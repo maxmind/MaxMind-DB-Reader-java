@@ -284,6 +284,26 @@ public class DecoderTest {
         return maps;
     }
 
+    public Map<Object[], byte[]> arrays() {
+        Map<Object[], byte[]> arrays = new HashMap<Object[], byte[]>();
+
+        arrays.put(new String[] { "Foo" }, new byte[] { 0b00000001, 0b00000100,
+        /* Foo */
+        0b01000011, 0b01000110, 0b01101111, 0b01101111 });
+
+        arrays.put(new String[] { "Foo", "人" }, new byte[] { 0b00000010,
+                0b00000100,
+                /* Foo */
+                0b01000011, 0b01000110, 0b01101111, 0b01101111,
+                /* 人 */
+                0b01000011, (byte) 0b11100100, (byte) 0b10111010,
+                (byte) 0b10111010 });
+
+        arrays.put(new Object[0], new byte[] { 0b00000000, 0b00000100 });
+
+        return arrays;
+    }
+
     @Test
     public void testUint16() throws MaxMindDbException, IOException {
         testTypeDecoding(Type.UINT16, uint16());
@@ -334,6 +354,11 @@ public class DecoderTest {
         testTypeDecoding(Type.MAP, this.maps());
     }
 
+    @Test
+    public void testArrays() throws MaxMindDbException, IOException {
+        testTypeDecoding(Type.ARRAY, this.arrays());
+    }
+
     public static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
             throws MaxMindDbException, IOException {
 
@@ -350,6 +375,9 @@ public class DecoderTest {
 
             if (type.equals(Type.BYTES)) {
                 assertArrayEquals(desc, (byte[]) expect, (byte[]) decoder
+                        .decode(0).getObject());
+            } else if (type.equals(Type.ARRAY)) {
+                assertArrayEquals(desc, (Object[]) expect, (Object[]) decoder
                         .decode(0).getObject());
             } else {
                 assertEquals(desc, expect, decoder.decode(0).getObject());
