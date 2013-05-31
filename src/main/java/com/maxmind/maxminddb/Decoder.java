@@ -50,20 +50,20 @@ public class Decoder {
     public Result decode(long offset) throws MaxMindDbException, IOException {
 
         if (this.DEBUG) {
-            this.debug("Offset", String.valueOf(offset));
+            Log.debug("Offset", String.valueOf(offset));
         }
 
         int ctrlByte = this.in.read();
         offset++;
 
         if (this.DEBUG) {
-            this.debug("Control byte", ctrlByte);
+            Log.debug("Control byte", ctrlByte);
         }
 
         Type type = Type.fromControlByte(ctrlByte);
 
         if (this.DEBUG) {
-            this.debug("Type", type.name());
+            Log.debug("Type", type.name());
         }
 
         // Pointers are a special case, we don't read the next $size bytes, we
@@ -83,7 +83,7 @@ public class Decoder {
             int nextByte = this.in.read();
 
             if (this.DEBUG) {
-                this.debug("Next byte", nextByte);
+                Log.debug("Next byte", nextByte);
             }
 
             int typeNum = nextByte + 7;
@@ -107,7 +107,7 @@ public class Decoder {
 
         if (this.DEBUG) {
             // FIXME - cast or whatever
-            this.debug("Size", String.valueOf(size));
+            Log.debug("Size", String.valueOf(size));
         }
 
         // The map and array types are special cases, since we don't read the
@@ -126,8 +126,8 @@ public class Decoder {
         }
 
         if (this.DEBUG) {
-            this.debug("Offset", offset);
-            this.debug("Size", size);
+            Log.debug("Offset", offset);
+            Log.debug("Size", size);
         }
         byte[] buffer = new byte[size];
 
@@ -174,7 +174,7 @@ public class Decoder {
         int pointerSize = ((ctrlByte >>> 3) & 0b00000011) + 1;
 
         if (this.DEBUG) {
-            this.debug("Pointer size", String.valueOf(pointerSize));
+            Log.debug("Pointer size", String.valueOf(pointerSize));
         }
 
         byte buffer[] = new byte[pointerSize + 1];
@@ -182,7 +182,7 @@ public class Decoder {
         this.in.read(buffer, 1, pointerSize);
 
         if (this.DEBUG) {
-            this.debug("Buffer", buffer);
+            Log.debug("Buffer", buffer);
         }
 
         buffer[0] = pointerSize == 4 ? (byte) 0
@@ -191,9 +191,9 @@ public class Decoder {
         long packed = decodeLong(buffer);
 
         if (this.DEBUG) {
-            this.debug("Packed pointer", String.valueOf(packed));
-            this.debug("Pointer base", this.pointerBase);
-            this.debug("Pointer value offset",
+            Log.debug("Packed pointer", String.valueOf(packed));
+            Log.debug("Pointer base", this.pointerBase);
+            Log.debug("Pointer value offset",
                     this.pointerValueOffset[pointerSize]);
         }
 
@@ -201,7 +201,7 @@ public class Decoder {
                 + this.pointerValueOffset[pointerSize];
 
         if (this.DEBUG) {
-            this.debug("Pointer to", String.valueOf(pointer));
+            Log.debug("Pointer to", String.valueOf(pointer));
         }
 
         return new Result(pointer, Type.POINTER, offset + pointerSize);
@@ -265,7 +265,7 @@ public class Decoder {
     private Result decodeArray(long size, long offset)
             throws MaxMindDbException, IOException {
         if (this.DEBUG) {
-            this.debug("Array size", size);
+            Log.debug("Array size", size);
         }
 
         Object[] array = new Object[(int) size];
@@ -275,13 +275,13 @@ public class Decoder {
             offset = r.getOffset();
 
             if (this.DEBUG) {
-                this.debug("Value " + i, r.getObject().toString());
+                Log.debug("Value " + i, r.getObject().toString());
             }
             array[i] = r.getObject();
         }
 
         if (this.DEBUG) {
-            this.debug("Decoded array", Arrays.toString(array));
+            Log.debug("Decoded array", Arrays.toString(array));
         }
 
         return new Result(array, Type.ARRAY, offset);
@@ -290,7 +290,7 @@ public class Decoder {
     private Result decodeMap(long size, long offset) throws MaxMindDbException,
             IOException {
         if (this.DEBUG) {
-            this.debug("Map size", size);
+            Log.debug("Map size", size);
         }
 
         Map<String, Object> map = new HashMap<String, Object>();
@@ -305,14 +305,14 @@ public class Decoder {
             offset = valueResult.getOffset();
 
             if (this.DEBUG) {
-                this.debug("Key " + i, key);
-                this.debug("Value " + i, value.toString());
+                Log.debug("Key " + i, key);
+                Log.debug("Value " + i, value.toString());
             }
             map.put(key, value);
         }
 
         if (this.DEBUG) {
-            this.debug("Decoded map", map.toString());
+            Log.debug("Decoded map", map.toString());
         }
 
         return new Result(map, Type.MAP, offset);
@@ -345,31 +345,6 @@ public class Decoder {
         }
 
         return new long[] { size, offset + bytesToRead };
-    }
-
-    private void debug(String name, long offset) {
-        this.debug(name, String.valueOf(offset));
-    }
-
-    private void debug(String name, int value) {
-        this.debug(name, String.valueOf(value));
-    }
-
-    private void debug(String string, byte[] buffer) {
-        String binary = "";
-        for (byte b : buffer) {
-            binary += Integer.toBinaryString(b & 0xFF) + " ";
-        }
-        this.debug(string, binary);
-
-    }
-
-    private void debug(String string, byte b) {
-        this.debug(string, Integer.toBinaryString(b & 0xFF));
-    }
-
-    private void debug(String name, String value) {
-        System.out.println(name + ": " + value);
     }
 
 }

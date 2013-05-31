@@ -4,13 +4,18 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -465,5 +470,22 @@ public class DecoderTest {
             assertEquals("decode uint128: " + entry.getKey(), entry.getKey(),
                     Decoder.decodeUint128(bytes));
         }
+    }
+
+    /*
+     * I really didn't want to create temporary files for these tests, but it is
+     * pretty hard to abstract away from the file io system in a way that is
+     * Java 6 compatible
+     */
+    private FileChannel getFileChannel(byte[] data) throws IOException {
+        File file = File.createTempFile(UUID.randomUUID().toString(), "tmp");
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        FileChannel fc = raf.getChannel();
+        fc.write(ByteBuffer.wrap(data));
+        raf.close();
+        fc.close();
+        raf = new RandomAccessFile(file, "r");
+
+        return raf.getChannel();
     }
 }
