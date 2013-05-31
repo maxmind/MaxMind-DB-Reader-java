@@ -3,7 +3,6 @@ package com.maxmind.maxminddb;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -167,10 +166,6 @@ public class Decoder {
         }
     }
 
-    private void debug(String name, int value) {
-        this.debug(name, String.valueOf(value));
-    }
-
     private final long[] pointerValueOffset = { 0, 0, 1 << 11,
             (((long) 1) << 19) + ((1) << 11), 0 };
 
@@ -258,7 +253,7 @@ public class Decoder {
     }
 
     private double decodeDouble(byte[] bytes) {
-        return ByteBuffer.wrap(bytes).getDouble();
+        return new Double(new String(bytes, Charset.forName("US-ASCII")));
     }
 
     private Result decodeBoolean(long size, long offset) {
@@ -354,6 +349,10 @@ public class Decoder {
 
     private void debug(String name, long offset) {
         this.debug(name, String.valueOf(offset));
+    }
+
+    private void debug(String name, int value) {
+        this.debug(name, String.valueOf(value));
     }
 
     private void debug(String string, byte[] buffer) {

@@ -215,6 +215,27 @@ public class DecoderTest {
         tests.put(str, bytes);
     }
 
+    public Map<Double, byte[]> doubles() {
+        Map<Double, byte[]> doubles = new HashMap<Double, byte[]>();
+        this.addTestDouble(doubles, (byte) 0b01110001, "-1073741824.12457");
+        this.addTestDouble(doubles, (byte) 0b01110000, "1073741824.12457");
+        this.addTestDouble(doubles, (byte) 0b01101110, "-3.14159265359");
+        this.addTestDouble(doubles, (byte) 0b01100011, "123");
+        this.addTestDouble(doubles, (byte) 0b01100010, ".5");
+        this.addTestDouble(doubles, (byte) 0b01100011, "-.5");
+        return doubles;
+    }
+
+    private void addTestDouble(Map<Double, byte[]> tests, byte ctrl, String str) {
+
+        byte[] sb = str.getBytes(Charset.forName("US-ASCII"));
+        byte[] bytes = new byte[1 + sb.length];
+
+        bytes[0] = ctrl;
+        System.arraycopy(sb, 0, bytes, 1, sb.length);
+        tests.put(new Double(str), bytes);
+    }
+
     public Map<Boolean, byte[]> booleans() {
         Map<Boolean, byte[]> booleans = new HashMap<Boolean, byte[]>();
 
@@ -327,6 +348,11 @@ public class DecoderTest {
     @Test
     public void testUint128() throws MaxMindDbException, IOException {
         testTypeDecoding(Type.UINT128, largeUint(128));
+    }
+
+    @Test
+    public void testDoubles() throws MaxMindDbException, IOException {
+        testTypeDecoding(Type.DOUBLE, this.doubles());
     }
 
     @Test
