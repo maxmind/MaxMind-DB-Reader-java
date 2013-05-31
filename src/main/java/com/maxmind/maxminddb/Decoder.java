@@ -1,15 +1,16 @@
 package com.maxmind.maxminddb;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Decoder {
-    private final InputStream in;
+    private final FileChannel in;
 
     private final boolean DEBUG = true;
     // XXX - This is only for unit testings. We should possibly make a
@@ -41,7 +42,7 @@ public class Decoder {
         }
     }
 
-    public Decoder(InputStream in, long pointerBase) {
+    public Decoder(FileChannel in, long pointerBase) {
         this.in = in;
         this.pointerBase = pointerBase;
     }
@@ -53,7 +54,9 @@ public class Decoder {
             Log.debug("Offset", String.valueOf(offset));
         }
 
-        int ctrlByte = this.in.read();
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[1]);
+        this.in.read(buffer);
+        int ctrlByte = buffer.get(0);
         offset++;
 
         if (this.DEBUG) {
@@ -80,7 +83,9 @@ public class Decoder {
         }
 
         if (type.equals(Type.EXTENDED)) {
-            int nextByte = this.in.read();
+            buffer = ByteBuffer.wrap(new byte[1]);
+            this.in.read(buffer);
+            int nextByte = buffer.get(0);
 
             if (this.DEBUG) {
                 Log.debug("Next byte", nextByte);
@@ -129,35 +134,36 @@ public class Decoder {
             Log.debug("Offset", offset);
             Log.debug("Size", size);
         }
-        byte[] buffer = new byte[size];
 
-        this.in.read(buffer, 0, size);
+        buffer = ByteBuffer.wrap(new byte[size]);
+        this.in.read(buffer);
+        byte[] bytes = buffer.array();
 
         long new_offset = offset + size;
         switch (type) {
             case UTF8_STRING:
-                String s = this.decodeString(buffer);
+                String s = this.decodeString(bytes);
                 return new Result(s, type, new_offset);
             case DOUBLE:
-                double d = this.decodeDouble(buffer);
+                double d = this.decodeDouble(bytes);
                 return new Result(d, type, new_offset);
             case BYTES:
-                byte[] b = this.decodeBytes(buffer);
+                byte[] b = this.decodeBytes(bytes);
                 return new Result(b, type, new_offset);
             case UINT16:
-                int i = Decoder.decodeUint16(buffer);
+                int i = Decoder.decodeUint16(bytes);
                 return new Result(i, type, new_offset);
             case UINT32:
-                long l = Decoder.decodeUint32(buffer);
+                long l = Decoder.decodeUint32(bytes);
                 return new Result(l, type, new_offset);
             case INT32:
-                int int32 = Decoder.decodeInt32(buffer);
+                int int32 = Decoder.decodeInt32(bytes);
                 return new Result(int32, type, new_offset);
             case UINT64:
-                BigInteger bi = Decoder.decodeUint64(buffer);
+                BigInteger bi = Decoder.decodeUint64(bytes);
                 return new Result(bi, type, new_offset);
             case UINT128:
-                BigInteger uint128 = Decoder.decodeUint128(buffer);
+                BigInteger uint128 = Decoder.decodeUint128(bytes);
                 return new Result(uint128, type, new_offset);
             default:
                 throw new MaxMindDbException("Unknown or unexpected type: "
@@ -177,18 +183,18 @@ public class Decoder {
             Log.debug("Pointer size", String.valueOf(pointerSize));
         }
 
-        byte buffer[] = new byte[pointerSize + 1];
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[pointerSize + 1]);
 
-        this.in.read(buffer, 1, pointerSize);
+        this.in.read(buffer, this.in.position() - 1);
 
         if (this.DEBUG) {
             Log.debug("Buffer", buffer);
         }
 
-        buffer[0] = pointerSize == 4 ? (byte) 0
-                : (byte) (ctrlByte & 0b00000111);
+        buffer.put(0, pointerSize == 4 ? (byte) 0
+                : (byte) (ctrlByte & 0b00000111));
 
-        long packed = decodeLong(buffer);
+        long packed = decodeLong(buffer.array());
 
         if (this.DEBUG) {
             Log.debug("Packed pointer", String.valueOf(packed));
@@ -329,18 +335,18 @@ public class Decoder {
 
         int bytesToRead = size - 28;
 
-        byte[] buffer = new byte[bytesToRead];
-        this.in.read(buffer, 0, bytesToRead);
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[bytesToRead]);
+        this.in.read(buffer);
 
         if (size == 29) {
-            int i = decodeInteger(buffer);
+            int i = decodeInteger(buffer.array());
             size = 29 + i;
         } else if (size == 30) {
-            int i = decodeInteger(buffer);
+            int i = decodeInteger(buffer.array());
             size = 285 + i;
         } else {
-            buffer[0] &= 0x0F;
-            int i = decodeInteger(buffer);
+            buffer.put(0, (byte) (buffer.get(0) & 0x0F));
+            int i = decodeInteger(buffer.array());
             size = 65821 + i;
         }
 

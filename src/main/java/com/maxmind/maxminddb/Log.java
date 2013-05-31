@@ -1,8 +1,13 @@
 package com.maxmind.maxminddb;
 
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 
 class Log {
+
+    static void debug(String string, ByteBuffer buffer) {
+        debug(string, buffer.array());
+    }
 
     static void debug(String string, byte[] buffer) {
         String binary = "";

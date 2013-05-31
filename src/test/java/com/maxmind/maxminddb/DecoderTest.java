@@ -3,10 +3,8 @@ package com.maxmind.maxminddb;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -332,65 +330,65 @@ public class DecoderTest {
 
     @Test
     public void testUint16() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.UINT16, uint16());
+        this.testTypeDecoding(Type.UINT16, uint16());
     }
 
     @Test
     public void testUint32() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.UINT32, uint32());
+        this.testTypeDecoding(Type.UINT32, uint32());
     }
 
     @Test
     public void testInt32() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.INT32, int32());
+        this.testTypeDecoding(Type.INT32, int32());
     }
 
     @Test
     public void testUint64() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.UINT64, largeUint(64));
+        this.testTypeDecoding(Type.UINT64, largeUint(64));
     }
 
     @Test
     public void testUint128() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.UINT128, largeUint(128));
+        this.testTypeDecoding(Type.UINT128, largeUint(128));
     }
 
     @Test
     public void testDoubles() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.DOUBLE, this.doubles());
+        this.testTypeDecoding(Type.DOUBLE, this.doubles());
     }
 
     @Test
     public void testPointers() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.POINTER, pointers());
+        this.testTypeDecoding(Type.POINTER, pointers());
     }
 
     @Test
     public void testStrings() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.UTF8_STRING, this.strings());
+        this.testTypeDecoding(Type.UTF8_STRING, this.strings());
     }
 
     @Test
     public void testBooleans() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.BOOLEAN, this.booleans());
+        this.testTypeDecoding(Type.BOOLEAN, this.booleans());
     }
 
     @Test
     public void testBytes() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.BYTES, this.bytes());
+        this.testTypeDecoding(Type.BYTES, this.bytes());
     }
 
     @Test
     public void testMaps() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.MAP, this.maps());
+        this.testTypeDecoding(Type.MAP, this.maps());
     }
 
     @Test
     public void testArrays() throws MaxMindDbException, IOException {
-        testTypeDecoding(Type.ARRAY, this.arrays());
+        this.testTypeDecoding(Type.ARRAY, this.arrays());
     }
 
-    public static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
+    public <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
             throws MaxMindDbException, IOException {
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
@@ -399,9 +397,9 @@ public class DecoderTest {
             System.out.println(Arrays.toString(input));
 
             String desc = "decoded " + type.name() + " - " + expect;
-            InputStream in = new ByteArrayInputStream(input);
+            FileChannel fc = this.getFileChannel(input);
 
-            Decoder decoder = new Decoder(in, 0);
+            Decoder decoder = new Decoder(fc, 0);
             decoder.POINTER_TEST_HACK = true;
 
             if (type.equals(Type.BYTES)) {
