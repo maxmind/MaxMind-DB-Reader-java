@@ -2,9 +2,12 @@ package com.maxmind.maxminddb;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Decoder {
     private final InputStream in;
@@ -209,9 +212,8 @@ public class Decoder {
         return new Result(pointer, Type.POINTER, offset + pointerSize);
     }
 
-    private String decodeString(byte[] bytes)
-            throws UnsupportedEncodingException {
-        return new String(bytes, "UTF-8");
+    private String decodeString(byte[] bytes) {
+        return new String(bytes, Charset.forName("UTF-8"));
     }
 
     // XXX - nop
@@ -223,20 +225,20 @@ public class Decoder {
         return Decoder.decodeInt32(bytes);
     }
 
-    static BigInteger decodeUint128(byte[] bytes) {
-        return new BigInteger(1, bytes);
-    }
-
-    static BigInteger decodeUint64(byte[] bytes) {
-        return new BigInteger(1, bytes);
-    }
-
     static int decodeInt32(byte[] bytes) {
         return decodeInteger(bytes);
     }
 
     static long decodeUint32(byte[] bytes) {
         return decodeLong(bytes);
+    }
+
+    static BigInteger decodeUint64(byte[] bytes) {
+        return new BigInteger(1, bytes);
+    }
+
+    static BigInteger decodeUint128(byte[] bytes) {
+        return new BigInteger(1, bytes);
     }
 
     static int decodeInteger(byte[] bytes) {
@@ -265,14 +267,61 @@ public class Decoder {
         return new Result(b, Type.BOOLEAN, offset);
     }
 
-    private Result decodeArray(long size, long offset) {
-        // TODO Auto-generated method stub
-        return null;
+    private Result decodeArray(long size, long offset)
+            throws MaxMindDbException, IOException {
+        if (this.DEBUG) {
+            this.debug("Array size", size);
+        }
+
+        Object[] array = new Object[(int) size];
+
+        for (int i = 0; i < array.length; i++) {
+            Result r = this.decode(offset);
+            offset = r.getOffset();
+
+            if (this.DEBUG) {
+                this.debug("Value " + i, r.getObject().toString());
+            }
+            array[i] = r.getObject();
+        }
+
+        if (this.DEBUG) {
+            this.debug("Decoded array", Arrays.toString(array));
+        }
+
+        return new Result(array, Type.ARRAY, offset);
     }
 
-    private Result decodeMap(long size, long offset) {
-        // TODO Auto-generated method stub
-        return null;
+    private Result decodeMap(long size, long offset) throws MaxMindDbException,
+            IOException {
+        if (this.DEBUG) {
+            this.debug("Map size", size);
+        }
+
+        Map<String, Object> map = new HashMap<String, Object>();
+
+        for (int i = 0; i < size; i++) {
+            Result keyResult = this.decode(offset);
+            String key = (String) keyResult.getObject();
+            offset = keyResult.getOffset();
+
+            Result valueResult = this.decode(offset);
+            Object value = valueResult.getObject();
+            offset = valueResult.getOffset();
+
+            if (this.DEBUG) {
+                this.debug("Key " + i, key);
+                this.debug("Value " + i, value.toString());
+            }
+            map.put(key, value);
+        }
+
+        if (this.DEBUG) {
+            this.debug("Decoded map", map.toString());
+        }
+
+        return new Result(map, Type.MAP, offset);
+
     }
 
     private long[] sizeFromCtrlByte(int ctrlByte, long offset)

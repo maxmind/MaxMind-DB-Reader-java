@@ -1,11 +1,13 @@
 package com.maxmind.maxminddb;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -146,6 +148,142 @@ public class DecoderTest {
         return pointers;
     }
 
+    public Map<String, byte[]> strings() {
+        Map<String, byte[]> strings = new HashMap<String, byte[]>();
+
+        this.addTestString(strings, (byte) 0b01000000, "");
+        this.addTestString(strings, (byte) 0b01000001, "1");
+        this.addTestString(strings, (byte) 0b01000011, "人");
+        this.addTestString(strings, (byte) 0b01000011, "123");
+        this.addTestString(strings, (byte) 0b01011011,
+                "123456789012345678901234567");
+        this.addTestString(strings, (byte) 0b01011100,
+                "1234567890123456789012345678");
+        this.addTestString(strings, (byte) 0b01011100,
+                "1234567890123456789012345678");
+        this.addTestString(strings, new byte[] { 0b01011101, 0b00000000 },
+                "12345678901234567890123456789");
+        this.addTestString(strings, new byte[] { 0b01011101, 0b00000001 },
+                "123456789012345678901234567890");
+
+        this.addTestString(strings, new byte[] { 0b01011110, 0b00000000,
+                (byte) 0b11010111 }, this.xString(500));
+        this.addTestString(strings, new byte[] { 0b01011110, 0b00000110,
+                (byte) 0b10110011 }, this.xString(2000));
+        this.addTestString(strings, new byte[] { 0b01011111, 0b00000000,
+                0b00010000, 0b01010011, }, this.xString(70000));
+
+        return strings;
+
+    }
+
+    public Map<byte[], byte[]> bytes() {
+        Map<byte[], byte[]> bytes = new HashMap<byte[], byte[]>();
+
+        Map<String, byte[]> strings = this.strings();
+
+        for (String s : strings.keySet()) {
+            byte[] ba = strings.get(s);
+            ba[0] ^= 0b11000000;
+
+            bytes.put(s.getBytes(Charset.forName("UTF-8")), ba);
+        }
+
+        return bytes;
+    }
+
+    private String xString(int length) {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < length; i++) {
+            sb.append("x");
+        }
+        return sb.toString();
+    }
+
+    private void addTestString(Map<String, byte[]> tests, byte ctrl, String str) {
+        this.addTestString(tests, new byte[] { ctrl }, str);
+    }
+
+    private void addTestString(Map<String, byte[]> tests, byte ctrl[],
+            String str) {
+
+        byte[] sb = str.getBytes(Charset.forName("UTF-8"));
+        byte[] bytes = new byte[ctrl.length + sb.length];
+
+        System.arraycopy(ctrl, 0, bytes, 0, ctrl.length);
+        System.arraycopy(sb, 0, bytes, ctrl.length, sb.length);
+        tests.put(str, bytes);
+    }
+
+    public Map<Boolean, byte[]> booleans() {
+        Map<Boolean, byte[]> booleans = new HashMap<Boolean, byte[]>();
+
+        booleans.put(Boolean.FALSE, new byte[] { 0b00000000, 0b00000111 });
+        booleans.put(Boolean.TRUE, new byte[] { 0b00000001, 0b00000111 });
+        return booleans;
+    }
+
+    public Map<Map<String, Object>, byte[]> maps() {
+        Map<Map<String, Object>, byte[]> maps = new HashMap<Map<String, Object>, byte[]>();
+
+        Map<String, Object> empty = new HashMap<String, Object>();
+        maps.put(empty, new byte[] { (byte) 0b11100000 });
+
+        Map<String, Object> one = new HashMap<String, Object>();
+        one.put("en", "Foo");
+        maps.put(one, new byte[] { (byte) 0b11100001, /* en */0b01000010,
+                0b01100101, 0b01101110,
+                /* Foo */0b01000011, 0b01000110, 0b01101111, 0b01101111 });
+
+        Map<String, Object> two = new HashMap<String, Object>();
+        two.put("en", "Foo");
+        two.put("zh", "人");
+        maps.put(two, new byte[] { (byte) 0b11100010,
+        /* en */
+        0b01000010, 0b01100101, 0b01101110,
+        /* Foo */
+        0b01000011, 0b01000110, 0b01101111, 0b01101111,
+        /* zh */
+        0b01000010, 0b01111010, 0b01101000,
+        /* 人 */
+        0b01000011, (byte) 0b11100100, (byte) 0b10111010, (byte) 0b10111010 });
+
+        Map<String, Object> nested = new HashMap<String, Object>();
+        nested.put("name", two);
+
+        maps.put(nested, new byte[] { (byte) 0b11100001, /* name */
+        0b01000100, 0b01101110, 0b01100001, 0b01101101, 0b01100101,
+                (byte) 0b11100010,/* en */
+                0b01000010, 0b01100101, 0b01101110,
+                /* Foo */
+                0b01000011, 0b01000110, 0b01101111, 0b01101111,
+                /* zh */
+                0b01000010, 0b01111010, 0b01101000,
+                /* 人 */
+                0b01000011, (byte) 0b11100100, (byte) 0b10111010,
+                (byte) 0b10111010 });
+
+        /*
+         * This currently isn't working as assertEquals thinks all arrays are
+         * different. Usually you would just use assertArrayEquals, but that
+         * obviously doesn't work here
+         */
+        // Map<String, Object> guess = new HashMap<String, Object>();
+        // guess.put("languages", new String[] { "en", "zh" });
+        // maps.put(guess, new byte[] { (byte) 0b11100001,/* languages */
+        // 0b01001001, 0b01101100, 0b01100001, 0b01101110, 0b01100111,
+        // 0b01110101,
+        // 0b01100001, 0b01100111, 0b01100101, 0b01110011,
+        // /* array */
+        // 0b00000010, 0b00000100,
+        // /* en */
+        // 0b01000010, 0b01100101, 0b01101110,
+        // /* zh */
+        // 0b01000010, 0b01111010, 0b01101000 });
+
+        return maps;
+    }
+
     @Test
     public void testUint16() throws MaxMindDbException, IOException {
         testTypeDecoding(Type.UINT16, uint16());
@@ -176,6 +314,26 @@ public class DecoderTest {
         testTypeDecoding(Type.POINTER, pointers());
     }
 
+    @Test
+    public void testStrings() throws MaxMindDbException, IOException {
+        testTypeDecoding(Type.UTF8_STRING, this.strings());
+    }
+
+    @Test
+    public void testBooleans() throws MaxMindDbException, IOException {
+        testTypeDecoding(Type.BOOLEAN, this.booleans());
+    }
+
+    @Test
+    public void testBytes() throws MaxMindDbException, IOException {
+        testTypeDecoding(Type.BYTES, this.bytes());
+    }
+
+    @Test
+    public void testMaps() throws MaxMindDbException, IOException {
+        testTypeDecoding(Type.MAP, this.maps());
+    }
+
     public static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
             throws MaxMindDbException, IOException {
 
@@ -185,13 +343,17 @@ public class DecoderTest {
             System.out.println(Arrays.toString(input));
 
             String desc = "decoded " + type.name() + " - " + expect;
-
             InputStream in = new ByteArrayInputStream(input);
 
             Decoder decoder = new Decoder(in, 0);
             decoder.POINTER_TEST_HACK = true;
 
-            assertEquals(desc, expect, decoder.decode(0).getObject());
+            if (type.equals(Type.BYTES)) {
+                assertArrayEquals(desc, (byte[]) expect, (byte[]) decoder
+                        .decode(0).getObject());
+            } else {
+                assertEquals(desc, expect, decoder.decode(0).getObject());
+            }
         }
     }
 
@@ -250,17 +412,4 @@ public class DecoderTest {
                     Decoder.decodeUint128(bytes));
         }
     }
-    //
-    // @Test
-    // public void testPointers() {
-    // Map<Long, byte[]> map = pointers();
-    // for (Map.Entry<Long, byte[]> entry : map.entrySet()) {
-    //
-    // byte[] bytes = entry.getValue();
-    // bytes[0] &= 0b00011111;
-    // assertEquals("decode uint32: " + entry.getKey(), entry.getKey()
-    // .longValue(), Decoder.decodeUint32(bytes));
-    // }
-    // }
-
 }
