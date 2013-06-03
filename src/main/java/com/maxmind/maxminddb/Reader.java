@@ -4,24 +4,64 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Map;
 
 public class Reader {
     private static final boolean DEBUG = true;
     private Decoder decoder;
     private long nodeCount;
-    private final long dataSourceSize;
-    private static byte METADATE_START_MARKER[] = { (byte) 0xab, (byte) 0xcd,
-            (byte) 0xef, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.', 'c', 'o', 'm' };
+    private final long dataSectionEnd;
+    private static byte METADATE_START_MARKER[] = { (byte) 0xAB, (byte) 0xCD,
+            (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.', 'c', 'o', 'm' };
+    private final FileChannel fc;
 
-    public Reader(File dataSource) {
+    public Reader(File dataSource) throws MaxMindDbException, IOException {
 
         RandomAccessFile raf = new RandomAccessFile(dataSource, "r");
-        FileChannel fc = raf.getChannel();
+        this.fc = raf.getChannel();
         // XXX - we will want
         // MappedByteBuffer in = fc.map(FileChannel.MapMode.READ_ONLY, 0,
         // fc.size());
 
+        /*
+         * We need to make sure that whatever chunk we read will have the
+         * metadata in it. The description metadata key is a hash of
+         * descriptions, one per language. The description could be something
+         * verbose like "GeoIP 2.0 City Database, Multilingual - English,
+         * Chinese (Taiwan), Chinese (China), French, German, Portuguese" (but
+         * with c. 20 languages). That comes out to about 250 bytes _per key_.
+         * Multiply that by 20 languages, and the description alon ecould use up
+         * about 5k. The other keys in the metadata are very, very tiny.
+         * 
+         * Given all this, reading 20k seems fairly future-proof. We'd have to
+         * have extremely long descriptions or descriptions in 80 languages
+         * before this became too long.
+         */
+        long start = this.findMetadataStart();
+
+        if (start < 0) {
+            throw new MaxMindDbException(
+                    "Could not find a MaxMind DB metadata marker in this file ("
+                            + dataSource.getName()
+                            + "). Is this a valid MaxMind DB file?");
+        }
+
+        // XXX - right?
+        this.dataSectionEnd = start - METADATE_START_MARKER.length;
+
+        Decoder decoder = new Decoder(this.fc, 0);
+
+        // FIXME - pretty ugly that I am setting the position outside of the
+        // decoder. Move this all into
+        // the decoder and make sure it is thread safe
+        this.fc.position(start);
+        Metadata metadata = new Metadata((Map<String, Object>) decoder
+                .decode(0).getObject());
+        if (DEBUG) {
+            Log.debug(metadata.toString());
+        }
     }
 
     // FIXME - figure out what we are returning
@@ -100,11 +140,10 @@ public class Reader {
         long resolved = (pointer - this.nodeCount) + this.searchTreeSize();
 
         if (DEBUG) {
-            long nodeCount = this.nodeCount;
             long treeSize = this.searchTreeSize();
 
             Log.debug("Resolved data pointer", "( " + pointer + " - "
-                    + nodeCount + " ) + " + treeSize + " = " + resolved);
+                    + this.nodeCount + " ) + " + treeSize + " = " + resolved);
 
         }
 
@@ -115,5 +154,31 @@ public class Reader {
 
     private long searchTreeSize() {
         throw new AssertionError("not implemented");
+    }
+
+    /*
+     * And here I though searching a file was a solved problem.
+     * 
+     * This is an extremely naive but reasonably readable implementation. There
+     * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
+     * an issue, but I suspect it won't be.
+     */
+    private long findMetadataStart() throws IOException {
+        long fileSize = this.fc.size();
+        System.out.println(fileSize);
+
+        FILE: for (long i = 0; i < fileSize - METADATE_START_MARKER.length + 1; i++) {
+            for (int j = 0; j < METADATE_START_MARKER.length; j++) {
+                ByteBuffer b = ByteBuffer.wrap(new byte[1]);
+                this.fc.read(b, fileSize - i - j - 1);
+                System.out.println(b.get(0));
+                if (b.get(0) != METADATE_START_MARKER[METADATE_START_MARKER.length
+                        - j - 1]) {
+                    continue FILE;
+                }
+            }
+            return fileSize - i;
+        }
+        return -1;
     }
 }

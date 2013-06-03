@@ -486,4 +486,5 @@ public class DecoderTest {
 
         return raf.getChannel();
     }
+
 }
