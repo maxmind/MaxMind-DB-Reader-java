@@ -1,6 +1,7 @@
 package com.maxmind.maxminddb;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Map;
 
 // XXX - if we make this public, add getters
@@ -13,6 +14,9 @@ class Metadata {
     Integer ipVersion;
     Long nodeCount;
     Long recordSize;
+    int nodeByteSize;
+    long searchTreeSize;
+    String[] languages;
 
     // XXX - think about how I want to construct this. Maybe look at how JSON
     // parsers deal with types
@@ -23,10 +27,15 @@ class Metadata {
                 .get("binary_format_minor_version");
         this.buildEpoch = (BigInteger) metadata.get("build_epoch");
         this.databaseType = (String) metadata.get("database_type");
+        Object[] langs = (Object[]) metadata.get("languages");
+        this.languages = Arrays.copyOf(langs, langs.length, String[].class);
         this.description = (Map<String, Object>) metadata.get("description");
         this.ipVersion = (Integer) metadata.get("ip_version");
         this.nodeCount = (Long) metadata.get("node_count");
         this.recordSize = (Long) metadata.get("record_size");
+        this.nodeByteSize = (int) (this.recordSize / 4);
+        this.searchTreeSize = this.nodeCount * this.nodeByteSize;
+
     }
 
     /*
@@ -44,5 +53,4 @@ class Metadata {
                 + this.ipVersion + ", nodeCount=" + this.nodeCount
                 + ", recordSize=" + this.recordSize + "]";
     }
-
 }

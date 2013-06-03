@@ -20,7 +20,7 @@ public class Decoder {
 
     class Result {
         private final Object obj;
-        private final long new_offset;
+        private long new_offset;
         private final Type type;
 
         Result(Object obj, Type t, long new_offset) {
@@ -37,6 +37,10 @@ public class Decoder {
             return this.new_offset;
         }
 
+        void setOffset(long offset) {
+            this.new_offset = offset;
+        }
+
         Type getType() {
             return this.type;
         }
@@ -49,18 +53,18 @@ public class Decoder {
 
     // FIXME - Move most of this method to a switch statement
     public Result decode(long offset) throws MaxMindDbException, IOException {
-
+        this.in.position(offset);
         if (this.DEBUG) {
             Log.debug("Offset", String.valueOf(offset));
         }
 
         ByteBuffer buffer = ByteBuffer.wrap(new byte[1]);
         this.in.read(buffer);
-        int ctrlByte = buffer.get(0);
+        int ctrlByte = 0xFF & buffer.get(0);
         offset++;
 
         if (this.DEBUG) {
-            Log.debug("Control byte", ctrlByte);
+            Log.debugBinary("Control byte", ctrlByte);
         }
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -78,8 +82,10 @@ public class Decoder {
             if (this.POINTER_TEST_HACK) {
                 return pointer;
             }
-
-            return this.decode(((Long) pointer.getObject()).longValue());
+            Result result = this.decode(((Long) pointer.getObject())
+                    .longValue());
+            result.setOffset(pointer.getOffset());
+            return result;
         }
 
         if (type.equals(Type.EXTENDED)) {
@@ -194,7 +200,7 @@ public class Decoder {
         buffer.put(0, pointerSize == 4 ? (byte) 0
                 : (byte) (ctrlByte & 0b00000111));
 
-        long packed = decodeLong(buffer.array());
+        long packed = Util.decodeLong(buffer.array());
 
         if (this.DEBUG) {
             Log.debug("Packed pointer", String.valueOf(packed));
@@ -227,11 +233,11 @@ public class Decoder {
     }
 
     static int decodeInt32(byte[] bytes) {
-        return decodeInteger(bytes);
+        return Util.decodeInteger(bytes);
     }
 
     static long decodeUint32(byte[] bytes) {
-        return decodeLong(bytes);
+        return Util.decodeLong(bytes);
     }
 
     static BigInteger decodeUint64(byte[] bytes) {
@@ -240,22 +246,6 @@ public class Decoder {
 
     static BigInteger decodeUint128(byte[] bytes) {
         return new BigInteger(1, bytes);
-    }
-
-    static int decodeInteger(byte[] bytes) {
-        int i = 0;
-        for (byte b : bytes) {
-            i = (i << 8) | (b & 0xFF);
-        }
-        return i;
-    }
-
-    static long decodeLong(byte[] bytes) {
-        long i = 0;
-        for (byte b : bytes) {
-            i = (i << 8) | (b & 0xFF);
-        }
-        return i;
     }
 
     private double decodeDouble(byte[] bytes) {
@@ -339,14 +329,14 @@ public class Decoder {
         this.in.read(buffer);
 
         if (size == 29) {
-            int i = decodeInteger(buffer.array());
+            int i = Util.decodeInteger(buffer.array());
             size = 29 + i;
         } else if (size == 30) {
-            int i = decodeInteger(buffer.array());
+            int i = Util.decodeInteger(buffer.array());
             size = 285 + i;
         } else {
             buffer.put(0, (byte) (buffer.get(0) & 0x0F));
-            int i = decodeInteger(buffer.array());
+            int i = Util.decodeInteger(buffer.array());
             size = 65821 + i;
         }
 

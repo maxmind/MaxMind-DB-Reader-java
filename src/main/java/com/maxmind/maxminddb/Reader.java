@@ -6,15 +6,18 @@ import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.Map;
 
 public class Reader {
-    private static final boolean DEBUG = true;
-    private Decoder decoder;
-    private long nodeCount;
-    private final long dataSectionEnd;
+    private static int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static byte METADATE_START_MARKER[] = { (byte) 0xAB, (byte) 0xCD,
             (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.', 'c', 'o', 'm' };
+
+    private static final boolean DEBUG = true;
+    private final Decoder decoder;
+    private final Metadata metadata;
+    private final long dataSectionEnd;
     private final FileChannel fc;
 
     public Reader(File dataSource) throws MaxMindDbException, IOException {
@@ -51,16 +54,16 @@ public class Reader {
         // XXX - right?
         this.dataSectionEnd = start - METADATE_START_MARKER.length;
 
-        Decoder decoder = new Decoder(this.fc, 0);
+        Decoder metadataDecoder = new Decoder(this.fc, 0);
 
-        // FIXME - pretty ugly that I am setting the position outside of the
-        // decoder. Move this all into
-        // the decoder and make sure it is thread safe
-        this.fc.position(start);
-        Metadata metadata = new Metadata((Map<String, Object>) decoder
-                .decode(0).getObject());
+        this.metadata = new Metadata((Map<String, Object>) metadataDecoder
+                .decode(start).getObject());
+
+        this.decoder = new Decoder(this.fc, this.metadata.searchTreeSize
+                + DATA_SECTION_SEPARATOR_SIZE);
+
         if (DEBUG) {
-            Log.debug(metadata.toString());
+            Log.debug(this.metadata.toString());
         }
     }
 
@@ -74,11 +77,20 @@ public class Reader {
             return null;
         }
 
+        this.fc.position(pointer);
         return this.resolveDataPointer(pointer);
     }
 
-    long findAddressInTree(InetAddress address) throws MaxMindDbException {
+    long findAddressInTree(InetAddress address) throws MaxMindDbException,
+            IOException {
         byte[] rawAddress = address.getAddress();
+
+        // XXX sort of wasteful
+        if (rawAddress.length == 4 && this.metadata.ipVersion == 6) {
+            byte[] newAddress = new byte[16];
+            System.arraycopy(rawAddress, 0, newAddress, 12, rawAddress.length);
+            rawAddress = newAddress;
+        }
 
         if (DEBUG) {
             Log.debugNewLine();
@@ -92,27 +104,29 @@ public class Reader {
         long nodeNum = 0;
 
         for (int i = 0; i < rawAddress.length * 8; i++) {
-            byte b = rawAddress[i / 8];
-            int bit = 1 & (b >> 7 - i);
-            int[] nodes = this.readNode(nodeNum);
+            int b = 0xFF & rawAddress[i / 8];
+            int bit = 1 & (b >> 7 - (i % 8));
+            long[] nodes = this.readNode(nodeNum);
 
-            int record = nodes[bit];
+            long record = nodes[bit];
 
             if (DEBUG) {
+                Log.debug("Nodes", Arrays.toString(nodes));
                 Log.debug("Bit #", i);
                 Log.debug("Bit value", bit);
                 Log.debug("Record", bit == 1 ? "right" : "left");
+                // Log.debug("Node count", this.metadata.nodeCount);
                 Log.debug("Record value", record);
             }
 
-            if (record == this.nodeCount) {
+            if (record == this.metadata.nodeCount) {
                 if (DEBUG) {
                     Log.debug("Record is empty");
                 }
                 return 0;
             }
 
-            if (record >= this.nodeCount) {
+            if (record >= this.metadata.nodeCount) {
                 if (DEBUG) {
                     Log.debug("Record is a data pointer");
                 }
@@ -130,30 +144,67 @@ public class Reader {
         throw new MaxMindDbException("Something bad happened");
     }
 
-    private int[] readNode(long nodeNum) {
-        throw new AssertionError("not implemented");
+    private long[] readNode(long nodeNumber) throws IOException,
+            MaxMindDbException {
+        ByteBuffer buffer = ByteBuffer
+                .wrap(new byte[this.metadata.nodeByteSize]);
+        this.fc.position(nodeNumber * this.metadata.nodeByteSize);
 
+        this.fc.read(buffer);
+
+        if (DEBUG) {
+            Log.debug("Node bytes", buffer);
+        }
+        return this.splitNodeIntoRecords(buffer);
+    }
+
+    private long[] splitNodeIntoRecords(ByteBuffer bytes)
+            throws MaxMindDbException {
+        long[] nodes = new long[2];
+        switch (this.metadata.recordSize.intValue()) {
+            case 24:
+                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 0,
+                        3));
+                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 3,
+                        6));
+                return nodes;
+            case 28:
+                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 0,
+                        3));
+                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 4,
+                        7));
+                nodes[0] = ((0xF0 & bytes.get(3)) << 24) | nodes[0];
+                nodes[1] = ((0x0F & bytes.get(3)) << 24) | nodes[1];
+                return nodes;
+            case 32:
+                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 0,
+                        4));
+                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 4,
+                        8));
+                return nodes;
+            default:
+                throw new MaxMindDbException("Unknown record size: "
+                        + this.metadata.recordSize);
+        }
     }
 
     private Object resolveDataPointer(long pointer) throws MaxMindDbException,
             IOException {
-        long resolved = (pointer - this.nodeCount) + this.searchTreeSize();
+        long resolved = (pointer - this.metadata.nodeCount)
+                + this.metadata.searchTreeSize;
 
         if (DEBUG) {
-            long treeSize = this.searchTreeSize();
+            long treeSize = this.metadata.searchTreeSize;
 
             Log.debug("Resolved data pointer", "( " + pointer + " - "
-                    + this.nodeCount + " ) + " + treeSize + " = " + resolved);
+                    + this.metadata.nodeCount + " ) + " + treeSize + " = "
+                    + resolved);
 
         }
 
         // We only want the data from the decoder, not the offset where it was
         // found.
         return this.decoder.decode(resolved).getObject();
-    }
-
-    private long searchTreeSize() {
-        throw new AssertionError("not implemented");
     }
 
     /*
@@ -180,5 +231,9 @@ public class Reader {
             return fileSize - i;
         }
         return -1;
+    }
+
+    public Metadata getMetadata() {
+        return this.metadata;
     }
 }
