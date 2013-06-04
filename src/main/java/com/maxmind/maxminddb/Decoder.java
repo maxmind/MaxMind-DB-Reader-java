@@ -12,7 +12,7 @@ import java.util.Map;
 public class Decoder {
     private final FileChannel in;
 
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;

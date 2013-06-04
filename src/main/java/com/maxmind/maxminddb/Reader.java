@@ -14,7 +14,7 @@ public class Reader {
     private static byte METADATE_START_MARKER[] = { (byte) 0xAB, (byte) 0xCD,
             (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.', 'c', 'o', 'm' };
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private final Decoder decoder;
     private final Metadata metadata;
     private final long dataSectionEnd;
@@ -173,7 +173,7 @@ public class Reader {
                         3));
                 nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 4,
                         7));
-                nodes[0] = ((0xF0 & bytes.get(3)) << 24) | nodes[0];
+                nodes[0] = ((0xF0 & bytes.get(3)) << 20) | nodes[0];
                 nodes[1] = ((0x0F & bytes.get(3)) << 24) | nodes[1];
                 return nodes;
             case 32:
@@ -216,13 +216,11 @@ public class Reader {
      */
     private long findMetadataStart() throws IOException {
         long fileSize = this.fc.size();
-        System.out.println(fileSize);
 
         FILE: for (long i = 0; i < fileSize - METADATE_START_MARKER.length + 1; i++) {
             for (int j = 0; j < METADATE_START_MARKER.length; j++) {
                 ByteBuffer b = ByteBuffer.wrap(new byte[1]);
                 this.fc.read(b, fileSize - i - j - 1);
-                System.out.println(b.get(0));
                 if (b.get(0) != METADATE_START_MARKER[METADATE_START_MARKER.length
                         - j - 1]) {
                     continue FILE;
