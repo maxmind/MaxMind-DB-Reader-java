@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 public class Decoder {
     private final FileChannel in;
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG;
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
@@ -53,15 +53,13 @@ public class Decoder {
             this.offset = offset;
         }
 
-        Type getType() {
-            return this.type;
-        }
     }
 
     public Decoder(FileChannel in, long pointerBase) {
         this.in = in;
         this.pointerBase = pointerBase;
         this.objectMapper = new ObjectMapper();
+        this.DEBUG = System.getenv().get("MAXMIND_DB_DECODER_DEBUG") != null;
     }
 
     // FIXME - Move most of this method to a switch statement
@@ -160,13 +158,13 @@ public class Decoder {
         long new_offset = offset + size;
         switch (type) {
             case UTF8_STRING:
-                TextNode s = new TextNode(this.decodeString(bytes));
+                TextNode s = new TextNode(Decoder.decodeString(bytes));
                 return new Result(s, type, new_offset);
             case DOUBLE:
-                DoubleNode d = this.decodeDouble(bytes);
+                DoubleNode d = Decoder.decodeDouble(bytes);
                 return new Result(d, type, new_offset);
             case BYTES:
-                BinaryNode b = new BinaryNode(this.decodeBytes(bytes));
+                BinaryNode b = new BinaryNode(Decoder.decodeBytes(bytes));
                 return new Result(b, type, new_offset);
             case UINT16:
                 IntNode i = Decoder.decodeUint16(bytes);
@@ -232,12 +230,12 @@ public class Decoder {
                 + pointerSize);
     }
 
-    private String decodeString(byte[] bytes) {
+    private static String decodeString(byte[] bytes) {
         return new String(bytes, Charset.forName("UTF-8"));
     }
 
     // XXX - nop
-    private byte[] decodeBytes(byte[] bytes) {
+    private static byte[] decodeBytes(byte[] bytes) {
         return bytes;
     }
 
@@ -261,8 +259,8 @@ public class Decoder {
         return new BigIntegerNode(new BigInteger(1, bytes));
     }
 
-    private DoubleNode decodeDouble(byte[] bytes) {
-        return new DoubleNode(new Double(new String(bytes,
+    private static DoubleNode decodeDouble(byte[] bytes) {
+        return new DoubleNode(Double.parseDouble(new String(bytes,
                 Charset.forName("US-ASCII"))));
     }
 
@@ -315,7 +313,7 @@ public class Decoder {
             offset = valueResult.getOffset();
 
             if (this.DEBUG) {
-                Log.debug("Key " + i, key.toString());
+                Log.debug("Key " + i, key);
                 Log.debug("Value " + i, value.toString());
             }
             map.put(key, value);

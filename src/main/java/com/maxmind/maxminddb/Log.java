@@ -34,10 +34,6 @@ class Log {
         Log.debug(name, Integer.toBinaryString(value));
     }
 
-    private static void debug(String string, byte b) {
-        Log.debug(string, Integer.toBinaryString(b & 0xFF));
-    }
-
     static void debug(String name, String value) {
         debug(name + ": " + value);
     }

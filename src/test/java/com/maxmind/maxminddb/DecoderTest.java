@@ -24,40 +24,40 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class DecoderTest {
 
     private static Map<Integer, byte[]> int32() {
-        int max = (2 << 30) - 1;
+        int max = ( 2 << 30) - 1;
         HashMap<Integer, byte[]> int32 = new HashMap<Integer, byte[]>();
 
-        int32.put(Integer.valueOf(0), new byte[] { 0b00000000, 0b00000001 });
-        int32.put(Integer.valueOf(-1), new byte[] { 0b00000100, 0b00000001,
+        int32.put(0, new byte[] { 0b00000000, 0b00000001 });
+        int32.put(-1, new byte[] { 0b00000100, 0b00000001,
                 (byte) 0b11111111, (byte) 0b11111111, (byte) 0b11111111,
                 (byte) 0b11111111 });
-        int32.put(Integer.valueOf((2 << 7) - 1), new byte[] { 0b00000001,
+        int32.put((2 << 7) - 1, new byte[] { 0b00000001,
                 0b00000001, (byte) 0b11111111 });
-        int32.put(Integer.valueOf(1 - (2 << 7)), new byte[] { 0b00000100,
+        int32.put(1 - (2 << 7), new byte[] { 0b00000100,
                 0b00000001, (byte) 0b11111111, (byte) 0b11111111,
                 (byte) 0b11111111, 0b00000001 });
-        int32.put(Integer.valueOf(500), new byte[] { 0b00000010, 0b00000001,
+        int32.put(500, new byte[] { 0b00000010, 0b00000001,
                 0b00000001, (byte) 0b11110100 });
 
-        int32.put(Integer.valueOf(-500), new byte[] { 0b00000100, 0b00000001,
+        int32.put(-500, new byte[] { 0b00000100, 0b00000001,
                 (byte) 0b11111111, (byte) 0b11111111, (byte) 0b11111110,
                 0b00001100 });
 
-        int32.put(Integer.valueOf((2 << 15) - 1), new byte[] { 0b00000010,
+        int32.put((2 << 15) - 1, new byte[] { 0b00000010,
                 0b00000001, (byte) 0b11111111, (byte) 0b11111111 });
-        int32.put(Integer.valueOf(1 - (2 << 15)), new byte[] { 0b00000100,
+        int32.put(1 - (2 << 15), new byte[] { 0b00000100,
                 0b00000001, (byte) 0b11111111, (byte) 0b11111111, 0b00000000,
                 0b00000001 });
-        int32.put(Integer.valueOf((2 << 23) - 1), new byte[] { 0b00000011,
+        int32.put((2 << 23) - 1, new byte[] { 0b00000011,
                 0b00000001, (byte) 0b11111111, (byte) 0b11111111,
                 (byte) 0b11111111 });
-        int32.put(Integer.valueOf(1 - (2 << 23)), new byte[] { 0b00000100,
+        int32.put(1 - (2 << 23), new byte[] { 0b00000100,
                 0b00000001, (byte) 0b11111111, 0b00000000, 0b00000000,
                 0b00000001 });
-        int32.put(Integer.valueOf(max), new byte[] { 0b00000100, 0b00000001,
+        int32.put(max, new byte[] { 0b00000100, 0b00000001,
                 0b01111111, (byte) 0b11111111, (byte) 0b11111111,
                 (byte) 0b11111111 });
-        int32.put(Integer.valueOf(-max), new byte[] { 0b00000100, 0b00000001,
+        int32.put(-max, new byte[] { 0b00000100, 0b00000001,
                 (byte) 0b10000000, 0b00000000, 0b00000000, 0b00000001 });
         return int32;
     }
@@ -66,16 +66,16 @@ public class DecoderTest {
         long max = (((long) 1) << 32) - 1;
         HashMap<Long, byte[]> uint32s = new HashMap<Long, byte[]>();
 
-        uint32s.put(Long.valueOf(0), new byte[] { (byte) 0b11000000 });
-        uint32s.put(Long.valueOf((1 << 8) - 1), new byte[] { (byte) 0b11000001,
+        uint32s.put((long) 0, new byte[] { (byte) 0b11000000 });
+        uint32s.put((long) ((1 << 8) - 1), new byte[] { (byte) 0b11000001,
                 (byte) 0b11111111 });
-        uint32s.put(Long.valueOf(500), new byte[] { (byte) 0b11000010,
+        uint32s.put((long) 500, new byte[] { (byte) 0b11000010,
                 0b00000001, (byte) 0b11110100 });
-        uint32s.put(Long.valueOf(10872), new byte[] { (byte) 0b11000010,
+        uint32s.put((long) 10872, new byte[] { (byte) 0b11000010,
                 0b00101010, 0b01111000 });
-        uint32s.put(Long.valueOf((1 << 16) - 1), new byte[] {
+        uint32s.put((long) ((1 << 16) - 1), new byte[] {
                 (byte) 0b11000010, (byte) 0b11111111, (byte) 0b11111111 });
-        uint32s.put(Long.valueOf((1 << 24) - 1), new byte[] {
+        uint32s.put((long) ((1 << 24) - 1), new byte[] {
                 (byte) 0b11000011, (byte) 0b11111111, (byte) 0b11111111,
                 (byte) 0b11111111 });
         uint32s.put(max, new byte[] { (byte) 0b11000100, (byte) 0b11111111,
@@ -124,6 +124,7 @@ public class DecoderTest {
             for (int i = 2; i < value.length; i++) {
                 value[i] = (byte) 0b11111111;
             }
+            uints.put(key, value);
         }
         return uints;
 
@@ -132,30 +133,30 @@ public class DecoderTest {
     private static Map<Long, byte[]> pointers() {
         Map<Long, byte[]> pointers = new HashMap<Long, byte[]>();
 
-        pointers.put(Long.valueOf(0), new byte[] { 0b00100000, 0b00000000 });
-        pointers.put(Long.valueOf(5), new byte[] { 0b00100000, 0b00000101 });
-        pointers.put(Long.valueOf(10), new byte[] { 0b00100000, 0b00001010 });
-        pointers.put(Long.valueOf((1 << 10) - 1), new byte[] { 0b00100011,
+        pointers.put((long) 0, new byte[] { 0b00100000, 0b00000000 });
+        pointers.put((long) 5, new byte[] { 0b00100000, 0b00000101 });
+        pointers.put((long) 10, new byte[] { 0b00100000, 0b00001010 });
+        pointers.put((long) ((1 << 10) - 1), new byte[] { 0b00100011,
                 (byte) 0b11111111, });
-        pointers.put(Long.valueOf(3017), new byte[] { 0b00101000, 0b00000011,
+        pointers.put((long) 3017, new byte[] { 0b00101000, 0b00000011,
                 (byte) 0b11001001 });
-        pointers.put(Long.valueOf((1 << 19) - 5), new byte[] { 0b00101111,
+        pointers.put((long) ((1 << 19) - 5), new byte[] { 0b00101111,
                 (byte) 0b11110111, (byte) 0b11111011 });
-        pointers.put(Long.valueOf((1 << 19) + (1 << 11) - 1), new byte[] {
+        pointers.put((long) ((1 << 19) + (1 << 11) - 1), new byte[] {
                 0b00101111, (byte) 0b11111111, (byte) 0b11111111 });
-        pointers.put(Long.valueOf((1 << 27) - 2), new byte[] { 0b00110111,
+        pointers.put((long) ((1 << 27) - 2), new byte[] { 0b00110111,
                 (byte) 0b11110111, (byte) 0b11110111, (byte) 0b11111110 });
         pointers.put(
-                Long.valueOf((((long) 1) << 27) + (1 << 19) + (1 << 11) - 1),
+                (((long) 1) << 27) + (1 << 19) + (1 << 11) - 1,
                 new byte[] { 0b00110111, (byte) 0b11111111, (byte) 0b11111111,
                         (byte) 0b11111111 });
-        pointers.put(Long.valueOf((((long) 1) << 32) - 1), new byte[] {
+        pointers.put((((long) 1) << 32) - 1, new byte[] {
                 0b00111000, (byte) 0b11111111, (byte) 0b11111111,
                 (byte) 0b11111111, (byte) 0b11111111 });
         return pointers;
     }
 
-    public Map<String, byte[]> strings() {
+    Map<String, byte[]> strings() {
         Map<String, byte[]> strings = new HashMap<String, byte[]>();
 
         this.addTestString(strings, (byte) 0b01000000, "");
@@ -184,7 +185,7 @@ public class DecoderTest {
 
     }
 
-    public Map<byte[], byte[]> bytes() {
+    Map<byte[], byte[]> bytes() {
         Map<byte[], byte[]> bytes = new HashMap<byte[], byte[]>();
 
         Map<String, byte[]> strings = this.strings();
@@ -200,7 +201,7 @@ public class DecoderTest {
     }
 
     private String xString(int length) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < length; i++) {
             sb.append("x");
         }
@@ -222,7 +223,7 @@ public class DecoderTest {
         tests.put(str, bytes);
     }
 
-    public Map<Double, byte[]> doubles() {
+    Map<Double, byte[]> doubles() {
         Map<Double, byte[]> doubles = new HashMap<Double, byte[]>();
         this.addTestDouble(doubles, (byte) 0b01110001, "-1073741824.12457");
         this.addTestDouble(doubles, (byte) 0b01110000, "1073741824.12457");
@@ -243,7 +244,7 @@ public class DecoderTest {
         tests.put(new Double(str), bytes);
     }
 
-    public Map<Boolean, byte[]> booleans() {
+    Map<Boolean, byte[]> booleans() {
         Map<Boolean, byte[]> booleans = new HashMap<Boolean, byte[]>();
 
         booleans.put(Boolean.FALSE, new byte[] { 0b00000000, 0b00000111 });
@@ -251,7 +252,7 @@ public class DecoderTest {
         return booleans;
     }
 
-    public Map<ObjectNode, byte[]> maps() {
+    Map<ObjectNode, byte[]> maps() {
         Map<ObjectNode, byte[]> maps = new HashMap<ObjectNode, byte[]>();
 
         ObjectMapper om = new ObjectMapper();
@@ -314,7 +315,7 @@ public class DecoderTest {
         return maps;
     }
 
-    public Map<ArrayNode, byte[]> arrays() {
+    Map<ArrayNode, byte[]> arrays() {
         Map<ArrayNode, byte[]> arrays = new HashMap<ArrayNode, byte[]>();
         ObjectMapper om = new ObjectMapper();
 
@@ -399,7 +400,7 @@ public class DecoderTest {
         this.testTypeDecoding(Type.ARRAY, this.arrays());
     }
 
-    public <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
+    <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
             throws MaxMindDbException, IOException {
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {

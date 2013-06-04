@@ -9,20 +9,20 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
 public class Reader {
-    private static int DATA_SECTION_SEPARATOR_SIZE = 16;
-    private static byte METADATE_START_MARKER[] = { (byte) 0xAB, (byte) 0xCD,
+    private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
+    private static final byte[] METADATA_START_MARKER = { (byte) 0xAB, (byte) 0xCD,
             (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.', 'c', 'o', 'm' };
 
-    private static final boolean DEBUG = false;
+    private final boolean DEBUG;
     private final Decoder decoder;
     private final Metadata metadata;
-    private final long dataSectionEnd;
     private final FileChannel fc;
+    private final RandomAccessFile raf;
 
     public Reader(File database) throws MaxMindDbException, IOException {
-
-        RandomAccessFile raf = new RandomAccessFile(database, "r");
-        this.fc = raf.getChannel();
+        this.DEBUG = System.getenv().get("MAXMIND_DB_READER_DEBUG") != null;
+        this.raf = new RandomAccessFile(database, "r");
+        this.fc = this.raf.getChannel();
         // XXX - we will want
         // MappedByteBuffer in = fc.map(FileChannel.MapMode.READ_ONLY, 0,
         // fc.size());
@@ -49,9 +49,6 @@ public class Reader {
                             + database.getName()
                             + "). Is this a valid MaxMind DB file?");
         }
-
-        // XXX - right?
-        this.dataSectionEnd = start - METADATE_START_MARKER.length;
 
         Decoder metadataDecoder = new Decoder(this.fc, 0);
 
@@ -159,7 +156,7 @@ public class Reader {
     private long[] splitNodeIntoRecords(ByteBuffer bytes)
             throws MaxMindDbException {
         long[] nodes = new long[2];
-        switch (this.metadata.recordSize.intValue()) {
+        switch (this.metadata.recordSize) {
             case 24:
                 nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 0,
                         3));
@@ -215,11 +212,11 @@ public class Reader {
     private long findMetadataStart() throws IOException {
         long fileSize = this.fc.size();
 
-        FILE: for (long i = 0; i < fileSize - METADATE_START_MARKER.length + 1; i++) {
-            for (int j = 0; j < METADATE_START_MARKER.length; j++) {
+        FILE: for (long i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
+            for (int j = 0; j < METADATA_START_MARKER.length; j++) {
                 ByteBuffer b = ByteBuffer.wrap(new byte[1]);
                 this.fc.read(b, fileSize - i - j - 1);
-                if (b.get(0) != METADATE_START_MARKER[METADATE_START_MARKER.length
+                if (b.get(0) != METADATA_START_MARKER[METADATA_START_MARKER.length
                         - j - 1]) {
                     continue FILE;
                 }

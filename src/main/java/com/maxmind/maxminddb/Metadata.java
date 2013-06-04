@@ -6,17 +6,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 // XXX - if we make this public, add getters
 class Metadata {
-    Integer binaryFormatMajorVersion;
-    Integer binaryFormatMinorVersion;
-    BigInteger buildEpoch;
-    String databaseType;
-    JsonNode description;
-    Integer ipVersion;
-    Long nodeCount;
-    Long recordSize;
-    int nodeByteSize;
-    long searchTreeSize;
-    JsonNode languages;
+    final int binaryFormatMajorVersion;
+    final int binaryFormatMinorVersion;
+    private final BigInteger buildEpoch;
+    final String databaseType;
+    final JsonNode description;
+    final int ipVersion;
+    final long nodeCount;
+    final int recordSize;
+    final int nodeByteSize;
+    final long searchTreeSize;
+    final JsonNode languages;
 
     // XXX - think about how I want to construct this. Maybe look at how JSON
     // parsers deal with types
@@ -31,8 +31,8 @@ class Metadata {
         this.description = metadata.get("description");
         this.ipVersion = metadata.get("ip_version").asInt();
         this.nodeCount = metadata.get("node_count").asLong();
-        this.recordSize = metadata.get("record_size").asLong();
-        this.nodeByteSize = (int) (this.recordSize / 4);
+        this.recordSize = metadata.get("record_size").asInt();
+        this.nodeByteSize = this.recordSize / 4;
         this.searchTreeSize = this.nodeCount * this.nodeByteSize;
 
     }

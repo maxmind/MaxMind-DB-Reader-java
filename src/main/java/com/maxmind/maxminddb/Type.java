@@ -8,7 +8,7 @@ enum Type {
         return Type.values()[i];
     }
 
-    public static Type get(byte b) {
+    private static Type get(byte b) {
         // bytes are signed, but we want to treat them as unsigned here
         // XXX - Type.values() might be expensive. Consider caching it.
         return Type.get(b & 0xFF);
