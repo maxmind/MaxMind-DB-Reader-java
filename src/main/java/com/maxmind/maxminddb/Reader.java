@@ -20,9 +20,9 @@ public class Reader {
     private final long dataSectionEnd;
     private final FileChannel fc;
 
-    public Reader(File dataSource) throws MaxMindDbException, IOException {
+    public Reader(File database) throws MaxMindDbException, IOException {
 
-        RandomAccessFile raf = new RandomAccessFile(dataSource, "r");
+        RandomAccessFile raf = new RandomAccessFile(database, "r");
         this.fc = raf.getChannel();
         // XXX - we will want
         // MappedByteBuffer in = fc.map(FileChannel.MapMode.READ_ONLY, 0,
@@ -47,7 +47,7 @@ public class Reader {
         if (start < 0) {
             throw new MaxMindDbException(
                     "Could not find a MaxMind DB metadata marker in this file ("
-                            + dataSource.getName()
+                            + database.getName()
                             + "). Is this a valid MaxMind DB file?");
         }
 
@@ -68,7 +68,7 @@ public class Reader {
     }
 
     // FIXME - figure out what we are returning
-    Object dataForAddress(InetAddress address) throws MaxMindDbException,
+    public Object get(InetAddress address) throws MaxMindDbException,
             IOException {
 
         long pointer = this.findAddressInTree(address);

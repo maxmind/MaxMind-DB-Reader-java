@@ -64,7 +64,7 @@ public class ReaderTest {
 
             assertEquals("found expected data record for " + address + " in "
                     + fileName, data,
-                    reader.dataForAddress(InetAddress.getByName(address)));
+                    reader.get(InetAddress.getByName(address)));
         }
 
         Map<String, String> pairs = new HashMap<String, String>();
@@ -81,11 +81,11 @@ public class ReaderTest {
 
             assertEquals("found expected data record for " + address + " in "
                     + fileName, data,
-                    reader.dataForAddress(InetAddress.getByName(address)));
+                    reader.get(InetAddress.getByName(address)));
         }
 
         for (String ip : new String[] { "1.1.1.33", "255.254.253.123" }) {
-            assertNull(reader.dataForAddress(InetAddress.getByName(ip)));
+            assertNull(reader.get(InetAddress.getByName(ip)));
         }
     }
 
@@ -101,7 +101,7 @@ public class ReaderTest {
 
             assertEquals("found expected data record for " + address + " in "
                     + fileName, data,
-                    reader.dataForAddress(InetAddress.getByName(address)));
+                    reader.get(InetAddress.getByName(address)));
         }
 
         Map<String, String> pairs = new HashMap<String, String>();
@@ -120,11 +120,11 @@ public class ReaderTest {
 
             assertEquals("found expected data record for " + address + " in "
                     + fileName, data,
-                    reader.dataForAddress(InetAddress.getByName(address)));
+                    reader.get(InetAddress.getByName(address)));
         }
 
         for (String ip : new String[] { "1.1.1.33", "255.254.253.123", "89fa::" }) {
-            assertNull(reader.dataForAddress(InetAddress.getByName(ip)));
+            assertNull(reader.get(InetAddress.getByName(ip)));
         }
 
     }
