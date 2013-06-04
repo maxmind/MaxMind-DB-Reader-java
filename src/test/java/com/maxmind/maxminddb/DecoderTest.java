@@ -8,9 +8,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -385,9 +386,10 @@ public class DecoderTest {
 
             String desc = "decoded " + type.name() + " - " + expect;
             FileChannel fc = DecoderTest.getFileChannel(input);
+            MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
             try {
 
-                Decoder decoder = new Decoder(fc, 0);
+                Decoder decoder = new Decoder(mmap, 0);
                 decoder.POINTER_TEST_HACK = true;
 
                 // XXX - this could be streamlined
@@ -424,62 +426,6 @@ public class DecoderTest {
                     fc.close();
                 }
             }
-        }
-    }
-
-    @Test
-    public void testDecodeInt32() {
-        Map<Integer, byte[]> map = int32();
-        for (Map.Entry<Integer, byte[]> entry : map.entrySet()) {
-            byte[] bytes = Arrays.copyOfRange(entry.getValue(), 2,
-                    entry.getValue().length);
-            assertEquals("decode int32: " + entry.getKey(), entry.getKey()
-                    .intValue(), Decoder.decodeInt32(bytes).intValue());
-        }
-    }
-
-    @Test
-    public void testDecodeUint16() {
-        Map<Integer, byte[]> map = uint16();
-        for (Map.Entry<Integer, byte[]> entry : map.entrySet()) {
-            byte[] bytes = Arrays.copyOfRange(entry.getValue(), 1,
-                    entry.getValue().length);
-            assertEquals("decode uint16: " + entry.getKey(), entry.getKey()
-                    .intValue(), Decoder.decodeUint16(bytes).intValue());
-        }
-    }
-
-    // FIXME - these tests should be combined using generics
-    @Test
-    public void testDecodeUint32() {
-        Map<Long, byte[]> map = uint32();
-        for (Map.Entry<Long, byte[]> entry : map.entrySet()) {
-            byte[] bytes = Arrays.copyOfRange(entry.getValue(), 1,
-                    entry.getValue().length);
-            assertEquals("decode uint32: " + entry.getKey(), entry.getKey()
-                    .longValue(), Decoder.decodeUint32(bytes).longValue());
-        }
-    }
-
-    @Test
-    public void testDecodeUint64() {
-        Map<BigInteger, byte[]> map = largeUint(64);
-        for (Map.Entry<BigInteger, byte[]> entry : map.entrySet()) {
-            byte[] bytes = Arrays.copyOfRange(entry.getValue(), 2,
-                    entry.getValue().length);
-            assertEquals("decode uint64: " + entry.getKey(), entry.getKey(),
-                    Decoder.decodeUint64(bytes).bigIntegerValue());
-        }
-    }
-
-    @Test
-    public void testDecodeUint128() {
-        Map<BigInteger, byte[]> map = largeUint(128);
-        for (Map.Entry<BigInteger, byte[]> entry : map.entrySet()) {
-            byte[] bytes = Arrays.copyOfRange(entry.getValue(), 2,
-                    entry.getValue().length);
-            assertEquals("decode uint128: " + entry.getKey(), entry.getKey(),
-                    Decoder.decodeUint128(bytes).bigIntegerValue());
         }
     }
 

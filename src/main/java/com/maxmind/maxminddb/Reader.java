@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 import java.util.Arrays;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,14 +23,13 @@ public class Reader {
     private final Metadata metadata;
     private final FileChannel fc;
     private final RandomAccessFile raf;
+    private final MappedByteBuffer mmap;
 
     public Reader(File database) throws MaxMindDbException, IOException {
         this.DEBUG = System.getenv().get("MAXMIND_DB_READER_DEBUG") != null;
         this.raf = new RandomAccessFile(database, "r");
         this.fc = this.raf.getChannel();
-        // XXX - we will want
-        // MappedByteBuffer in = fc.map(FileChannel.MapMode.READ_ONLY, 0,
-        // fc.size());
+        this.mmap = this.fc.map(MapMode.READ_ONLY, 0, this.fc.size());
 
         /*
          * We need to make sure that whatever chunk we read will have the
@@ -53,12 +54,11 @@ public class Reader {
                             + "). Is this a valid MaxMind DB file?");
         }
 
-        Decoder metadataDecoder = new Decoder(this.fc, 0);
+        Decoder metadataDecoder = new Decoder(this.mmap, 0);
 
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
 
-        this.decoder = new Decoder(this.fc, this.metadata.searchTreeSize
-                + DATA_SECTION_SEPARATOR_SIZE);
+        this.decoder = new Decoder(this.mmap, this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
 
         if (this.DEBUG) {
             Log.debug(this.metadata.toString());

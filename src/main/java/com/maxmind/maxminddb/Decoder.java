@@ -3,7 +3,6 @@ package com.maxmind.maxminddb;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,7 +18,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 public class Decoder {
-    private final FileChannel in;
 
     private final boolean DEBUG;
     // XXX - This is only for unit testings. We should possibly make a
@@ -29,6 +27,8 @@ public class Decoder {
 
     private final ObjectMapper objectMapper;
 
+    private final ByteBuffer mmap;
+
     class Result {
         private final JsonNode node;
         private long offset;
@@ -36,7 +36,6 @@ public class Decoder {
         Result(JsonNode node, long offset) {
             this.node = node;
             this.offset = offset;
-
         }
 
         JsonNode getNode() {
@@ -53,22 +52,22 @@ public class Decoder {
 
     }
 
-    public Decoder(FileChannel in, long pointerBase) {
-        this.in = in;
+    public Decoder(ByteBuffer mmap, long pointerBase) {
         this.pointerBase = pointerBase;
+        this.mmap = mmap;
         this.objectMapper = new ObjectMapper();
         this.DEBUG = System.getenv().get("MAXMIND_DB_DECODER_DEBUG") != null;
     }
 
     public Result decode(long offset) throws MaxMindDbException, IOException {
-        this.in.position(offset);
+        this.mmap.position((int) offset);
+
         if (this.DEBUG) {
             Log.debug("Offset", String.valueOf(offset));
         }
 
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[1]);
-        this.in.read(buffer);
-        int ctrlByte = 0xFF & buffer.get(0);
+        int ctrlByte = 0xFF & this.mmap.get();
+
         offset++;
 
         if (this.DEBUG) {
@@ -96,9 +95,7 @@ public class Decoder {
         }
 
         if (type.equals(Type.EXTENDED)) {
-            buffer = ByteBuffer.wrap(new byte[1]);
-            this.in.read(buffer);
-            int nextByte = buffer.get(0);
+            int nextByte = this.mmap.get();
 
             if (this.DEBUG) {
                 Log.debug("Next byte", nextByte);
@@ -147,35 +144,31 @@ public class Decoder {
             Log.debug("Size", size);
         }
 
-        buffer = ByteBuffer.wrap(new byte[size]);
-        this.in.read(buffer);
-        byte[] bytes = buffer.array();
-
         long new_offset = offset + size;
         switch (type) {
             case UTF8_STRING:
-                TextNode s = new TextNode(Decoder.decodeString(bytes));
+                TextNode s = new TextNode(this.decodeString(size));
                 return new Result(s, new_offset);
             case DOUBLE:
-                DoubleNode d = Decoder.decodeDouble(bytes);
+                DoubleNode d = this.decodeDouble(size);
                 return new Result(d, new_offset);
             case BYTES:
-                BinaryNode b = new BinaryNode(Decoder.decodeBytes(bytes));
+                BinaryNode b = new BinaryNode(this.getByteArray(size));
                 return new Result(b, new_offset);
             case UINT16:
-                IntNode i = Decoder.decodeUint16(bytes);
+                IntNode i = this.decodeUint16(size);
                 return new Result(i, new_offset);
             case UINT32:
-                LongNode l = Decoder.decodeUint32(bytes);
+                LongNode l = this.decodeUint32(size);
                 return new Result(l, new_offset);
             case INT32:
-                IntNode int32 = Decoder.decodeInt32(bytes);
+                IntNode int32 = this.decodeInt32(size);
                 return new Result(int32, new_offset);
             case UINT64:
-                BigIntegerNode bi = Decoder.decodeUint64(bytes);
+                BigIntegerNode bi = this.decodeBigInteger(size);
                 return new Result(bi, new_offset);
             case UINT128:
-                BigIntegerNode uint128 = Decoder.decodeUint128(bytes);
+                BigIntegerNode uint128 = this.decodeBigInteger(size);
                 return new Result(uint128, new_offset);
             default:
                 throw new MaxMindDbException("Unknown or unexpected type: "
@@ -187,7 +180,7 @@ public class Decoder {
     private final long[] pointerValueOffset = { 0, 0, 1 << 11,
             (((long) 1) << 19) + ((1) << 11), 0 };
 
-    private Result decodePointer(int ctrlByte, long offset) throws IOException {
+    private Result decodePointer(int ctrlByte, long offset) {
 
         int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
 
@@ -195,17 +188,9 @@ public class Decoder {
             Log.debug("Pointer size", String.valueOf(pointerSize));
         }
 
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[pointerSize + 1]);
+        int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
 
-        this.in.read(buffer, this.in.position() - 1);
-
-        if (this.DEBUG) {
-            Log.debug("Buffer", buffer);
-        }
-
-        buffer.put(0, pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7));
-
-        long packed = Util.decodeLong(buffer.array());
+        long packed = this.decodeLong(base, pointerSize);
 
         if (this.DEBUG) {
             Log.debug("Packed pointer", String.valueOf(packed));
@@ -224,36 +209,55 @@ public class Decoder {
         return new Result(new LongNode(pointer), offset + pointerSize);
     }
 
-    private static String decodeString(byte[] bytes) {
-        return new String(bytes, Charset.forName("UTF-8"));
+    private String decodeString(int size) {
+        ByteBuffer buffer = this.mmap.slice();
+        buffer.limit(size);
+        return Charset.forName("UTF-8").decode(buffer).toString();
     }
 
-    // XXX - nop
-    private static byte[] decodeBytes(byte[] bytes) {
-        return bytes;
+    IntNode decodeUint16(int size) {
+        return new IntNode(this.decodeInteger(size));
     }
 
-    static IntNode decodeUint16(byte[] bytes) {
-        return new IntNode(Util.decodeInteger(bytes));
+    IntNode decodeInt32(int size) {
+        return new IntNode(this.decodeInteger(size));
     }
 
-    static IntNode decodeInt32(byte[] bytes) {
-        return new IntNode(Util.decodeInteger(bytes));
+    private int decodeInteger(int size) {
+        return this.decodeInteger(0, size);
     }
 
-    static LongNode decodeUint32(byte[] bytes) {
-        return new LongNode(Util.decodeLong(bytes));
+    private int decodeInteger(int base, int size) {
+        int integer = base;
+        for (int i = 0; i < size; i++) {
+            integer = (integer << 8) | (this.mmap.get() & 0xFF);
+        }
+        return integer;
     }
 
-    static BigIntegerNode decodeUint64(byte[] bytes) {
+    LongNode decodeUint32(int size) {
+        return new LongNode(this.decodeLong(size));
+    }
+
+    long decodeLong(int size) {
+        return this.decodeLong(0, size);
+    }
+
+    long decodeLong(long base, int size) {
+        long longInt = base;
+        for (int i = 0; i < size; i++) {
+            longInt = (longInt << 8) | (this.mmap.get() & 0xFF);
+        }
+        return longInt;
+    }
+
+    BigIntegerNode decodeBigInteger(int size) {
+        byte[] bytes = this.getByteArray(size);
         return new BigIntegerNode(new BigInteger(1, bytes));
     }
 
-    static BigIntegerNode decodeUint128(byte[] bytes) {
-        return new BigIntegerNode(new BigInteger(1, bytes));
-    }
-
-    private static DoubleNode decodeDouble(byte[] bytes) {
+    private DoubleNode decodeDouble(int size) {
+        byte[] bytes = this.getByteArray(size);
         return new DoubleNode(Double.parseDouble(new String(bytes, Charset
                 .forName("US-ASCII"))));
     }
@@ -331,22 +335,24 @@ public class Decoder {
 
         int bytesToRead = size - 28;
 
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[bytesToRead]);
-        this.in.read(buffer);
-
         if (size == 29) {
-            int i = Util.decodeInteger(buffer.array());
+            int i = this.decodeInteger(bytesToRead);
             size = 29 + i;
         } else if (size == 30) {
-            int i = Util.decodeInteger(buffer.array());
+            int i = this.decodeInteger(bytesToRead);
             size = 285 + i;
         } else {
-            buffer.put(0, (byte) (buffer.get(0) & 0x0F));
-            int i = Util.decodeInteger(buffer.array());
+            int i = this.decodeInteger(bytesToRead)
+                    & (0x0FFFFFFF >>> (32 - (8 * bytesToRead)));
             size = 65821 + i;
         }
 
         return new long[] { size, offset + bytesToRead };
     }
 
+    private byte[] getByteArray(int length) {
+        byte[] bytes = new byte[length];
+        this.mmap.get(bytes);
+        return bytes;
+    }
 }

@@ -5,7 +5,9 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 
 import org.junit.Test;
 
@@ -19,8 +21,9 @@ public class PointerTest {
         File file = new File("test-data/pointer.bin");
         RandomAccessFile raf = new RandomAccessFile(file, "r");
         FileChannel fc = raf.getChannel();
+        MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
         try {
-            Decoder decoder = new Decoder(fc, 0);
+            Decoder decoder = new Decoder(mmap, 0);
 
             ObjectMapper om = new ObjectMapper();
 
