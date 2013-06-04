@@ -393,31 +393,31 @@ public class DecoderTest {
                 // XXX - this could be streamlined
                 if (type.equals(Type.BYTES)) {
                     assertArrayEquals(desc, (byte[]) expect, decoder.decode(0)
-                            .getObject().binaryValue());
+                            .getNode().binaryValue());
                 } else if (type.equals(Type.ARRAY)) {
-                    assertEquals(desc, expect, decoder.decode(0).getObject());
+                    assertEquals(desc, expect, decoder.decode(0).getNode());
                 } else if (type.equals(Type.UINT16) || type.equals(Type.INT32)) {
-                    assertEquals(desc, expect, decoder.decode(0).getObject()
+                    assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asInt());
                 } else if (type.equals(Type.UINT32)
                         || type.equals(Type.POINTER)) {
-                    assertEquals(desc, expect, decoder.decode(0).getObject()
+                    assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asLong());
                 } else if (type.equals(Type.UINT64)
                         || type.equals(Type.UINT128)) {
-                    assertEquals(desc, expect, decoder.decode(0).getObject()
+                    assertEquals(desc, expect, decoder.decode(0).getNode()
                             .bigIntegerValue());
                 } else if (type.equals(Type.DOUBLE)) {
-                    assertEquals(desc, expect, decoder.decode(0).getObject()
+                    assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asDouble());
                 } else if (type.equals(Type.UTF8_STRING)) {
-                    assertEquals(desc, expect, decoder.decode(0).getObject()
+                    assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asText());
                 } else if (type.equals(Type.BOOLEAN)) {
-                    assertEquals(desc, expect, decoder.decode(0).getObject()
+                    assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asBoolean());
                 } else {
-                    assertEquals(desc, expect, decoder.decode(0).getObject());
+                    assertEquals(desc, expect, decoder.decode(0).getNode());
                 }
             } finally {
                 if (fc != null) {

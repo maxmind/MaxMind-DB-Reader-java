@@ -55,7 +55,7 @@ public class Reader {
 
         Decoder metadataDecoder = new Decoder(this.fc, 0);
 
-        this.metadata = new Metadata(metadataDecoder.decode(start).getObject());
+        this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
 
         this.decoder = new Decoder(this.fc, this.metadata.searchTreeSize
                 + DATA_SECTION_SEPARATOR_SIZE);
@@ -200,7 +200,7 @@ public class Reader {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        return this.decoder.decode(resolved).getObject();
+        return this.decoder.decode(resolved).getNode();
     }
 
     /*

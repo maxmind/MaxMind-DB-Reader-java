@@ -26,27 +26,27 @@ public class PointerTest {
 
             ObjectNode map = om.createObjectNode();
             map.put("long_key", "long_value1");
-            assertEquals(map, decoder.decode(0).getObject());
+            assertEquals(map, decoder.decode(0).getNode());
 
             map = om.createObjectNode();
             map.put("long_key", "long_value2");
-            assertEquals(map, decoder.decode(22).getObject());
+            assertEquals(map, decoder.decode(22).getNode());
 
             map = om.createObjectNode();
             map.put("long_key2", "long_value1");
-            assertEquals(map, decoder.decode(37).getObject());
+            assertEquals(map, decoder.decode(37).getNode());
 
             map = om.createObjectNode();
             map.put("long_key2", "long_value2");
-            assertEquals(map, decoder.decode(50).getObject());
+            assertEquals(map, decoder.decode(50).getNode());
 
             map = om.createObjectNode();
             map.put("long_key", "long_value1");
-            assertEquals(map, decoder.decode(55).getObject());
+            assertEquals(map, decoder.decode(55).getNode());
 
             map = om.createObjectNode();
             map.put("long_key2", "long_value2");
-            assertEquals(map, decoder.decode(57).getObject());
+            assertEquals(map, decoder.decode(57).getNode());
         } finally {
             if (fc != null) {
                 fc.close();

@@ -30,17 +30,17 @@ public class Decoder {
     private final ObjectMapper objectMapper;
 
     class Result {
-        private final JsonNode obj;
+        private final JsonNode node;
         private long offset;
 
-        Result(JsonNode obj, long offset) {
-            this.obj = obj;
+        Result(JsonNode node, long offset) {
+            this.node = node;
             this.offset = offset;
 
         }
 
-        JsonNode getObject() {
-            return this.obj;
+        JsonNode getNode() {
+            return this.node;
         }
 
         long getOffset() {
@@ -90,7 +90,7 @@ public class Decoder {
             if (this.POINTER_TEST_HACK) {
                 return pointer;
             }
-            Result result = this.decode((pointer.getObject().asLong()));
+            Result result = this.decode((pointer.getNode().asLong()));
             result.setOffset(pointer.getOffset());
             return result;
         }
@@ -277,9 +277,9 @@ public class Decoder {
             offset = r.getOffset();
 
             if (this.DEBUG) {
-                Log.debug("Value " + i, r.getObject().toString());
+                Log.debug("Value " + i, r.getNode().toString());
             }
-            array.add(r.getObject());
+            array.add(r.getNode());
         }
 
         if (this.DEBUG) {
@@ -299,11 +299,11 @@ public class Decoder {
 
         for (int i = 0; i < size; i++) {
             Result keyResult = this.decode(offset);
-            String key = keyResult.getObject().asText();
+            String key = keyResult.getNode().asText();
             offset = keyResult.getOffset();
 
             Result valueResult = this.decode(offset);
-            JsonNode value = valueResult.getObject();
+            JsonNode value = valueResult.getNode();
             offset = valueResult.getOffset();
 
             if (this.DEBUG) {
