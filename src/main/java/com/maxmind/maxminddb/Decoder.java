@@ -32,10 +32,8 @@ public class Decoder {
     class Result {
         private final JsonNode obj;
         private long offset;
-        private final Type type;
 
-        Result(JsonNode obj, Type t, long offset) {
-            this.type = t;
+        Result(JsonNode obj, long offset) {
             this.obj = obj;
             this.offset = offset;
 
@@ -159,28 +157,28 @@ public class Decoder {
         switch (type) {
             case UTF8_STRING:
                 TextNode s = new TextNode(Decoder.decodeString(bytes));
-                return new Result(s, type, new_offset);
+                return new Result(s, new_offset);
             case DOUBLE:
                 DoubleNode d = Decoder.decodeDouble(bytes);
-                return new Result(d, type, new_offset);
+                return new Result(d, new_offset);
             case BYTES:
                 BinaryNode b = new BinaryNode(Decoder.decodeBytes(bytes));
-                return new Result(b, type, new_offset);
+                return new Result(b, new_offset);
             case UINT16:
                 IntNode i = Decoder.decodeUint16(bytes);
-                return new Result(i, type, new_offset);
+                return new Result(i, new_offset);
             case UINT32:
                 LongNode l = Decoder.decodeUint32(bytes);
-                return new Result(l, type, new_offset);
+                return new Result(l, new_offset);
             case INT32:
                 IntNode int32 = Decoder.decodeInt32(bytes);
-                return new Result(int32, type, new_offset);
+                return new Result(int32, new_offset);
             case UINT64:
                 BigIntegerNode bi = Decoder.decodeUint64(bytes);
-                return new Result(bi, type, new_offset);
+                return new Result(bi, new_offset);
             case UINT128:
                 BigIntegerNode uint128 = Decoder.decodeUint128(bytes);
-                return new Result(uint128, type, new_offset);
+                return new Result(uint128, new_offset);
             default:
                 throw new MaxMindDbException("Unknown or unexpected type: "
                         + type.name());
@@ -207,8 +205,7 @@ public class Decoder {
             Log.debug("Buffer", buffer);
         }
 
-        buffer.put(0, pointerSize == 4 ? (byte) 0
-                : (byte) (ctrlByte & 0x7));
+        buffer.put(0, pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7));
 
         long packed = Util.decodeLong(buffer.array());
 
@@ -226,8 +223,7 @@ public class Decoder {
             Log.debug("Pointer to", String.valueOf(pointer));
         }
 
-        return new Result(new LongNode(pointer), Type.POINTER, offset
-                + pointerSize);
+        return new Result(new LongNode(pointer), offset + pointerSize);
     }
 
     private static String decodeString(byte[] bytes) {
@@ -260,14 +256,14 @@ public class Decoder {
     }
 
     private static DoubleNode decodeDouble(byte[] bytes) {
-        return new DoubleNode(Double.parseDouble(new String(bytes,
-                Charset.forName("US-ASCII"))));
+        return new DoubleNode(Double.parseDouble(new String(bytes, Charset
+                .forName("US-ASCII"))));
     }
 
     private Result decodeBoolean(long size, long offset) {
         BooleanNode b = size == 0 ? BooleanNode.FALSE : BooleanNode.TRUE;
 
-        return new Result(b, Type.BOOLEAN, offset);
+        return new Result(b, offset);
     }
 
     private Result decodeArray(long size, long offset)
@@ -292,7 +288,7 @@ public class Decoder {
             Log.debug("Decoded array", array.toString());
         }
 
-        return new Result(array, Type.ARRAY, offset);
+        return new Result(array, offset);
     }
 
     private Result decodeMap(long size, long offset) throws MaxMindDbException,
@@ -323,7 +319,7 @@ public class Decoder {
             Log.debug("Decoded map", map.toString());
         }
 
-        return new Result(map, Type.MAP, offset);
+        return new Result(map, offset);
 
     }
 

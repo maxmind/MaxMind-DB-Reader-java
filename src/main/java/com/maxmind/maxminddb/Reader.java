@@ -10,8 +10,9 @@ import java.util.Arrays;
 
 public class Reader {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
-    private static final byte[] METADATA_START_MARKER = { (byte) 0xAB, (byte) 0xCD,
-            (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.', 'c', 'o', 'm' };
+    private static final byte[] METADATA_START_MARKER = { (byte) 0xAB,
+            (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
+            'c', 'o', 'm' };
 
     private final boolean DEBUG;
     private final Decoder decoder;
@@ -57,7 +58,7 @@ public class Reader {
         this.decoder = new Decoder(this.fc, this.metadata.searchTreeSize
                 + DATA_SECTION_SEPARATOR_SIZE);
 
-        if (DEBUG) {
+        if (this.DEBUG) {
             Log.debug(this.metadata.toString());
         }
     }
@@ -87,7 +88,7 @@ public class Reader {
             rawAddress = newAddress;
         }
 
-        if (DEBUG) {
+        if (this.DEBUG) {
             Log.debugNewLine();
             Log.debug("IP address", address);
             Log.debug("IP address", rawAddress);
@@ -105,7 +106,7 @@ public class Reader {
 
             long record = nodes[bit];
 
-            if (DEBUG) {
+            if (this.DEBUG) {
                 Log.debug("Nodes", Arrays.toString(nodes));
                 Log.debug("Bit #", i);
                 Log.debug("Bit value", bit);
@@ -115,20 +116,20 @@ public class Reader {
             }
 
             if (record == this.metadata.nodeCount) {
-                if (DEBUG) {
+                if (this.DEBUG) {
                     Log.debug("Record is empty");
                 }
                 return 0;
             }
 
             if (record >= this.metadata.nodeCount) {
-                if (DEBUG) {
+                if (this.DEBUG) {
                     Log.debug("Record is a data pointer");
                 }
                 return record;
             }
 
-            if (DEBUG) {
+            if (this.DEBUG) {
                 Log.debug("Record is a node number");
             }
 
@@ -147,7 +148,7 @@ public class Reader {
 
         this.fc.read(buffer);
 
-        if (DEBUG) {
+        if (this.DEBUG) {
             Log.debug("Node bytes", buffer);
         }
         return this.splitNodeIntoRecords(buffer);
@@ -188,7 +189,7 @@ public class Reader {
         long resolved = (pointer - this.metadata.nodeCount)
                 + this.metadata.searchTreeSize;
 
-        if (DEBUG) {
+        if (this.DEBUG) {
             long treeSize = this.metadata.searchTreeSize;
 
             Log.debug("Resolved data pointer", "( " + pointer + " - "
