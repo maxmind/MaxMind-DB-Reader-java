@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNull;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,13 +36,12 @@ public class ReaderTest {
         }
     }
 
-    private void testMetadata(Reader reader, Integer ipVersion, Long recordSize) {
+    private void testMetadata(Reader reader, int ipVersion, long recordSize) {
 
         Metadata metadata = reader.getMetadata();
 
-        assertEquals("major version", Integer.valueOf(2),
-                metadata.binaryFormatMajorVersion);
-        assertEquals(Integer.valueOf(0), metadata.binaryFormatMinorVersion);
+        assertEquals("major version", 2, metadata.binaryFormatMajorVersion);
+        assertEquals(0, metadata.binaryFormatMinorVersion);
         assertEquals(ipVersion, metadata.ipVersion);
         assertEquals("Test", metadata.databaseType);
         assertEquals("en", metadata.languages.get(0).asText());

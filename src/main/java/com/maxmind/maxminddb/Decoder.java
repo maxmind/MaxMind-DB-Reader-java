@@ -193,7 +193,7 @@ public class Decoder {
 
     private Result decodePointer(int ctrlByte, long offset) throws IOException {
 
-        int pointerSize = ((ctrlByte >>> 3) & 0b00000011) + 1;
+        int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
 
         if (this.DEBUG) {
             Log.debug("Pointer size", String.valueOf(pointerSize));
@@ -208,7 +208,7 @@ public class Decoder {
         }
 
         buffer.put(0, pointerSize == 4 ? (byte) 0
-                : (byte) (ctrlByte & 0b00000111));
+                : (byte) (ctrlByte & 0x7));
 
         long packed = Util.decodeLong(buffer.array());
 
@@ -329,7 +329,7 @@ public class Decoder {
 
     private long[] sizeFromCtrlByte(int ctrlByte, long offset)
             throws IOException {
-        int size = ctrlByte & 0b00011111;
+        int size = ctrlByte & 0x1f;
 
         if (size < 29) {
             return new long[] { size, offset };
