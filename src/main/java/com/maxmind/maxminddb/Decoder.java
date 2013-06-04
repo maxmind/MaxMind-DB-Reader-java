@@ -5,9 +5,18 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.BigIntegerNode;
+import com.fasterxml.jackson.databind.node.BinaryNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.fasterxml.jackson.databind.node.DoubleNode;
+import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.LongNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 public class Decoder {
     private final FileChannel in;
@@ -18,27 +27,30 @@ public class Decoder {
     boolean POINTER_TEST_HACK = false;
     private final long pointerBase;
 
+    private final ObjectMapper objectMapper;
+
     class Result {
-        private final Object obj;
-        private long new_offset;
+        private final JsonNode obj;
+        private long offset;
         private final Type type;
 
-        Result(Object obj, Type t, long new_offset) {
+        Result(JsonNode obj, Type t, long offset) {
             this.type = t;
             this.obj = obj;
-            this.new_offset = new_offset;
+            this.offset = offset;
+
         }
 
-        Object getObject() {
+        JsonNode getObject() {
             return this.obj;
         }
 
         long getOffset() {
-            return this.new_offset;
+            return this.offset;
         }
 
         void setOffset(long offset) {
-            this.new_offset = offset;
+            this.offset = offset;
         }
 
         Type getType() {
@@ -49,6 +61,7 @@ public class Decoder {
     public Decoder(FileChannel in, long pointerBase) {
         this.in = in;
         this.pointerBase = pointerBase;
+        this.objectMapper = new ObjectMapper();
     }
 
     // FIXME - Move most of this method to a switch statement
@@ -82,8 +95,7 @@ public class Decoder {
             if (this.POINTER_TEST_HACK) {
                 return pointer;
             }
-            Result result = this.decode(((Long) pointer.getObject())
-                    .longValue());
+            Result result = this.decode((pointer.getObject().asLong()));
             result.setOffset(pointer.getOffset());
             return result;
         }
@@ -148,28 +160,28 @@ public class Decoder {
         long new_offset = offset + size;
         switch (type) {
             case UTF8_STRING:
-                String s = this.decodeString(bytes);
+                TextNode s = new TextNode(this.decodeString(bytes));
                 return new Result(s, type, new_offset);
             case DOUBLE:
-                double d = this.decodeDouble(bytes);
+                DoubleNode d = this.decodeDouble(bytes);
                 return new Result(d, type, new_offset);
             case BYTES:
-                byte[] b = this.decodeBytes(bytes);
+                BinaryNode b = new BinaryNode(this.decodeBytes(bytes));
                 return new Result(b, type, new_offset);
             case UINT16:
-                int i = Decoder.decodeUint16(bytes);
+                IntNode i = Decoder.decodeUint16(bytes);
                 return new Result(i, type, new_offset);
             case UINT32:
-                long l = Decoder.decodeUint32(bytes);
+                LongNode l = Decoder.decodeUint32(bytes);
                 return new Result(l, type, new_offset);
             case INT32:
-                int int32 = Decoder.decodeInt32(bytes);
+                IntNode int32 = Decoder.decodeInt32(bytes);
                 return new Result(int32, type, new_offset);
             case UINT64:
-                BigInteger bi = Decoder.decodeUint64(bytes);
+                BigIntegerNode bi = Decoder.decodeUint64(bytes);
                 return new Result(bi, type, new_offset);
             case UINT128:
-                BigInteger uint128 = Decoder.decodeUint128(bytes);
+                BigIntegerNode uint128 = Decoder.decodeUint128(bytes);
                 return new Result(uint128, type, new_offset);
             default:
                 throw new MaxMindDbException("Unknown or unexpected type: "
@@ -216,7 +228,8 @@ public class Decoder {
             Log.debug("Pointer to", String.valueOf(pointer));
         }
 
-        return new Result(pointer, Type.POINTER, offset + pointerSize);
+        return new Result(new LongNode(pointer), Type.POINTER, offset
+                + pointerSize);
     }
 
     private String decodeString(byte[] bytes) {
@@ -228,32 +241,33 @@ public class Decoder {
         return bytes;
     }
 
-    static int decodeUint16(byte[] bytes) {
-        return Decoder.decodeInt32(bytes);
+    static IntNode decodeUint16(byte[] bytes) {
+        return new IntNode(Util.decodeInteger(bytes));
     }
 
-    static int decodeInt32(byte[] bytes) {
-        return Util.decodeInteger(bytes);
+    static IntNode decodeInt32(byte[] bytes) {
+        return new IntNode(Util.decodeInteger(bytes));
     }
 
-    static long decodeUint32(byte[] bytes) {
-        return Util.decodeLong(bytes);
+    static LongNode decodeUint32(byte[] bytes) {
+        return new LongNode(Util.decodeLong(bytes));
     }
 
-    static BigInteger decodeUint64(byte[] bytes) {
-        return new BigInteger(1, bytes);
+    static BigIntegerNode decodeUint64(byte[] bytes) {
+        return new BigIntegerNode(new BigInteger(1, bytes));
     }
 
-    static BigInteger decodeUint128(byte[] bytes) {
-        return new BigInteger(1, bytes);
+    static BigIntegerNode decodeUint128(byte[] bytes) {
+        return new BigIntegerNode(new BigInteger(1, bytes));
     }
 
-    private double decodeDouble(byte[] bytes) {
-        return new Double(new String(bytes, Charset.forName("US-ASCII")));
+    private DoubleNode decodeDouble(byte[] bytes) {
+        return new DoubleNode(new Double(new String(bytes,
+                Charset.forName("US-ASCII"))));
     }
 
     private Result decodeBoolean(long size, long offset) {
-        boolean b = size == 0 ? false : true;
+        BooleanNode b = size == 0 ? BooleanNode.FALSE : BooleanNode.TRUE;
 
         return new Result(b, Type.BOOLEAN, offset);
     }
@@ -264,20 +278,20 @@ public class Decoder {
             Log.debug("Array size", size);
         }
 
-        Object[] array = new Object[(int) size];
+        ArrayNode array = this.objectMapper.createArrayNode();
 
-        for (int i = 0; i < array.length; i++) {
+        for (int i = 0; i < size; i++) {
             Result r = this.decode(offset);
             offset = r.getOffset();
 
             if (this.DEBUG) {
                 Log.debug("Value " + i, r.getObject().toString());
             }
-            array[i] = r.getObject();
+            array.add(r.getObject());
         }
 
         if (this.DEBUG) {
-            Log.debug("Decoded array", Arrays.toString(array));
+            Log.debug("Decoded array", array.toString());
         }
 
         return new Result(array, Type.ARRAY, offset);
@@ -289,19 +303,19 @@ public class Decoder {
             Log.debug("Map size", size);
         }
 
-        Map<String, Object> map = new HashMap<String, Object>();
+        ObjectNode map = this.objectMapper.createObjectNode();
 
         for (int i = 0; i < size; i++) {
             Result keyResult = this.decode(offset);
-            String key = (String) keyResult.getObject();
+            String key = keyResult.getObject().asText();
             offset = keyResult.getOffset();
 
             Result valueResult = this.decode(offset);
-            Object value = valueResult.getObject();
+            JsonNode value = valueResult.getObject();
             offset = valueResult.getOffset();
 
             if (this.DEBUG) {
-                Log.debug("Key " + i, key);
+                Log.debug("Key " + i, key.toString());
                 Log.debug("Value " + i, value.toString());
             }
             map.put(key, value);

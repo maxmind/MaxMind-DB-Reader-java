@@ -7,7 +7,6 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
-import java.util.Map;
 
 public class Reader {
     private static int DATA_SECTION_SEPARATOR_SIZE = 16;
@@ -56,8 +55,7 @@ public class Reader {
 
         Decoder metadataDecoder = new Decoder(this.fc, 0);
 
-        this.metadata = new Metadata((Map<String, Object>) metadataDecoder
-                .decode(start).getObject());
+        this.metadata = new Metadata(metadataDecoder.decode(start).getObject());
 
         this.decoder = new Decoder(this.fc, this.metadata.searchTreeSize
                 + DATA_SECTION_SEPARATOR_SIZE);

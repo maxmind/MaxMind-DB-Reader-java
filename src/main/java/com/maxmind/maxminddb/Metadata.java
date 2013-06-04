@@ -1,8 +1,8 @@
 package com.maxmind.maxminddb;
 
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 // XXX - if we make this public, add getters
 class Metadata {
@@ -10,29 +10,28 @@ class Metadata {
     Integer binaryFormatMinorVersion;
     BigInteger buildEpoch;
     String databaseType;
-    Map<String, Object> description;
+    JsonNode description;
     Integer ipVersion;
     Long nodeCount;
     Long recordSize;
     int nodeByteSize;
     long searchTreeSize;
-    String[] languages;
+    JsonNode languages;
 
     // XXX - think about how I want to construct this. Maybe look at how JSON
     // parsers deal with types
-    public Metadata(Map<String, Object> metadata) {
-        this.binaryFormatMajorVersion = (Integer) metadata
-                .get("binary_format_major_version");
-        this.binaryFormatMinorVersion = (Integer) metadata
-                .get("binary_format_minor_version");
-        this.buildEpoch = (BigInteger) metadata.get("build_epoch");
-        this.databaseType = (String) metadata.get("database_type");
-        Object[] langs = (Object[]) metadata.get("languages");
-        this.languages = Arrays.copyOf(langs, langs.length, String[].class);
-        this.description = (Map<String, Object>) metadata.get("description");
-        this.ipVersion = (Integer) metadata.get("ip_version");
-        this.nodeCount = (Long) metadata.get("node_count");
-        this.recordSize = (Long) metadata.get("record_size");
+    public Metadata(JsonNode metadata) {
+        this.binaryFormatMajorVersion = metadata.get(
+                "binary_format_major_version").asInt();
+        this.binaryFormatMinorVersion = metadata.get(
+                "binary_format_minor_version").asInt();
+        this.buildEpoch = metadata.get("build_epoch").bigIntegerValue();
+        this.databaseType = metadata.get("database_type").asText();
+        this.languages = metadata.get("languages");
+        this.description = metadata.get("description");
+        this.ipVersion = metadata.get("ip_version").asInt();
+        this.nodeCount = metadata.get("node_count").asLong();
+        this.recordSize = metadata.get("record_size").asLong();
         this.nodeByteSize = (int) (this.recordSize / 4);
         this.searchTreeSize = this.nodeCount * this.nodeByteSize;
 

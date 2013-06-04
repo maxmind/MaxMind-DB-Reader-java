@@ -1,6 +1,5 @@
 package com.maxmind.maxminddb;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -13,7 +12,11 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 public class ReaderTest {
+    ObjectMapper om = new ObjectMapper();
 
     @Test
     public void test() throws MaxMindDbException, IOException {
@@ -43,9 +46,10 @@ public class ReaderTest {
         assertEquals(Integer.valueOf(0), metadata.binaryFormatMinorVersion);
         assertEquals(ipVersion, metadata.ipVersion);
         assertEquals("Test", metadata.databaseType);
-        assertArrayEquals(new String[] { "en", "zh" }, metadata.languages);
+        assertEquals("en", metadata.languages.get(0).asText());
+        assertEquals("zh", metadata.languages.get(1).asText());
 
-        Map<String, Object> description = new HashMap<String, Object>();
+        ObjectNode description = this.om.createObjectNode();
         description.put("en", "Test Database");
         description.put("zh", "Test Database Chinese");
 
@@ -59,7 +63,7 @@ public class ReaderTest {
 
         for (int i = 0; i <= 5; i++) {
             String address = "1.1.1." + (int) Math.pow(2, i);
-            Map<String, Object> data = new HashMap<String, Object>();
+            ObjectNode data = this.om.createObjectNode();
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
@@ -76,7 +80,7 @@ public class ReaderTest {
         pairs.put("1.1.1.17", "1.1.1.16");
         pairs.put("1.1.1.31", "1.1.1.16");
         for (String address : pairs.keySet()) {
-            Map<String, Object> data = new HashMap<String, Object>();
+            ObjectNode data = this.om.createObjectNode();
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "
@@ -96,7 +100,7 @@ public class ReaderTest {
                 "::2:0:40", "::2:0:50", "::2:0:58" };
 
         for (String address : subnets) {
-            Map<String, Object> data = new HashMap<String, Object>();
+            ObjectNode data = this.om.createObjectNode();
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
@@ -115,7 +119,7 @@ public class ReaderTest {
         pairs.put("::2:0:59", "::2:0:58");
 
         for (String address : pairs.keySet()) {
-            Map<String, Object> data = new HashMap<String, Object>();
+            ObjectNode data = this.om.createObjectNode();
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "

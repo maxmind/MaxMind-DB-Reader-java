@@ -17,6 +17,10 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 public class DecoderTest {
 
     private static Map<Integer, byte[]> int32() {
@@ -247,19 +251,21 @@ public class DecoderTest {
         return booleans;
     }
 
-    public Map<Map<String, Object>, byte[]> maps() {
-        Map<Map<String, Object>, byte[]> maps = new HashMap<Map<String, Object>, byte[]>();
+    public Map<ObjectNode, byte[]> maps() {
+        Map<ObjectNode, byte[]> maps = new HashMap<ObjectNode, byte[]>();
 
-        Map<String, Object> empty = new HashMap<String, Object>();
+        ObjectMapper om = new ObjectMapper();
+
+        ObjectNode empty = om.createObjectNode();
         maps.put(empty, new byte[] { (byte) 0b11100000 });
 
-        Map<String, Object> one = new HashMap<String, Object>();
+        ObjectNode one = om.createObjectNode();
         one.put("en", "Foo");
         maps.put(one, new byte[] { (byte) 0b11100001, /* en */0b01000010,
                 0b01100101, 0b01101110,
                 /* Foo */0b01000011, 0b01000110, 0b01101111, 0b01101111 });
 
-        Map<String, Object> two = new HashMap<String, Object>();
+        ObjectNode two = om.createObjectNode();
         two.put("en", "Foo");
         two.put("zh", "人");
         maps.put(two, new byte[] { (byte) 0b11100010,
@@ -272,7 +278,7 @@ public class DecoderTest {
         /* 人 */
         0b01000011, (byte) 0b11100100, (byte) 0b10111010, (byte) 0b10111010 });
 
-        Map<String, Object> nested = new HashMap<String, Object>();
+        ObjectNode nested = om.createObjectNode();
         nested.put("name", two);
 
         maps.put(nested, new byte[] { (byte) 0b11100001, /* name */
@@ -308,22 +314,27 @@ public class DecoderTest {
         return maps;
     }
 
-    public Map<Object[], byte[]> arrays() {
-        Map<Object[], byte[]> arrays = new HashMap<Object[], byte[]>();
+    public Map<ArrayNode, byte[]> arrays() {
+        Map<ArrayNode, byte[]> arrays = new HashMap<ArrayNode, byte[]>();
+        ObjectMapper om = new ObjectMapper();
 
-        arrays.put(new String[] { "Foo" }, new byte[] { 0b00000001, 0b00000100,
+        ArrayNode f1 = om.createArrayNode();
+        f1.add("Foo");
+        arrays.put(f1, new byte[] { 0b00000001, 0b00000100,
         /* Foo */
         0b01000011, 0b01000110, 0b01101111, 0b01101111 });
 
-        arrays.put(new String[] { "Foo", "人" }, new byte[] { 0b00000010,
-                0b00000100,
-                /* Foo */
-                0b01000011, 0b01000110, 0b01101111, 0b01101111,
-                /* 人 */
-                0b01000011, (byte) 0b11100100, (byte) 0b10111010,
-                (byte) 0b10111010 });
+        ArrayNode f2 = om.createArrayNode();
+        f2.add("Foo");
+        f2.add("人");
+        arrays.put(f2, new byte[] { 0b00000010, 0b00000100,
+        /* Foo */
+        0b01000011, 0b01000110, 0b01101111, 0b01101111,
+        /* 人 */
+        0b01000011, (byte) 0b11100100, (byte) 0b10111010, (byte) 0b10111010 });
 
-        arrays.put(new Object[0], new byte[] { 0b00000000, 0b00000100 });
+        ArrayNode empty = om.createArrayNode();
+        arrays.put(empty, new byte[] { 0b00000000, 0b00000100 });
 
         return arrays;
     }
@@ -402,12 +413,30 @@ public class DecoderTest {
             Decoder decoder = new Decoder(fc, 0);
             decoder.POINTER_TEST_HACK = true;
 
+            // XXX - this could be streamlined
             if (type.equals(Type.BYTES)) {
-                assertArrayEquals(desc, (byte[]) expect, (byte[]) decoder
-                        .decode(0).getObject());
+                assertArrayEquals(desc, (byte[]) expect, decoder.decode(0)
+                        .getObject().binaryValue());
             } else if (type.equals(Type.ARRAY)) {
-                assertArrayEquals(desc, (Object[]) expect, (Object[]) decoder
-                        .decode(0).getObject());
+                assertEquals(desc, expect, decoder.decode(0).getObject());
+            } else if (type.equals(Type.UINT16) || type.equals(Type.INT32)) {
+                assertEquals(desc, expect, decoder.decode(0).getObject()
+                        .asInt());
+            } else if (type.equals(Type.UINT32) || type.equals(Type.POINTER)) {
+                assertEquals(desc, expect, decoder.decode(0).getObject()
+                        .asLong());
+            } else if (type.equals(Type.UINT64) || type.equals(Type.UINT128)) {
+                assertEquals(desc, expect, decoder.decode(0).getObject()
+                        .bigIntegerValue());
+            } else if (type.equals(Type.DOUBLE)) {
+                assertEquals(desc, expect, decoder.decode(0).getObject()
+                        .asDouble());
+            } else if (type.equals(Type.UTF8_STRING)) {
+                assertEquals(desc, expect, decoder.decode(0).getObject()
+                        .asText());
+            } else if (type.equals(Type.BOOLEAN)) {
+                assertEquals(desc, expect, decoder.decode(0).getObject()
+                        .asBoolean());
             } else {
                 assertEquals(desc, expect, decoder.decode(0).getObject());
             }
@@ -421,7 +450,7 @@ public class DecoderTest {
             byte[] bytes = Arrays.copyOfRange(entry.getValue(), 2,
                     entry.getValue().length);
             assertEquals("decode int32: " + entry.getKey(), entry.getKey()
-                    .intValue(), Decoder.decodeInt32(bytes));
+                    .intValue(), Decoder.decodeInt32(bytes).intValue());
         }
     }
 
@@ -432,7 +461,7 @@ public class DecoderTest {
             byte[] bytes = Arrays.copyOfRange(entry.getValue(), 1,
                     entry.getValue().length);
             assertEquals("decode uint16: " + entry.getKey(), entry.getKey()
-                    .intValue(), Decoder.decodeUint16(bytes));
+                    .intValue(), Decoder.decodeUint16(bytes).intValue());
         }
     }
 
@@ -444,7 +473,7 @@ public class DecoderTest {
             byte[] bytes = Arrays.copyOfRange(entry.getValue(), 1,
                     entry.getValue().length);
             assertEquals("decode uint32: " + entry.getKey(), entry.getKey()
-                    .longValue(), Decoder.decodeUint32(bytes));
+                    .longValue(), Decoder.decodeUint32(bytes).longValue());
         }
     }
 
@@ -455,7 +484,7 @@ public class DecoderTest {
             byte[] bytes = Arrays.copyOfRange(entry.getValue(), 2,
                     entry.getValue().length);
             assertEquals("decode uint64: " + entry.getKey(), entry.getKey(),
-                    Decoder.decodeUint64(bytes));
+                    Decoder.decodeUint64(bytes).bigIntegerValue());
         }
     }
 
@@ -466,7 +495,7 @@ public class DecoderTest {
             byte[] bytes = Arrays.copyOfRange(entry.getValue(), 2,
                     entry.getValue().length);
             assertEquals("decode uint128: " + entry.getKey(), entry.getKey(),
-                    Decoder.decodeUint128(bytes));
+                    Decoder.decodeUint128(bytes).bigIntegerValue());
         }
     }
 
