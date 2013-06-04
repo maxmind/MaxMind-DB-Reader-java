@@ -147,19 +147,19 @@ public class DecoderTest {
                 "1234567890123456789012345678");
         DecoderTest.addTestString(strings, (byte) 0x5c,
                 "1234567890123456789012345678");
-        DecoderTest.addTestString(strings, new byte[]{0x5d, 0x0},
+        DecoderTest.addTestString(strings, new byte[] { 0x5d, 0x0 },
                 "12345678901234567890123456789");
-        DecoderTest.addTestString(strings, new byte[]{0x5d, 0x1},
+        DecoderTest.addTestString(strings, new byte[] { 0x5d, 0x1 },
                 "123456789012345678901234567890");
 
         DecoderTest
-                .addTestString(strings, new byte[]{0x5e, 0x0, (byte) 0xd7},
+                .addTestString(strings, new byte[] { 0x5e, 0x0, (byte) 0xd7 },
                         DecoderTest.xString(500));
         DecoderTest.addTestString(strings,
-                new byte[]{0x5e, 0x6, (byte) 0xb3},
+                new byte[] { 0x5e, 0x6, (byte) 0xb3 },
                 DecoderTest.xString(2000));
         DecoderTest.addTestString(strings,
-                new byte[]{0x5f, 0x0, 0x10, 0x53,},
+                new byte[] { 0x5f, 0x0, 0x10, 0x53, },
                 DecoderTest.xString(70000));
 
         return strings;
@@ -191,7 +191,7 @@ public class DecoderTest {
 
     private static void addTestString(Map<String, byte[]> tests, byte ctrl,
             String str) {
-        DecoderTest.addTestString(tests, new byte[]{ctrl}, str);
+        DecoderTest.addTestString(tests, new byte[] { ctrl }, str);
     }
 
     private static void addTestString(Map<String, byte[]> tests, byte ctrl[],
@@ -386,7 +386,6 @@ public class DecoderTest {
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
             T expect = entry.getKey();
             byte[] input = entry.getValue();
-            System.out.println(Arrays.toString(input));
 
             String desc = "decoded " + type.name() + " - " + expect;
             FileChannel fc = DecoderTest.getFileChannel(input);
@@ -424,8 +423,8 @@ public class DecoderTest {
                 } else {
                     assertEquals(desc, expect, decoder.decode(0).getObject());
                 }
-            }  finally {
-                if (fc != null ) {
+            } finally {
+                if (fc != null) {
                     fc.close();
                 }
             }
@@ -504,7 +503,7 @@ public class DecoderTest {
             raf = new RandomAccessFile(file, "r");
 
             return raf.getChannel();
-        }  finally {
+        } finally {
             if (fc != null) {
                 fc.close();
             }
