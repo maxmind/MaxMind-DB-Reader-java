@@ -60,7 +60,6 @@ public class Decoder {
         this.DEBUG = System.getenv().get("MAXMIND_DB_DECODER_DEBUG") != null;
     }
 
-    // FIXME - Move most of this method to a switch statement
     public Result decode(long offset) throws MaxMindDbException, IOException {
         this.in.position(offset);
         if (this.DEBUG) {
@@ -125,7 +124,6 @@ public class Decoder {
         offset = sizeArray[1];
 
         if (this.DEBUG) {
-            // FIXME - cast or whatever
             Log.debug("Size", String.valueOf(size));
         }
 

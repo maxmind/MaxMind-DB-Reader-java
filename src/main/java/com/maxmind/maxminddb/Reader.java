@@ -8,6 +8,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 public class Reader {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = { (byte) 0xAB,
@@ -63,8 +65,7 @@ public class Reader {
         }
     }
 
-    // FIXME - figure out what we are returning
-    public Object get(InetAddress address) throws MaxMindDbException,
+    public JsonNode get(InetAddress address) throws MaxMindDbException,
             IOException {
 
         long pointer = this.findAddressInTree(address);
@@ -136,7 +137,6 @@ public class Reader {
             nodeNum = record;
         }
 
-        // XXX - Can we get down here?
         throw new MaxMindDbException("Something bad happened");
     }
 
@@ -184,8 +184,8 @@ public class Reader {
         }
     }
 
-    private Object resolveDataPointer(long pointer) throws MaxMindDbException,
-            IOException {
+    private JsonNode resolveDataPointer(long pointer)
+            throws MaxMindDbException, IOException {
         long resolved = (pointer - this.metadata.nodeCount)
                 + this.metadata.searchTreeSize;
 
@@ -229,5 +229,14 @@ public class Reader {
 
     public Metadata getMetadata() {
         return this.metadata;
+    }
+
+    public void close() throws IOException {
+        if (this.fc != null) {
+            this.fc.close();
+        }
+        if (this.raf != null) {
+            this.raf.close();
+        }
     }
 }
