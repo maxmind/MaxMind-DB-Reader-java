@@ -1,5 +1,7 @@
 package com.maxmind.maxminddb;
 
+import java.nio.ByteBuffer;
+
 class Util {
 
     public Util() {
@@ -20,6 +22,12 @@ class Util {
             i = (i << 8) | (b & 0xFF);
         }
         return i;
+    }
+
+    static byte[] getByteArray(ByteBuffer buffer, int length) {
+        byte[] bytes = new byte[length];
+        buffer.get(bytes);
+        return bytes;
     }
 
 }

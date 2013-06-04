@@ -351,8 +351,6 @@ public class Decoder {
     }
 
     private byte[] getByteArray(int length) {
-        byte[] bytes = new byte[length];
-        this.mmap.get(bytes);
-        return bytes;
+        return Util.getByteArray(this.mmap, length);
     }
 }

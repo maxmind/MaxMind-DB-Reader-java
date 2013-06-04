@@ -58,7 +58,8 @@ public class Reader {
 
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
 
-        this.decoder = new Decoder(this.mmap, this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
+        this.decoder = new Decoder(this.mmap, this.metadata.searchTreeSize
+                + DATA_SECTION_SEPARATOR_SIZE);
 
         if (this.DEBUG) {
             Log.debug(this.metadata.toString());
@@ -74,7 +75,7 @@ public class Reader {
             return null;
         }
 
-        this.fc.position(pointer);
+        this.mmap.position((int) pointer);
         return this.resolveDataPointer(pointer);
     }
 
@@ -142,11 +143,10 @@ public class Reader {
 
     private long[] readNode(long nodeNumber) throws IOException,
             MaxMindDbException {
-        ByteBuffer buffer = ByteBuffer
-                .wrap(new byte[this.metadata.nodeByteSize]);
-        this.fc.position(nodeNumber * this.metadata.nodeByteSize);
+        this.mmap.position((int) nodeNumber * this.metadata.nodeByteSize);
 
-        this.fc.read(buffer);
+        byte[] buffer = Util
+                .getByteArray(this.mmap, this.metadata.nodeByteSize);
 
         if (this.DEBUG) {
             Log.debug("Node bytes", buffer);
@@ -154,29 +154,22 @@ public class Reader {
         return this.splitNodeIntoRecords(buffer);
     }
 
-    private long[] splitNodeIntoRecords(ByteBuffer bytes)
-            throws MaxMindDbException {
+    private long[] splitNodeIntoRecords(byte[] bytes) throws MaxMindDbException {
         long[] nodes = new long[2];
         switch (this.metadata.recordSize) {
             case 24:
-                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 0,
-                        3));
-                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 3,
-                        6));
+                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes, 0, 3));
+                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes, 3, 6));
                 return nodes;
             case 28:
-                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 0,
-                        3));
-                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 4,
-                        7));
-                nodes[0] = ((0xF0 & bytes.get(3)) << 20) | nodes[0];
-                nodes[1] = ((0x0F & bytes.get(3)) << 24) | nodes[1];
+                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes, 0, 3));
+                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes, 4, 7));
+                nodes[0] = ((0xF0 & bytes[3]) << 20) | nodes[0];
+                nodes[1] = ((0x0F & bytes[3]) << 24) | nodes[1];
                 return nodes;
             case 32:
-                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 0,
-                        4));
-                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes.array(), 4,
-                        8));
+                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes, 0, 4));
+                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes, 4, 8));
                 return nodes;
             default:
                 throw new MaxMindDbException("Unknown record size: "
