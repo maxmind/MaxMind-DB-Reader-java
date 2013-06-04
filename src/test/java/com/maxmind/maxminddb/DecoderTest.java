@@ -274,23 +274,19 @@ public class DecoderTest {
         /* 人 */
         0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba });
 
-        /*
-         * This currently isn't working as assertEquals thinks all arrays are
-         * different. Usually you would just use assertArrayEquals, but that
-         * obviously doesn't work here
-         */
-        // Map<String, Object> guess = new HashMap<String, Object>();
-        // guess.put("languages", new String[] { "en", "zh" });
-        // maps.put(guess, new byte[] { (byte) 0b11100001,/* languages */
-        // 0b01001001, 0b01101100, 0b01100001, 0b01101110, 0b01100111,
-        // 0b01110101,
-        // 0b01100001, 0b01100111, 0b01100101, 0b01110011,
-        // /* array */
-        // 0b00000010, 0b00000100,
-        // /* en */
-        // 0b01000010, 0b01100101, 0b01101110,
-        // /* zh */
-        // 0b01000010, 0b01111010, 0b01101000 });
+        ObjectNode guess = om.createObjectNode();
+        ArrayNode languages = om.createArrayNode();
+        languages.add("en");
+        languages.add("zh");
+        guess.put("languages", languages);
+        maps.put(guess, new byte[] { (byte) 0xe1,/* languages */
+        0x49, 0x6c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x73,
+        /* array */
+        0x2, 0x4,
+        /* en */
+        0x42, 0x65, 0x6e,
+        /* zh */
+        0x42, 0x7a, 0x68 });
 
         return maps;
     }
