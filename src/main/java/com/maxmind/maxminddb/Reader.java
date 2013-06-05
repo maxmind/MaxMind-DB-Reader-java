@@ -85,13 +85,6 @@ public final class Reader {
     long findAddressInTree(InetAddress address) throws MaxMindDbException {
         byte[] rawAddress = address.getAddress();
 
-        // XXX sort of wasteful
-        if (rawAddress.length == 4 && this.metadata.ipVersion == 6) {
-            byte[] newAddress = new byte[16];
-            System.arraycopy(rawAddress, 0, newAddress, 12, rawAddress.length);
-            rawAddress = newAddress;
-        }
-
         if (this.DEBUG) {
             Log.debugNewLine();
             Log.debug("IP address", address);
@@ -99,13 +92,20 @@ public final class Reader {
             Log.debugNewLine();
         }
 
+        boolean isIp4AddressInIp6Db = rawAddress.length == 4
+                && this.metadata.ipVersion == 6;
+        int ipStartBit = isIp4AddressInIp6Db ? 96 : 0;
+
         // The first node of the tree is always node 0, at the beginning of the
         // value
         long nodeNum = 0;
 
-        for (int i = 0; i < rawAddress.length * 8; i++) {
-            int b = 0xFF & rawAddress[i / 8];
-            int bit = 1 & (b >> 7 - (i % 8));
+        for (int i = 0; i < rawAddress.length * 8 + ipStartBit; i++) {
+            int bit = 0;
+            if (i >= ipStartBit) {
+                int b = 0xFF & rawAddress[(i - ipStartBit) / 8];
+                bit = 1 & (b >> 7 - (i % 8));
+            }
             long record = this.readNode(nodeNum, bit);
 
             if (this.DEBUG) {
