@@ -319,65 +319,68 @@ public class DecoderTest {
 
     @Test
     public void testUint16() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.UINT16, uint16());
+        DecoderTest.testTypeDecoding(Decoder.Type.UINT16, uint16());
     }
 
     @Test
     public void testUint32() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.UINT32, uint32());
+        DecoderTest.testTypeDecoding(Decoder.Type.UINT32, uint32());
     }
 
     @Test
     public void testInt32() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.INT32, int32());
+        DecoderTest.testTypeDecoding(Decoder.Type.INT32, int32());
     }
 
     @Test
     public void testUint64() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.UINT64, largeUint(64));
+        DecoderTest.testTypeDecoding(Decoder.Type.UINT64, largeUint(64));
     }
 
     @Test
     public void testUint128() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.UINT128, largeUint(128));
+        DecoderTest.testTypeDecoding(Decoder.Type.UINT128, largeUint(128));
     }
 
     @Test
     public void testDoubles() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.DOUBLE, DecoderTest.doubles());
+        DecoderTest
+                .testTypeDecoding(Decoder.Type.DOUBLE, DecoderTest.doubles());
     }
 
     @Test
     public void testPointers() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.POINTER, pointers());
+        DecoderTest.testTypeDecoding(Decoder.Type.POINTER, pointers());
     }
 
     @Test
     public void testStrings() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.UTF8_STRING, DecoderTest.strings());
+        DecoderTest.testTypeDecoding(Decoder.Type.UTF8_STRING,
+                DecoderTest.strings());
     }
 
     @Test
     public void testBooleans() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.BOOLEAN, DecoderTest.booleans());
+        DecoderTest.testTypeDecoding(Decoder.Type.BOOLEAN,
+                DecoderTest.booleans());
     }
 
     @Test
     public void testBytes() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.BYTES, DecoderTest.bytes());
+        DecoderTest.testTypeDecoding(Decoder.Type.BYTES, DecoderTest.bytes());
     }
 
     @Test
     public void testMaps() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.MAP, DecoderTest.maps());
+        DecoderTest.testTypeDecoding(Decoder.Type.MAP, DecoderTest.maps());
     }
 
     @Test
     public void testArrays() throws MaxMindDbException, IOException {
-        DecoderTest.testTypeDecoding(Type.ARRAY, DecoderTest.arrays());
+        DecoderTest.testTypeDecoding(Decoder.Type.ARRAY, DecoderTest.arrays());
     }
 
-    static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
+    static <T> void testTypeDecoding(Decoder.Type type, Map<T, byte[]> tests)
             throws MaxMindDbException, IOException {
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
@@ -389,33 +392,34 @@ public class DecoderTest {
             MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
             try {
 
-                Decoder decoder = new Decoder(mmap, 0);
+                Decoder decoder = new Decoder(new ThreadBuffer(mmap), 0);
                 decoder.POINTER_TEST_HACK = true;
 
                 // XXX - this could be streamlined
-                if (type.equals(Type.BYTES)) {
+                if (type.equals(Decoder.Type.BYTES)) {
                     assertArrayEquals(desc, (byte[]) expect, decoder.decode(0)
                             .getNode().binaryValue());
-                } else if (type.equals(Type.ARRAY)) {
+                } else if (type.equals(Decoder.Type.ARRAY)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode());
-                } else if (type.equals(Type.UINT16) || type.equals(Type.INT32)) {
+                } else if (type.equals(Decoder.Type.UINT16)
+                        || type.equals(Decoder.Type.INT32)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asInt());
-                } else if (type.equals(Type.UINT32)
-                        || type.equals(Type.POINTER)) {
+                } else if (type.equals(Decoder.Type.UINT32)
+                        || type.equals(Decoder.Type.POINTER)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asLong());
-                } else if (type.equals(Type.UINT64)
-                        || type.equals(Type.UINT128)) {
+                } else if (type.equals(Decoder.Type.UINT64)
+                        || type.equals(Decoder.Type.UINT128)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .bigIntegerValue());
-                } else if (type.equals(Type.DOUBLE)) {
+                } else if (type.equals(Decoder.Type.DOUBLE)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asDouble());
-                } else if (type.equals(Type.UTF8_STRING)) {
+                } else if (type.equals(Decoder.Type.UTF8_STRING)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asText());
-                } else if (type.equals(Type.BOOLEAN)) {
+                } else if (type.equals(Decoder.Type.BOOLEAN)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asBoolean());
                 } else {
@@ -438,18 +442,11 @@ public class DecoderTest {
         File file = File.createTempFile(UUID.randomUUID().toString(), "tmp");
         RandomAccessFile raf = new RandomAccessFile(file, "rw");
         FileChannel fc = raf.getChannel();
-        try {
-            fc.write(ByteBuffer.wrap(data));
-            raf.close();
-            fc.close();
-            raf = new RandomAccessFile(file, "r");
-
-            return raf.getChannel();
-        } finally {
-            if (fc != null) {
-                fc.close();
-            }
-        }
+        fc.write(ByteBuffer.wrap(data));
+        raf.close();
+        fc.close();
+        raf = new RandomAccessFile(file, "r");
+        return raf.getChannel();
     }
 
 }

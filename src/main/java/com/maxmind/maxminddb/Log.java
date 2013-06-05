@@ -3,7 +3,7 @@ package com.maxmind.maxminddb;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
-class Log {
+final class Log {
 
     static void debug(String string, ByteBuffer buffer) {
         debug(string, buffer.array());

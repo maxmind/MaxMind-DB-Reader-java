@@ -5,7 +5,7 @@ import java.math.BigInteger;
 import com.fasterxml.jackson.databind.JsonNode;
 
 // XXX - if we make this public, add getters
-class Metadata {
+final class Metadata {
     final int binaryFormatMajorVersion;
     final int binaryFormatMinorVersion;
     private final BigInteger buildEpoch;

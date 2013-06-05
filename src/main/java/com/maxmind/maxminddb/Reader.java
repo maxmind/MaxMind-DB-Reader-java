@@ -2,17 +2,13 @@ package com.maxmind.maxminddb;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileChannel.MapMode;
 import java.util.Arrays;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-public class Reader {
+public final class Reader {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = { (byte) 0xAB,
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
@@ -21,15 +17,23 @@ public class Reader {
     private final boolean DEBUG;
     private final Decoder decoder;
     private final Metadata metadata;
-    private final FileChannel fc;
-    private final RandomAccessFile raf;
-    private final MappedByteBuffer mmap;
+    private final ThreadBuffer threadBuffer;
+
+    public enum FileMode {
+        MEMORY_MAPPED, IN_MEMORY
+    }
 
     public Reader(File database) throws MaxMindDbException, IOException {
+        this(database, FileMode.MEMORY_MAPPED);
+    }
+
+    // XXX - loading the file into memory doesn't really provide any performance
+    // gains on my machine. Consider whether it is even worth providing the
+    // option.
+    public Reader(File database, FileMode mode) throws MaxMindDbException,
+            IOException {
         this.DEBUG = System.getenv().get("MAXMIND_DB_READER_DEBUG") != null;
-        this.raf = new RandomAccessFile(database, "r");
-        this.fc = this.raf.getChannel();
-        this.mmap = this.fc.map(MapMode.READ_ONLY, 0, this.fc.size());
+        this.threadBuffer = new ThreadBuffer(database, mode);
 
         /*
          * We need to make sure that whatever chunk we read will have the
@@ -54,12 +58,12 @@ public class Reader {
                             + "). Is this a valid MaxMind DB file?");
         }
 
-        Decoder metadataDecoder = new Decoder(this.mmap, 0);
+        Decoder metadataDecoder = new Decoder(this.threadBuffer, 0);
 
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
 
-        this.decoder = new Decoder(this.mmap, this.metadata.searchTreeSize
-                + DATA_SECTION_SEPARATOR_SIZE);
+        this.decoder = new Decoder(this.threadBuffer,
+                this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
 
         if (this.DEBUG) {
             Log.debug(this.metadata.toString());
@@ -75,12 +79,11 @@ public class Reader {
             return null;
         }
 
-        this.mmap.position((int) pointer);
+        this.threadBuffer.get().position((int) pointer);
         return this.resolveDataPointer(pointer);
     }
 
-    long findAddressInTree(InetAddress address) throws MaxMindDbException,
-            IOException {
+    long findAddressInTree(InetAddress address) throws MaxMindDbException {
         byte[] rawAddress = address.getAddress();
 
         // XXX sort of wasteful
@@ -141,35 +144,34 @@ public class Reader {
         throw new MaxMindDbException("Something bad happened");
     }
 
-    private long[] readNode(long nodeNumber) throws IOException,
-            MaxMindDbException {
-        this.mmap.position((int) nodeNumber * this.metadata.nodeByteSize);
+    private long[] readNode(long nodeNumber) throws MaxMindDbException {
+        ByteBuffer buffer = this.threadBuffer.get();
+        buffer.position((int) nodeNumber * this.metadata.nodeByteSize);
 
-        byte[] buffer = Util
-                .getByteArray(this.mmap, this.metadata.nodeByteSize);
+        byte[] bytes = Decoder.getByteArray(buffer, this.metadata.nodeByteSize);
 
         if (this.DEBUG) {
-            Log.debug("Node bytes", buffer);
+            Log.debug("Node bytes", bytes);
         }
-        return this.splitNodeIntoRecords(buffer);
+        return this.splitNodeIntoRecords(bytes);
     }
 
     private long[] splitNodeIntoRecords(byte[] bytes) throws MaxMindDbException {
         long[] nodes = new long[2];
         switch (this.metadata.recordSize) {
             case 24:
-                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes, 0, 3));
-                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes, 3, 6));
+                nodes[0] = Decoder.decodeLong(Arrays.copyOfRange(bytes, 0, 3));
+                nodes[1] = Decoder.decodeLong(Arrays.copyOfRange(bytes, 3, 6));
                 return nodes;
             case 28:
-                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes, 0, 3));
-                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes, 4, 7));
+                nodes[0] = Decoder.decodeLong(Arrays.copyOfRange(bytes, 0, 3));
+                nodes[1] = Decoder.decodeLong(Arrays.copyOfRange(bytes, 4, 7));
                 nodes[0] = ((0xF0 & bytes[3]) << 20) | nodes[0];
                 nodes[1] = ((0x0F & bytes[3]) << 24) | nodes[1];
                 return nodes;
             case 32:
-                nodes[0] = Util.decodeLong(Arrays.copyOfRange(bytes, 0, 4));
-                nodes[1] = Util.decodeLong(Arrays.copyOfRange(bytes, 4, 8));
+                nodes[0] = Decoder.decodeLong(Arrays.copyOfRange(bytes, 0, 4));
+                nodes[1] = Decoder.decodeLong(Arrays.copyOfRange(bytes, 4, 8));
                 return nodes;
             default:
                 throw new MaxMindDbException("Unknown record size: "
@@ -203,15 +205,15 @@ public class Reader {
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private long findMetadataStart() throws IOException {
-        long fileSize = this.fc.size();
+    private long findMetadataStart() {
+        ByteBuffer buffer = this.threadBuffer.get();
+        int fileSize = buffer.capacity();
 
-        FILE: for (long i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
+        FILE: for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
             for (int j = 0; j < METADATA_START_MARKER.length; j++) {
-                ByteBuffer b = ByteBuffer.wrap(new byte[1]);
-                this.fc.read(b, fileSize - i - j - 1);
-                if (b.get(0) != METADATA_START_MARKER[METADATA_START_MARKER.length
-                        - j - 1]) {
+                byte b = buffer.get(fileSize - i - j - 1);
+                if (b != METADATA_START_MARKER[METADATA_START_MARKER.length - j
+                        - 1]) {
                     continue FILE;
                 }
             }
@@ -220,16 +222,11 @@ public class Reader {
         return -1;
     }
 
-    public Metadata getMetadata() {
+    Metadata getMetadata() {
         return this.metadata;
     }
 
     public void close() throws IOException {
-        if (this.fc != null) {
-            this.fc.close();
-        }
-        if (this.raf != null) {
-            this.raf.close();
-        }
+        this.threadBuffer.close();
     }
 }
