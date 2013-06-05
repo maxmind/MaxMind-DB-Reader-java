@@ -18,8 +18,6 @@ final class Metadata {
     final long searchTreeSize;
     final JsonNode languages;
 
-    // XXX - think about how I want to construct this. Maybe look at how JSON
-    // parsers deal with types
     public Metadata(JsonNode metadata) {
         this.binaryFormatMajorVersion = metadata.get(
                 "binary_format_major_version").asInt();
