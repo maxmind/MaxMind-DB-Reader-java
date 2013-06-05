@@ -5,8 +5,8 @@
   <artifactId>maxminddb</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>MaxMindDB Reader</name>
-  <description>Reader for MaxMindDB</description>
+  <name>MaxMind DB Reader</name>
+  <description>Reader for MaxMind DB</description>
   <url>http://dev.maxmind.com/</url>
   <licenses>
     <license>
