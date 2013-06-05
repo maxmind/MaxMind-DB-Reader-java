@@ -5,12 +5,8 @@ production release.
 
 ## Description ##
 
-MaxMind DB is a binary file format that stores data indexed by IP address
-subnets (IPv4 or IPv6).
-
-This repository contains the spec for the format, tools for creating MaxMind
-DB files, and the Perl API for reading such files.
-
+This is the Java API for reading MaxMind DB files. MaxMind DB is a binary
+file format that stores data indexed by IP address subnets (IPv4 or IPv6).
 
 ## Installation ##
 
