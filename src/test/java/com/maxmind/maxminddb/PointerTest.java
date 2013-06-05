@@ -14,7 +14,7 @@ import com.maxmind.maxminddb.Reader.FileMode;
 public class PointerTest {
     @SuppressWarnings("static-method")
     @Test
-    public void testWithPointers() throws MaxMindDbException, IOException {
+    public void testWithPointers() throws InvalidDatabaseException, IOException {
         File file = new File("test-data/pointer.bin");
         ThreadBuffer ptf = new ThreadBuffer(file, FileMode.IN_MEMORY);
         try {

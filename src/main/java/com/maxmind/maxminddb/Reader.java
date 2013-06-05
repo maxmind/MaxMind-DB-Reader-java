@@ -7,6 +7,10 @@ import java.nio.ByteBuffer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+/**
+ * Instances of this class provide a reader for the MaxMind DB format. IP
+ * addresses can be looked up using the <code>get</code> method.
+ */
 public final class Reader {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = { (byte) 0xAB,
@@ -18,21 +22,49 @@ public final class Reader {
     private final Metadata metadata;
     private final ThreadBuffer threadBuffer;
 
+    /**
+     * The file mode to use when opening a MaxMind DB.
+     */
     public enum FileMode {
-        MEMORY_MAPPED, IN_MEMORY
+        /**
+         * The default file mode. This maps the database to virtual memory. This
+         * often provides similar performance to loading the database into real
+         * memory without the overhead.
+         */
+        MEMORY_MAPPED,
+        /**
+         * Loads the database into memory when the reader is constructed.
+         */
+        IN_MEMORY
     }
 
-    public Reader(File database) throws MaxMindDbException, IOException {
+    /**
+     * Constructs a Reader for the MaxMind DB format. The file passed to it must
+     * be a valid MaxMind DB file such as a GeoIP2 database file.
+     * 
+     * @param database
+     *            the MaxMind DB file to use.
+     * @throws IOException
+     *             if there is an error opening or reading from the file.
+     */
+    public Reader(File database) throws IOException {
         this(database, FileMode.MEMORY_MAPPED);
     }
 
-    // XXX - loading the file into memory doesn't really provide any performance
-    // gains on my machine. Consider whether it is even worth providing the
-    // option.
-    public Reader(File database, FileMode mode) throws MaxMindDbException,
-            IOException {
+    /**
+     * Constructs a Reader for the MaxMind DB format. The file passed to it must
+     * be a valid MaxMind DB file such as a GeoIP2 database file.
+     * 
+     * @param database
+     *            the MaxMind DB file to use.
+     * @param fileMode
+     *            the mode to open the file with.
+     * @throws IOException
+     *             if there is an error opening or reading from the file.
+     */
+    public Reader(File database, FileMode fileMode) throws IOException {
         this.DEBUG = System.getenv().get("MAXMIND_DB_READER_DEBUG") != null;
-        this.threadBuffer = new ThreadBuffer(database, mode);
+        this.threadBuffer = new ThreadBuffer(database, fileMode);
 
         /*
          * We need to make sure that whatever chunk we read will have the
@@ -51,7 +83,7 @@ public final class Reader {
         long start = this.findMetadataStart();
 
         if (start < 0) {
-            throw new MaxMindDbException(
+            throw new InvalidDatabaseException(
                     "Could not find a MaxMind DB metadata marker in this file ("
                             + database.getName()
                             + "). Is this a valid MaxMind DB file?");
@@ -69,10 +101,18 @@ public final class Reader {
         }
     }
 
-    public JsonNode get(InetAddress address) throws MaxMindDbException,
-            IOException {
+    /**
+     * Looks up the <code>address</code> in the MaxMind DB.
+     * 
+     * @param ipAddress
+     *            the IP address to look up.
+     * @return the record for the IP address.
+     * @throws IOException
+     *             if a file I/O error occurs.
+     */
+    public JsonNode get(InetAddress ipAddress) throws IOException {
 
-        long pointer = this.findAddressInTree(address);
+        long pointer = this.findAddressInTree(ipAddress);
 
         if (pointer == 0) {
             return null;
@@ -83,7 +123,7 @@ public final class Reader {
     }
 
     private long findAddressInTree(InetAddress address)
-            throws MaxMindDbException {
+            throws InvalidDatabaseException {
         byte[] rawAddress = address.getAddress();
 
         if (this.DEBUG) {
@@ -138,10 +178,11 @@ public final class Reader {
             nodeNum = record;
         }
 
-        throw new MaxMindDbException("Something bad happened");
+        throw new InvalidDatabaseException("Something bad happened");
     }
 
-    private long readNode(long nodeNumber, int index) throws MaxMindDbException {
+    private long readNode(long nodeNumber, int index)
+            throws InvalidDatabaseException {
         ByteBuffer buffer = this.threadBuffer.get();
         int baseOffset = (int) nodeNumber * this.metadata.nodeByteSize;
         buffer.position(baseOffset);
@@ -164,13 +205,12 @@ public final class Reader {
                 buffer.position(baseOffset + index * 4);
                 return Decoder.decodeLong(buffer, 0, 4);
             default:
-                throw new MaxMindDbException("Unknown record size: "
+                throw new InvalidDatabaseException("Unknown record size: "
                         + this.metadata.recordSize);
         }
     }
 
-    private JsonNode resolveDataPointer(long pointer)
-            throws MaxMindDbException, IOException {
+    private JsonNode resolveDataPointer(long pointer) throws IOException {
         long resolved = (pointer - this.metadata.nodeCount)
                 + this.metadata.searchTreeSize;
 
@@ -216,6 +256,12 @@ public final class Reader {
         return this.metadata;
     }
 
+    /**
+     * Closes the MaxMind DB and returns resources to the system.
+     * 
+     * @throws IOException
+     *             if an I/O error occurs.
+     */
     public void close() throws IOException {
         this.threadBuffer.close();
     }

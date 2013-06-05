@@ -318,70 +318,70 @@ public class DecoderTest {
     }
 
     @Test
-    public void testUint16() throws MaxMindDbException, IOException {
+    public void testUint16() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT16, uint16());
     }
 
     @Test
-    public void testUint32() throws MaxMindDbException, IOException {
+    public void testUint32() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT32, uint32());
     }
 
     @Test
-    public void testInt32() throws MaxMindDbException, IOException {
+    public void testInt32() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.INT32, int32());
     }
 
     @Test
-    public void testUint64() throws MaxMindDbException, IOException {
+    public void testUint64() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT64, largeUint(64));
     }
 
     @Test
-    public void testUint128() throws MaxMindDbException, IOException {
+    public void testUint128() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT128, largeUint(128));
     }
 
     @Test
-    public void testDoubles() throws MaxMindDbException, IOException {
+    public void testDoubles() throws InvalidDatabaseException, IOException {
         DecoderTest
                 .testTypeDecoding(Decoder.Type.DOUBLE, DecoderTest.doubles());
     }
 
     @Test
-    public void testPointers() throws MaxMindDbException, IOException {
+    public void testPointers() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.POINTER, pointers());
     }
 
     @Test
-    public void testStrings() throws MaxMindDbException, IOException {
+    public void testStrings() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UTF8_STRING,
                 DecoderTest.strings());
     }
 
     @Test
-    public void testBooleans() throws MaxMindDbException, IOException {
+    public void testBooleans() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.BOOLEAN,
                 DecoderTest.booleans());
     }
 
     @Test
-    public void testBytes() throws MaxMindDbException, IOException {
+    public void testBytes() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.BYTES, DecoderTest.bytes());
     }
 
     @Test
-    public void testMaps() throws MaxMindDbException, IOException {
+    public void testMaps() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.MAP, DecoderTest.maps());
     }
 
     @Test
-    public void testArrays() throws MaxMindDbException, IOException {
+    public void testArrays() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.ARRAY, DecoderTest.arrays());
     }
 
     static <T> void testTypeDecoding(Decoder.Type type, Map<T, byte[]> tests)
-            throws MaxMindDbException, IOException {
+            throws InvalidDatabaseException, IOException {
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
             T expect = entry.getKey();

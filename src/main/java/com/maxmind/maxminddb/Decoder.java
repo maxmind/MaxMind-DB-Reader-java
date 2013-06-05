@@ -79,7 +79,7 @@ final class Decoder {
         this.DEBUG = System.getenv().get("MAXMIND_DB_DECODER_DEBUG") != null;
     }
 
-    Result decode(long offset) throws MaxMindDbException, IOException {
+    Result decode(long offset) throws IOException {
         ByteBuffer buffer = this.threadBuffer.get();
 
         buffer.position((int) offset);
@@ -126,7 +126,7 @@ final class Decoder {
             int typeNum = nextByte + 7;
 
             if (typeNum < 8) {
-                throw new MaxMindDbException(
+                throw new InvalidDatabaseException(
                         "Something went horribly wrong in the decoder. An extended type "
                                 + "resolved to a type number < 8 (" + typeNum
                                 + ")");
@@ -193,8 +193,8 @@ final class Decoder {
                 BigIntegerNode uint128 = this.decodeBigInteger(size);
                 return new Result(uint128, new_offset);
             default:
-                throw new MaxMindDbException("Unknown or unexpected type: "
-                        + type.name());
+                throw new InvalidDatabaseException(
+                        "Unknown or unexpected type: " + type.name());
 
         }
     }
@@ -293,8 +293,7 @@ final class Decoder {
         return new Result(b, offset);
     }
 
-    private Result decodeArray(long size, long offset)
-            throws MaxMindDbException, IOException {
+    private Result decodeArray(long size, long offset) throws IOException {
         if (this.DEBUG) {
             Log.debug("Array size", size);
         }
@@ -318,8 +317,7 @@ final class Decoder {
         return new Result(array, offset);
     }
 
-    private Result decodeMap(long size, long offset) throws MaxMindDbException,
-            IOException {
+    private Result decodeMap(long size, long offset) throws IOException {
         if (this.DEBUG) {
             Log.debug("Map size", size);
         }
