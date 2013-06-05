@@ -77,7 +77,7 @@ specific to this reader, please [contact MaxMind support]
 
 ## Requirements  ##
 
-Maxmind has tested this API with Java 6 and above. Reasonable patches
+MaxMind has tested this API with Java 6 and above. Reasonable patches
 for Java 5 will be accepted. Patches for 1.4 or earlier will not be
 accepted.
 
