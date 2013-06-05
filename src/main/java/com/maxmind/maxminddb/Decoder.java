@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
-public final class Decoder {
+final class Decoder {
 
     private final boolean DEBUG;
     // XXX - This is only for unit testings. We should possibly make a
@@ -72,14 +72,14 @@ public final class Decoder {
 
     }
 
-    public Decoder(ThreadBuffer threadBuffer, long pointerBase) {
+    Decoder(ThreadBuffer threadBuffer, long pointerBase) {
         this.pointerBase = pointerBase;
         this.threadBuffer = threadBuffer;
         this.objectMapper = new ObjectMapper();
         this.DEBUG = System.getenv().get("MAXMIND_DB_DECODER_DEBUG") != null;
     }
 
-    public Result decode(long offset) throws MaxMindDbException, IOException {
+    Result decode(long offset) throws MaxMindDbException, IOException {
         ByteBuffer buffer = this.threadBuffer.get();
 
         buffer.position((int) offset);
@@ -237,11 +237,11 @@ public final class Decoder {
         return Charset.forName("UTF-8").decode(buffer).toString();
     }
 
-    IntNode decodeUint16(int size) {
+    private IntNode decodeUint16(int size) {
         return new IntNode(this.decodeInteger(size));
     }
 
-    IntNode decodeInt32(int size) {
+    private IntNode decodeInt32(int size) {
         return new IntNode(this.decodeInteger(size));
     }
 
@@ -254,15 +254,15 @@ public final class Decoder {
         return integer;
     }
 
-    LongNode decodeUint32(int size) {
+    private LongNode decodeUint32(int size) {
         return new LongNode(this.decodeLong(size));
     }
 
-    long decodeLong(int size) {
+    private long decodeLong(int size) {
         return this.decodeLong(0, size);
     }
 
-    long decodeLong(long base, int size) {
+    private long decodeLong(long base, int size) {
         ByteBuffer buffer = this.threadBuffer.get();
         return Decoder.decodeLong(buffer, base, size);
     }
@@ -276,7 +276,7 @@ public final class Decoder {
         return longInt;
     }
 
-    BigIntegerNode decodeBigInteger(int size) {
+    private BigIntegerNode decodeBigInteger(int size) {
         byte[] bytes = this.getByteArray(size);
         return new BigIntegerNode(new BigInteger(1, bytes));
     }

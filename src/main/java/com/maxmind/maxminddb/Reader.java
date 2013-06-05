@@ -82,7 +82,8 @@ public final class Reader {
         return this.resolveDataPointer(pointer);
     }
 
-    long findAddressInTree(InetAddress address) throws MaxMindDbException {
+    private long findAddressInTree(InetAddress address)
+            throws MaxMindDbException {
         byte[] rawAddress = address.getAddress();
 
         if (this.DEBUG) {
