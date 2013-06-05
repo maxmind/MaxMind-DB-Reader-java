@@ -268,6 +268,11 @@ public final class Decoder {
 
     long decodeLong(long base, int size) {
         ByteBuffer buffer = this.threadBuffer.get();
+        return Decoder.decodeLong(buffer, base, size);
+    }
+
+    static long decodeLong(ByteBuffer buffer, long base, int size) {
+
         long longInt = base;
         for (int i = 0; i < size; i++) {
             longInt = (longInt << 8) | (buffer.get() & 0xFF);
