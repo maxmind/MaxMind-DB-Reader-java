@@ -59,6 +59,8 @@ JsonNode result = reader.get(address);
 
 System.out.println(result);
 
+result.close();
+
 ```
 ## Format ##
 
