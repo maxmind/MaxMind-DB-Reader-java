@@ -246,12 +246,8 @@ public final class Decoder {
     }
 
     private int decodeInteger(int size) {
-        return this.decodeInteger(0, size);
-    }
-
-    private int decodeInteger(int base, int size) {
         ByteBuffer buffer = this.threadBuffer.get();
-        int integer = base;
+        int integer = 0;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (buffer.get() & 0xFF);
         }
@@ -382,23 +378,7 @@ public final class Decoder {
         return Decoder.getByteArray(this.threadBuffer.get(), length);
     }
 
-    static int decodeInteger(byte[] bytes) {
-        int i = 0;
-        for (byte b : bytes) {
-            i = (i << 8) | (b & 0xFF);
-        }
-        return i;
-    }
-
-    static long decodeLong(byte[] bytes) {
-        long i = 0;
-        for (byte b : bytes) {
-            i = (i << 8) | (b & 0xFF);
-        }
-        return i;
-    }
-
-    static byte[] getByteArray(ByteBuffer buffer, int length) {
+    private static byte[] getByteArray(ByteBuffer buffer, int length) {
         byte[] bytes = new byte[length];
         buffer.get(bytes);
         return bytes;
