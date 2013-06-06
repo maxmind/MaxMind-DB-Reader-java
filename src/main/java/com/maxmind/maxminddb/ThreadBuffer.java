@@ -1,5 +1,6 @@
 package com.maxmind.maxminddb;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -9,7 +10,7 @@ import java.nio.channels.FileChannel.MapMode;
 
 import com.maxmind.maxminddb.Reader.FileMode;
 
-final class ThreadBuffer extends ThreadLocal<ByteBuffer> {
+final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
     // XXX - DO NOT PASS THIS OUTSIDE THIS CLASS.
     private final ByteBuffer buffer;
     private final RandomAccessFile raf;
@@ -38,6 +39,7 @@ final class ThreadBuffer extends ThreadLocal<ByteBuffer> {
         return this.buffer.duplicate();
     }
 
+    @Override
     public void close() throws IOException {
         if (this.fc != null) {
             this.fc.close();

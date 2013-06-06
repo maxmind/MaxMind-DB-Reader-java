@@ -1,5 +1,6 @@
 package com.maxmind.maxminddb;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -11,7 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * Instances of this class provide a reader for the MaxMind DB format. IP
  * addresses can be looked up using the <code>get</code> method.
  */
-public final class Reader {
+public final class Reader implements Closeable {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = { (byte) 0xAB,
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
@@ -262,6 +263,7 @@ public final class Reader {
      * @throws IOException
      *             if an I/O error occurs.
      */
+    @Override
     public void close() throws IOException {
         this.threadBuffer.close();
     }
