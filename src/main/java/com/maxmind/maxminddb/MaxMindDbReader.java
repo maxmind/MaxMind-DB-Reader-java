@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * Instances of this class provide a reader for the MaxMind DB format. IP
  * addresses can be looked up using the <code>get</code> method.
  */
-public final class Reader implements Closeable {
+public final class MaxMindDbReader implements Closeable {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = { (byte) 0xAB,
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
@@ -48,7 +48,7 @@ public final class Reader implements Closeable {
      * @throws IOException
      *             if there is an error opening or reading from the file.
      */
-    public Reader(File database) throws IOException {
+    public MaxMindDbReader(File database) throws IOException {
         this(database, FileMode.MEMORY_MAPPED);
     }
 
@@ -63,7 +63,7 @@ public final class Reader implements Closeable {
      * @throws IOException
      *             if there is an error opening or reading from the file.
      */
-    public Reader(File database, FileMode fileMode) throws IOException {
+    public MaxMindDbReader(File database, FileMode fileMode) throws IOException {
         this.DEBUG = System.getenv().get("MAXMIND_DB_READER_DEBUG") != null;
         this.threadBuffer = new ThreadBuffer(database, fileMode);
 

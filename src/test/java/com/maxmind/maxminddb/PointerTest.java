@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.maxmind.maxminddb.Reader.FileMode;
+import com.maxmind.maxminddb.MaxMindDbReader.FileMode;
 
 public class PointerTest {
     @SuppressWarnings("static-method")

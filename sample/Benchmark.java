@@ -6,8 +6,8 @@ import java.util.Random;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.net.InetAddresses;
 import com.maxmind.maxminddb.InvalidDatabaseException;
-import com.maxmind.maxminddb.Reader;
-import com.maxmind.maxminddb.Reader.FileMode;
+import com.maxmind.maxminddb.MaxMindDbReader;
+import com.maxmind.maxminddb.MaxMindDbReader.FileMode;
 
 public class Benchmark {
 
@@ -15,7 +15,7 @@ public class Benchmark {
             InvalidDatabaseException {
         File file = new File("GeoIP2-City.mmdb");
 
-        Reader r = new Reader(file, FileMode.MEMORY_MAPPED);
+        MaxMindDbReader r = new MaxMindDbReader(file, FileMode.MEMORY_MAPPED);
         Random random = new Random();
         int count = 1000000;
         long startTime = System.nanoTime();

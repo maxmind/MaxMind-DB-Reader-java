@@ -23,7 +23,7 @@ public class ReaderTest {
             for (int ipVersion : new int[] { 4, 6 }) {
                 String fileName = "test-data/Test-IPv" + ipVersion + "-"
                         + recordSize + ".mmdb";
-                Reader reader = new Reader(new File(fileName));
+                MaxMindDbReader reader = new MaxMindDbReader(new File(fileName));
                 this.testMetadata(reader, ipVersion, recordSize);
 
                 if (ipVersion == 4) {
@@ -36,7 +36,7 @@ public class ReaderTest {
         }
     }
 
-    private void testMetadata(Reader reader, int ipVersion, long recordSize) {
+    private void testMetadata(MaxMindDbReader reader, int ipVersion, long recordSize) {
 
         Metadata metadata = reader.getMetadata();
 
@@ -56,7 +56,7 @@ public class ReaderTest {
 
     }
 
-    private void testIpV4(Reader reader, String fileName)
+    private void testIpV4(MaxMindDbReader reader, String fileName)
             throws InvalidDatabaseException, IOException {
 
         for (int i = 0; i <= 5; i++) {
@@ -92,7 +92,7 @@ public class ReaderTest {
     }
 
     // XXX - logic could be combined with above
-    private void testIpV6(Reader reader, String fileName)
+    private void testIpV6(MaxMindDbReader reader, String fileName)
             throws InvalidDatabaseException, IOException {
         String[] subnets = new String[] { "::1:ffff:ffff", "::2:0:0",
                 "::2:0:40", "::2:0:50", "::2:0:58" };

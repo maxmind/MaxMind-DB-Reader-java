@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-import com.maxmind.maxminddb.Reader.FileMode;
+import com.maxmind.maxminddb.MaxMindDbReader.FileMode;
 
 final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
     // XXX - DO NOT PASS THIS OUTSIDE THIS CLASS.
