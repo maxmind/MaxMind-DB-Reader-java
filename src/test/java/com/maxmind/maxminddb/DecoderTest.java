@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @SuppressWarnings({ "boxing", "static-method" })
@@ -208,24 +209,47 @@ public class DecoderTest {
 
     static Map<Double, byte[]> doubles() {
         Map<Double, byte[]> doubles = new HashMap<Double, byte[]>();
-        DecoderTest.addTestDouble(doubles, (byte) 0x71, "-1073741824.12457");
-        DecoderTest.addTestDouble(doubles, (byte) 0x70, "1073741824.12457");
-        DecoderTest.addTestDouble(doubles, (byte) 0x6e, "-3.14159265359");
-        DecoderTest.addTestDouble(doubles, (byte) 0x63, "123");
-        DecoderTest.addTestDouble(doubles, (byte) 0x62, ".5");
-        DecoderTest.addTestDouble(doubles, (byte) 0x63, "-.5");
+        doubles.put(0.0, new byte[] { 0x68, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                0x0 });
+        doubles.put(0.5, new byte[] { 0x68, 0x3F, (byte) 0xE0, 0x0, 0x0, 0x0,
+                0x0, 0x0, 0x0 });
+        doubles.put(3.14159265359, new byte[] { 0x68, 0x40, 0x9, 0x21,
+                (byte) 0xFB, 0x54, 0x44, 0x2E, (byte) 0xEA });
+        doubles.put(123.0, new byte[] { 0x68, 0x40, 0x5E, (byte) 0xC0, 0x0,
+                0x0, 0x0, 0x0, 0x0 });
+        doubles.put(1073741824.12457, new byte[] { 0x68, 0x41, (byte) 0xD0,
+                0x0, 0x0, 0x0, 0x7, (byte) 0xF8, (byte) 0xF4 });
+        doubles.put(-0.5, new byte[] { 0x68, (byte) 0xBF, (byte) 0xE0, 0x0,
+                0x0, 0x0, 0x0, 0x0, 0x0 });
+        doubles.put(-3.14159265359, new byte[] { 0x68, (byte) 0xC0, 0x9, 0x21,
+                (byte) 0xFB, 0x54, 0x44, 0x2E, (byte) 0xEA });
+        doubles.put(-1073741824.12457, new byte[] { 0x68, (byte) 0xC1,
+                (byte) 0xD0, 0x0, 0x0, 0x0, 0x7, (byte) 0xF8, (byte) 0xF4 });
+
         return doubles;
     }
 
-    private static void addTestDouble(Map<Double, byte[]> tests, byte ctrl,
-            String str) {
+    static Map<Float, byte[]> floats() {
+        Map<Float, byte[]> floats = new HashMap<Float, byte[]>();
+        floats.put((float) 0.0, new byte[] { 0x4, 0x8, 0x0, 0x0, 0x0, 0x0 });
+        floats.put((float) 1.0, new byte[] { 0x4, 0x8, 0x3F, (byte) 0x80, 0x0,
+                0x0 });
+        floats.put((float) 1.1, new byte[] { 0x4, 0x8, 0x3F, (byte) 0x8C,
+                (byte) 0xCC, (byte) 0xCD });
+        floats.put((float) 3.14, new byte[] { 0x4, 0x8, 0x40, 0x48,
+                (byte) 0xF5, (byte) 0xC3 });
+        floats.put((float) 9999.99, new byte[] { 0x4, 0x8, 0x46, 0x1C, 0x3F,
+                (byte) 0xF6 });
+        floats.put((float) -1.0, new byte[] { 0x4, 0x8, (byte) 0xBF,
+                (byte) 0x80, 0x0, 0x0 });
+        floats.put((float) -1.1, new byte[] { 0x4, 0x8, (byte) 0xBF,
+                (byte) 0x8C, (byte) 0xCC, (byte) 0xCD });
+        floats.put((float) -3.14, new byte[] { 0x4, 0x8, (byte) 0xC0, 0x48,
+                (byte) 0xF5, (byte) 0xC3 });
+        floats.put((float) -9999.99, new byte[] { 0x4, 0x8, (byte) 0xC6, 0x1C,
+                0x3F, (byte) 0xF6 });
 
-        byte[] sb = str.getBytes(Charset.forName("US-ASCII"));
-        byte[] bytes = new byte[1 + sb.length];
-
-        bytes[0] = ctrl;
-        System.arraycopy(sb, 0, bytes, 1, sb.length);
-        tests.put(new Double(str), bytes);
+        return floats;
     }
 
     static Map<Boolean, byte[]> booleans() {
@@ -349,6 +373,11 @@ public class DecoderTest {
     }
 
     @Test
+    public void testFloats() throws InvalidDatabaseException, IOException {
+        DecoderTest.testTypeDecoding(Decoder.Type.FLOAT, DecoderTest.floats());
+    }
+
+    @Test
     public void testPointers() throws InvalidDatabaseException, IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.POINTER, pointers());
     }
@@ -416,6 +445,9 @@ public class DecoderTest {
                 } else if (type.equals(Decoder.Type.DOUBLE)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asDouble());
+                } else if (type.equals(Decoder.Type.FLOAT)) {
+                    assertEquals(desc, new FloatNode((Float) expect), decoder
+                            .decode(0).getNode());
                 } else if (type.equals(Decoder.Type.UTF8_STRING)) {
                     assertEquals(desc, expect, decoder.decode(0).getNode()
                             .asText());

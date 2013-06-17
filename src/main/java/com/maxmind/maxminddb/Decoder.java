@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.node.BigIntegerNode;
 import com.fasterxml.jackson.databind.node.BinaryNode;
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.DoubleNode;
+import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -30,7 +31,7 @@ final class Decoder {
     private final ThreadBuffer threadBuffer;
 
     static enum Type {
-        EXTENDED, POINTER, UTF8_STRING, DOUBLE, BYTES, UINT16, UINT32, MAP, INT32, UINT64, UINT128, ARRAY, CONTAINER, END_MARKER, BOOLEAN;
+        EXTENDED, POINTER, UTF8_STRING, DOUBLE, BYTES, UINT16, UINT32, MAP, INT32, UINT64, UINT128, ARRAY, CONTAINER, END_MARKER, BOOLEAN, FLOAT;
 
         public static Type get(int i) {
             // XXX - Type.values() might be expensive. Consider caching it.
@@ -166,32 +167,33 @@ final class Decoder {
             Log.debug("Size", size);
         }
 
-        long new_offset = offset + size;
+        long newOffset = offset + size;
         switch (type) {
             case UTF8_STRING:
                 TextNode s = new TextNode(this.decodeString(size));
-                return new Result(s, new_offset);
+                return new Result(s, newOffset);
             case DOUBLE:
-                DoubleNode d = this.decodeDouble(size);
-                return new Result(d, new_offset);
+                return new Result(this.decodeDouble(), newOffset);
+            case FLOAT:
+                return new Result(this.decodeFloat(), newOffset);
             case BYTES:
                 BinaryNode b = new BinaryNode(this.getByteArray(size));
-                return new Result(b, new_offset);
+                return new Result(b, newOffset);
             case UINT16:
                 IntNode i = this.decodeUint16(size);
-                return new Result(i, new_offset);
+                return new Result(i, newOffset);
             case UINT32:
                 LongNode l = this.decodeUint32(size);
-                return new Result(l, new_offset);
+                return new Result(l, newOffset);
             case INT32:
                 IntNode int32 = this.decodeInt32(size);
-                return new Result(int32, new_offset);
+                return new Result(int32, newOffset);
             case UINT64:
                 BigIntegerNode bi = this.decodeBigInteger(size);
-                return new Result(bi, new_offset);
+                return new Result(bi, newOffset);
             case UINT128:
                 BigIntegerNode uint128 = this.decodeBigInteger(size);
-                return new Result(uint128, new_offset);
+                return new Result(uint128, newOffset);
             default:
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
@@ -281,10 +283,12 @@ final class Decoder {
         return new BigIntegerNode(new BigInteger(1, bytes));
     }
 
-    private DoubleNode decodeDouble(int size) {
-        byte[] bytes = this.getByteArray(size);
-        return new DoubleNode(Double.parseDouble(new String(bytes, Charset
-                .forName("US-ASCII"))));
+    private DoubleNode decodeDouble() {
+        return new DoubleNode(this.threadBuffer.get().getDouble());
+    }
+
+    private FloatNode decodeFloat() {
+        return new FloatNode(this.threadBuffer.get().getFloat());
     }
 
     private Result decodeBoolean(long size, long offset) {
