@@ -54,9 +54,9 @@ final class Decoder {
 
     class Result {
         private final JsonNode node;
-        private long offset;
+        private int offset;
 
-        Result(JsonNode node, long offset) {
+        Result(JsonNode node, int offset) {
             this.node = node;
             this.offset = offset;
         }
@@ -65,11 +65,11 @@ final class Decoder {
             return this.node;
         }
 
-        long getOffset() {
+        int getOffset() {
             return this.offset;
         }
 
-        void setOffset(long offset) {
+        void setOffset(int offset) {
             this.offset = offset;
         }
 
@@ -82,39 +82,32 @@ final class Decoder {
         this.DEBUG = System.getenv().get("MAXMIND_DB_DECODER_DEBUG") != null;
     }
 
-    Result decode(long offset) throws IOException {
+    Result decode(int offset) throws IOException {
         ByteBuffer buffer = this.threadBuffer.get();
 
-        buffer.position((int) offset);
-
-        if (this.DEBUG) {
-            Log.debug("Offset", String.valueOf(offset));
-        }
-
+        buffer.position(offset);
         int ctrlByte = 0xFF & buffer.get();
-
         offset++;
-
-        if (this.DEBUG) {
-            Log.debugBinary("Control byte", ctrlByte);
-        }
 
         Type type = Type.fromControlByte(ctrlByte);
 
         if (this.DEBUG) {
+            Log.debug("Offset", String.valueOf(offset));
+            Log.debugBinary("Control byte", ctrlByte);
             Log.debug("Type", type.name());
         }
 
         // Pointers are a special case, we don't read the next $size bytes, we
-        // use
-        // the size to determine the length of the pointer and then follow it.
+        // use the size to determine the length of the pointer and then follow
+        // it.
         if (type.equals(Type.POINTER)) {
             Result pointer = this.decodePointer(ctrlByte, offset);
 
+            // for unit testing
             if (this.POINTER_TEST_HACK) {
                 return pointer;
             }
-            Result result = this.decode((pointer.getNode().asLong()));
+            Result result = this.decode((pointer.getNode().asInt()));
             result.setOffset(pointer.getOffset());
             return result;
         }
@@ -139,38 +132,33 @@ final class Decoder {
             offset++;
         }
 
-        // consider passing by reference or something once I have a better feel
-        // for the logic
-        long[] sizeArray = this.sizeFromCtrlByte(ctrlByte, offset);
-        int size = (int) sizeArray[0];
+        int[] sizeArray = this.sizeFromCtrlByte(ctrlByte, offset);
+        int size = sizeArray[0];
         offset = sizeArray[1];
 
         if (this.DEBUG) {
             Log.debug("Size", String.valueOf(size));
         }
 
-        // The map and array types are special cases, since we don't read the
-        // next
-        // <code>size</code> bytes. For all other types, we do.
-        if (type.equals(Type.MAP)) {
-            return this.decodeMap(size, offset);
-        }
-
-        if (type.equals(Type.ARRAY)) {
-            return this.decodeArray(size, offset);
-        }
-
-        if (type.equals(Type.BOOLEAN)) {
-            return this.decodeBoolean(size, offset);
-        }
-
         if (this.DEBUG) {
             Log.debug("Offset", offset);
             Log.debug("Size", size);
         }
+        return this.decodeByType(type, offset, size);
+    }
 
-        long newOffset = offset + size;
+    private Result decodeByType(Type type, int offset, int size)
+            throws IOException {
+        // MAP, ARRAY, and BOOLEAN do not use newOffset as we don't read the
+        // next <code>size</code> bytes. For all other types, we do.
+        int newOffset = offset + size;
         switch (type) {
+            case MAP:
+                return this.decodeMap(size, offset);
+            case ARRAY:
+                return this.decodeArray(size, offset);
+            case BOOLEAN:
+                return this.decodeBoolean(size, offset);
             case UTF8_STRING:
                 TextNode s = new TextNode(this.decodeString(size));
                 return new Result(s, newOffset);
@@ -203,10 +191,10 @@ final class Decoder {
         }
     }
 
-    private final long[] pointerValueOffset = { 0, 0, 1 << 11,
-            (((long) 1) << 19) + ((1) << 11), 0 };
+    private final int[] pointerValueOffset = { 0, 0, 1 << 11,
+            (1 << 19) + ((1) << 11), 0 };
 
-    private Result decodePointer(int ctrlByte, long offset) {
+    private Result decodePointer(int ctrlByte, int offset) {
 
         int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
 
@@ -216,7 +204,7 @@ final class Decoder {
 
         int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
 
-        long packed = this.decodeLong(base, pointerSize);
+        int packed = this.decodeInteger(base, pointerSize);
 
         if (this.DEBUG) {
             Log.debug("Packed pointer", String.valueOf(packed));
@@ -249,9 +237,9 @@ final class Decoder {
         return new IntNode(this.decodeInteger(size));
     }
 
-    private int decodeInteger(int size) {
+    private long decodeLong(int size) {
         ByteBuffer buffer = this.threadBuffer.get();
-        int integer = 0;
+        long integer = 0;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (buffer.get() & 0xFF);
         }
@@ -262,22 +250,22 @@ final class Decoder {
         return new LongNode(this.decodeLong(size));
     }
 
-    private long decodeLong(int size) {
-        return this.decodeLong(0, size);
+    private int decodeInteger(int size) {
+        return this.decodeInteger(0, size);
     }
 
-    private long decodeLong(long base, int size) {
+    private int decodeInteger(int base, int size) {
         ByteBuffer buffer = this.threadBuffer.get();
-        return Decoder.decodeLong(buffer, base, size);
+        return Decoder.decodeInteger(buffer, base, size);
     }
 
-    static long decodeLong(ByteBuffer buffer, long base, int size) {
+    static int decodeInteger(ByteBuffer buffer, int base, int size) {
 
-        long longInt = base;
+        int integer = base;
         for (int i = 0; i < size; i++) {
-            longInt = (longInt << 8) | (buffer.get() & 0xFF);
+            integer = (integer << 8) | (buffer.get() & 0xFF);
         }
-        return longInt;
+        return integer;
     }
 
     private BigIntegerNode decodeBigInteger(int size) {
@@ -293,13 +281,13 @@ final class Decoder {
         return new FloatNode(this.threadBuffer.get().getFloat());
     }
 
-    private Result decodeBoolean(long size, long offset) {
+    private Result decodeBoolean(int size, int offset) {
         BooleanNode b = size == 0 ? BooleanNode.FALSE : BooleanNode.TRUE;
 
         return new Result(b, offset);
     }
 
-    private Result decodeArray(long size, long offset) throws IOException {
+    private Result decodeArray(int size, int offset) throws IOException {
         if (this.DEBUG) {
             Log.debug("Array size", size);
         }
@@ -323,7 +311,7 @@ final class Decoder {
         return new Result(array, offset);
     }
 
-    private Result decodeMap(long size, long offset) throws IOException {
+    private Result decodeMap(int size, int offset) throws IOException {
         if (this.DEBUG) {
             Log.debug("Map size", size);
         }
@@ -354,11 +342,11 @@ final class Decoder {
 
     }
 
-    private long[] sizeFromCtrlByte(int ctrlByte, long offset) {
+    private int[] sizeFromCtrlByte(int ctrlByte, int offset) {
         int size = ctrlByte & 0x1f;
 
         if (size < 29) {
-            return new long[] { size, offset };
+            return new int[] { size, offset };
         }
 
         int bytesToRead = size - 28;
@@ -375,7 +363,7 @@ final class Decoder {
             size = 65821 + i;
         }
 
-        return new long[] { size, offset + bytesToRead };
+        return new int[] { size, offset + bytesToRead };
     }
 
     private byte[] getByteArray(int length) {

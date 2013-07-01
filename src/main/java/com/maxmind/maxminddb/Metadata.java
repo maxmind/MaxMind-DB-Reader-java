@@ -12,10 +12,10 @@ final class Metadata {
     final String databaseType;
     final JsonNode description;
     final int ipVersion;
-    final long nodeCount;
+    final int nodeCount;
     final int recordSize;
     final int nodeByteSize;
-    final long searchTreeSize;
+    final int searchTreeSize;
     final JsonNode languages;
 
     public Metadata(JsonNode metadata) {
@@ -28,7 +28,7 @@ final class Metadata {
         this.languages = metadata.get("languages");
         this.description = metadata.get("description");
         this.ipVersion = metadata.get("ip_version").asInt();
-        this.nodeCount = metadata.get("node_count").asLong();
+        this.nodeCount = metadata.get("node_count").asInt();
         this.recordSize = metadata.get("record_size").asInt();
         this.nodeByteSize = this.recordSize / 4;
         this.searchTreeSize = this.nodeCount * this.nodeByteSize;

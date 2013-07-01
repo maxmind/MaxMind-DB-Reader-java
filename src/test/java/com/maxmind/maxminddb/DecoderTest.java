@@ -131,8 +131,19 @@ public class DecoderTest {
                 (byte) 0xf7, (byte) 0xfe });
         pointers.put((((long) 1) << 27) + (1 << 19) + (1 << 11) - 1,
                 new byte[] { 0x37, (byte) 0xff, (byte) 0xff, (byte) 0xff });
-        pointers.put((((long) 1) << 32) - 1, new byte[] { 0x38, (byte) 0xff,
+
+        pointers.put((((long) 1) << 31) - 1, new byte[] { 0x38, (byte) 0x7f,
                 (byte) 0xff, (byte) 0xff, (byte) 0xff });
+
+        // XXX - This is disabled because Java only supports ByteBuffers up to
+        // 2GB. As such, we are using a (signed) int as the pointer. This makes
+        // the Java implementation not quite compliant with the specification as
+        // that has a 32bit address space rather than a 31 bit. This is fixable
+        // using multiple buffer views in the unlikely situation that it becomes
+        // an issue.
+
+        // pointers.put((((long) 1) << 32) - 1, new byte[] { 0x38, (byte) 0xff,
+        // (byte) 0xff, (byte) 0xff, (byte) 0xff });
         return pointers;
     }
 
