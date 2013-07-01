@@ -66,21 +66,6 @@ public final class MaxMindDbReader implements Closeable {
      */
     public MaxMindDbReader(File database, FileMode fileMode) throws IOException {
         this.threadBuffer = new ThreadBuffer(database, fileMode);
-
-        /*
-         * We need to make sure that whatever chunk we read will have the
-         * metadata in it. The description metadata key is a hash of
-         * descriptions, one per language. The description could be something
-         * verbose like "GeoIP 2.0 City Database, Multilingual - English,
-         * Chinese (Taiwan), Chinese (China), French, German, Portuguese" (but
-         * with c. 20 languages). That comes out to about 250 bytes _per key_.
-         * Multiply that by 20 languages, and the description alon ecould use up
-         * about 5k. The other keys in the metadata are very, very tiny.
-         * 
-         * Given all this, reading 20k seems fairly future-proof. We'd have to
-         * have extremely long descriptions or descriptions in 80 languages
-         * before this became too long.
-         */
         int start = this.findMetadataStart();
 
         if (start < 0) {
@@ -91,9 +76,7 @@ public final class MaxMindDbReader implements Closeable {
         }
 
         Decoder metadataDecoder = new Decoder(this.threadBuffer, 0);
-
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
-
         this.decoder = new Decoder(this.threadBuffer,
                 this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
 
@@ -112,13 +95,10 @@ public final class MaxMindDbReader implements Closeable {
      *             if a file I/O error occurs.
      */
     public JsonNode get(InetAddress ipAddress) throws IOException {
-
         int pointer = this.findAddressInTree(ipAddress);
-
         if (pointer == 0) {
             return null;
         }
-
         this.threadBuffer.get().position(pointer);
         return this.resolveDataPointer(pointer);
     }
@@ -154,7 +134,6 @@ public final class MaxMindDbReader implements Closeable {
                 Log.debug("Bit #", i);
                 Log.debug("Bit value", bit);
                 Log.debug("Record", bit == 1 ? "right" : "left");
-                // Log.debug("Node count", this.metadata.nodeCount);
                 Log.debug("Record value", record);
             }
 
@@ -163,9 +142,7 @@ public final class MaxMindDbReader implements Closeable {
                     Log.debug("Record is empty");
                 }
                 return 0;
-            }
-
-            if (record >= this.metadata.nodeCount) {
+            } else if (record > this.metadata.nodeCount) {
                 if (MaxMindDbReader.DEBUG) {
                     Log.debug("Record is a data pointer");
                 }
@@ -178,7 +155,6 @@ public final class MaxMindDbReader implements Closeable {
 
             nodeNum = record;
         }
-
         throw new InvalidDatabaseException("Something bad happened");
     }
 
@@ -217,11 +193,9 @@ public final class MaxMindDbReader implements Closeable {
 
         if (MaxMindDbReader.DEBUG) {
             int treeSize = this.metadata.searchTreeSize;
-
             Log.debug("Resolved data pointer", "( " + pointer + " - "
                     + this.metadata.nodeCount + " ) + " + treeSize + " = "
                     + resolved);
-
         }
 
         // We only want the data from the decoder, not the offset where it was
@@ -230,7 +204,8 @@ public final class MaxMindDbReader implements Closeable {
     }
 
     /*
-     * And here I though searching a file was a solved problem.
+     * Apparently searching a file for a sequence is not a solved problem in
+     * Java. This searches from the end of the file for metadata start.
      * 
      * This is an extremely naive but reasonably readable implementation. There
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever

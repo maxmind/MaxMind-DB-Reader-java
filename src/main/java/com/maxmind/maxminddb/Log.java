@@ -38,6 +38,7 @@ final class Log {
     }
 
     static void debug(String message) {
+        // XXX - eventually we should probably switch to a real logger.
         System.out.println(message);
     }
 

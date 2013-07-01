@@ -11,7 +11,8 @@ import java.nio.channels.FileChannel.MapMode;
 import com.maxmind.maxminddb.MaxMindDbReader.FileMode;
 
 final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
-    // XXX - DO NOT PASS THIS OUTSIDE THIS CLASS.
+    // DO NOT PASS THESE OUTSIDE THIS CLASS. Doing so will remove thread
+    // safety.
     private final ByteBuffer buffer;
     private final RandomAccessFile raf;
     private final FileChannel fc;

@@ -20,7 +20,8 @@ import com.fasterxml.jackson.databind.node.TextNode;
 
 final class Decoder {
 
-    private final boolean DEBUG;
+    private final static boolean DEBUG = System.getenv().get(
+            "MAXMIND_DB_DECODER_DEBUG") != null;
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
@@ -79,7 +80,6 @@ final class Decoder {
         this.pointerBase = pointerBase;
         this.threadBuffer = threadBuffer;
         this.objectMapper = new ObjectMapper();
-        this.DEBUG = System.getenv().get("MAXMIND_DB_DECODER_DEBUG") != null;
     }
 
     Result decode(int offset) throws IOException {
@@ -91,7 +91,7 @@ final class Decoder {
 
         Type type = Type.fromControlByte(ctrlByte);
 
-        if (this.DEBUG) {
+        if (Decoder.DEBUG) {
             Log.debug("Offset", String.valueOf(offset));
             Log.debugBinary("Control byte", ctrlByte);
             Log.debug("Type", type.name());
@@ -115,7 +115,7 @@ final class Decoder {
         if (type.equals(Type.EXTENDED)) {
             int nextByte = buffer.get();
 
-            if (this.DEBUG) {
+            if (Decoder.DEBUG) {
                 Log.debug("Next byte", nextByte);
             }
 
@@ -136,11 +136,11 @@ final class Decoder {
         int size = sizeArray[0];
         offset = sizeArray[1];
 
-        if (this.DEBUG) {
+        if (Decoder.DEBUG) {
             Log.debug("Size", String.valueOf(size));
         }
 
-        if (this.DEBUG) {
+        if (Decoder.DEBUG) {
             Log.debug("Offset", offset);
             Log.debug("Size", size);
         }
@@ -158,7 +158,7 @@ final class Decoder {
             case ARRAY:
                 return this.decodeArray(size, offset);
             case BOOLEAN:
-                return this.decodeBoolean(size, offset);
+                return new Result(Decoder.decodeBoolean(size), offset);
             case UTF8_STRING:
                 TextNode s = new TextNode(this.decodeString(size));
                 return new Result(s, newOffset);
@@ -195,28 +195,18 @@ final class Decoder {
             (1 << 19) + ((1) << 11), 0 };
 
     private Result decodePointer(int ctrlByte, int offset) {
-
         int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
-
-        if (this.DEBUG) {
-            Log.debug("Pointer size", String.valueOf(pointerSize));
-        }
-
         int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
-
         int packed = this.decodeInteger(base, pointerSize);
+        long pointer = packed + this.pointerBase
+                + this.pointerValueOffset[pointerSize];
 
-        if (this.DEBUG) {
+        if (Decoder.DEBUG) {
+            Log.debug("Pointer size", String.valueOf(pointerSize));
             Log.debug("Packed pointer", String.valueOf(packed));
             Log.debug("Pointer base", this.pointerBase);
             Log.debug("Pointer value offset",
                     this.pointerValueOffset[pointerSize]);
-        }
-
-        long pointer = packed + this.pointerBase
-                + this.pointerValueOffset[pointerSize];
-
-        if (this.DEBUG) {
             Log.debug("Pointer to", String.valueOf(pointer));
         }
 
@@ -260,7 +250,6 @@ final class Decoder {
     }
 
     static int decodeInteger(ByteBuffer buffer, int base, int size) {
-
         int integer = base;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (buffer.get() & 0xFF);
@@ -281,30 +270,21 @@ final class Decoder {
         return new FloatNode(this.threadBuffer.get().getFloat());
     }
 
-    private Result decodeBoolean(int size, int offset) {
-        BooleanNode b = size == 0 ? BooleanNode.FALSE : BooleanNode.TRUE;
-
-        return new Result(b, offset);
+    private static BooleanNode decodeBoolean(int size) {
+        return size == 0 ? BooleanNode.FALSE : BooleanNode.TRUE;
     }
 
     private Result decodeArray(int size, int offset) throws IOException {
-        if (this.DEBUG) {
-            Log.debug("Array size", size);
-        }
-
         ArrayNode array = this.objectMapper.createArrayNode();
 
         for (int i = 0; i < size; i++) {
             Result r = this.decode(offset);
             offset = r.getOffset();
-
-            if (this.DEBUG) {
-                Log.debug("Value " + i, r.getNode().toString());
-            }
             array.add(r.getNode());
         }
 
-        if (this.DEBUG) {
+        if (Decoder.DEBUG) {
+            Log.debug("Array size", size);
             Log.debug("Decoded array", array.toString());
         }
 
@@ -312,10 +292,6 @@ final class Decoder {
     }
 
     private Result decodeMap(int size, int offset) throws IOException {
-        if (this.DEBUG) {
-            Log.debug("Map size", size);
-        }
-
         ObjectNode map = this.objectMapper.createObjectNode();
 
         for (int i = 0; i < size; i++) {
@@ -327,14 +303,11 @@ final class Decoder {
             JsonNode value = valueResult.getNode();
             offset = valueResult.getOffset();
 
-            if (this.DEBUG) {
-                Log.debug("Key " + i, key);
-                Log.debug("Value " + i, value.toString());
-            }
             map.put(key, value);
         }
 
-        if (this.DEBUG) {
+        if (Decoder.DEBUG) {
+            Log.debug("Map size", size);
             Log.debug("Decoded map", map.toString());
         }
 
@@ -344,12 +317,7 @@ final class Decoder {
 
     private int[] sizeFromCtrlByte(int ctrlByte, int offset) {
         int size = ctrlByte & 0x1f;
-
-        if (size < 29) {
-            return new int[] { size, offset };
-        }
-
-        int bytesToRead = size - 28;
+        int bytesToRead = size < 29 ? 0 : size - 28;
 
         if (size == 29) {
             int i = this.decodeInteger(bytesToRead);
@@ -357,12 +325,11 @@ final class Decoder {
         } else if (size == 30) {
             int i = this.decodeInteger(bytesToRead);
             size = 285 + i;
-        } else {
+        } else if (size > 30) {
             int i = this.decodeInteger(bytesToRead)
                     & (0x0FFFFFFF >>> (32 - (8 * bytesToRead)));
             size = 65821 + i;
         }
-
         return new int[] { size, offset + bytesToRead };
     }
 
