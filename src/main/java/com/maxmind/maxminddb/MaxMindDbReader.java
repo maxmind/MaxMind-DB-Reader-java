@@ -37,7 +37,7 @@ public final class MaxMindDbReader implements Closeable {
         /**
          * Loads the database into memory when the reader is constructed.
          */
-        IN_MEMORY
+        MEMORY
     }
 
     /**

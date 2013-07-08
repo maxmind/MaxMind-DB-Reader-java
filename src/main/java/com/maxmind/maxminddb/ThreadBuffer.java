@@ -20,7 +20,7 @@ final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
     ThreadBuffer(File database, FileMode mode) throws IOException {
         this.raf = new RandomAccessFile(database, "r");
         this.fc = this.raf.getChannel();
-        if (mode == FileMode.IN_MEMORY) {
+        if (mode == FileMode.MEMORY) {
             this.buffer = ByteBuffer.wrap(new byte[(int) this.fc.size()]);
             this.fc.read(this.buffer);
         } else {

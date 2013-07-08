@@ -16,7 +16,7 @@ public class PointerTest {
     @Test
     public void testWithPointers() throws InvalidDatabaseException, IOException {
         File file = new File("test-data/pointer.bin");
-        ThreadBuffer ptf = new ThreadBuffer(file, FileMode.IN_MEMORY);
+        ThreadBuffer ptf = new ThreadBuffer(file, FileMode.MEMORY);
         try {
             Decoder decoder = new Decoder(ptf, 0);
 
