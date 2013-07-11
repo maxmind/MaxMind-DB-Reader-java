@@ -138,9 +138,6 @@ final class Decoder {
 
         if (Decoder.DEBUG) {
             Log.debug("Size", String.valueOf(size));
-        }
-
-        if (Decoder.DEBUG) {
             Log.debug("Offset", offset);
             Log.debug("Size", size);
         }
