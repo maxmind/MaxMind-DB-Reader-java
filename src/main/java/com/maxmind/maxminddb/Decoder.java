@@ -309,7 +309,6 @@ final class Decoder {
         }
 
         return new Result(map, offset);
-
     }
 
     private int[] sizeFromCtrlByte(int ctrlByte, int offset) {

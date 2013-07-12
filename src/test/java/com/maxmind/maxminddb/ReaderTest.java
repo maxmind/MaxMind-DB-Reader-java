@@ -19,7 +19,7 @@ public class ReaderTest {
 
     @Test
     public void test() throws InvalidDatabaseException, IOException {
-        for (long recordSize : new long[] { 24 }) { // 24, 28, 32 }) {
+        for (long recordSize : new long[] { 24, 28, 32 }) {
             for (int ipVersion : new int[] { 4, 6 }) {
                 String fileName = "test-data/Test-IPv" + ipVersion + "-"
                         + recordSize + ".mmdb";
@@ -31,7 +31,6 @@ public class ReaderTest {
                 } else {
                     this.testIpV6(reader, fileName);
                 }
-
             }
         }
     }
@@ -53,7 +52,6 @@ public class ReaderTest {
 
         assertEquals(description, metadata.description);
         assertEquals(recordSize, metadata.recordSize);
-
     }
 
     private void testIpV4(MaxMindDbReader reader, String fileName)
@@ -128,6 +126,5 @@ public class ReaderTest {
         for (String ip : new String[] { "1.1.1.33", "255.254.253.123", "89fa::" }) {
             assertNull(reader.get(InetAddress.getByName(ip)));
         }
-
     }
 }

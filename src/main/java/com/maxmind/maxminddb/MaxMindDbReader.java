@@ -43,7 +43,7 @@ public final class MaxMindDbReader implements Closeable {
     /**
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
-     * 
+     *
      * @param database
      *            the MaxMind DB file to use.
      * @throws IOException
@@ -56,7 +56,7 @@ public final class MaxMindDbReader implements Closeable {
     /**
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
-     * 
+     *
      * @param database
      *            the MaxMind DB file to use.
      * @param fileMode
@@ -66,14 +66,7 @@ public final class MaxMindDbReader implements Closeable {
      */
     public MaxMindDbReader(File database, FileMode fileMode) throws IOException {
         this.threadBuffer = new ThreadBuffer(database, fileMode);
-        int start = this.findMetadataStart();
-
-        if (start < 0) {
-            throw new InvalidDatabaseException(
-                    "Could not find a MaxMind DB metadata marker in this file ("
-                            + database.getName()
-                            + "). Is this a valid MaxMind DB file?");
-        }
+        int start = this.findMetadataStart(database.getName());
 
         Decoder metadataDecoder = new Decoder(this.threadBuffer, 0);
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
@@ -87,7 +80,7 @@ public final class MaxMindDbReader implements Closeable {
 
     /**
      * Looks up the <code>address</code> in the MaxMind DB.
-     * 
+     *
      * @param ipAddress
      *            the IP address to look up.
      * @return the record for the IP address.
@@ -99,7 +92,6 @@ public final class MaxMindDbReader implements Closeable {
         if (pointer == 0) {
             return null;
         }
-        this.threadBuffer.get().position(pointer);
         return this.resolveDataPointer(pointer);
     }
 
@@ -162,7 +154,6 @@ public final class MaxMindDbReader implements Closeable {
             throws InvalidDatabaseException {
         ByteBuffer buffer = this.threadBuffer.get();
         int baseOffset = nodeNumber * this.metadata.nodeByteSize;
-        buffer.position(baseOffset);
 
         switch (this.metadata.recordSize) {
             case 24:
@@ -206,12 +197,12 @@ public final class MaxMindDbReader implements Closeable {
     /*
      * Apparently searching a file for a sequence is not a solved problem in
      * Java. This searches from the end of the file for metadata start.
-     * 
+     *
      * This is an extremely naive but reasonably readable implementation. There
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private int findMetadataStart() {
+    private int findMetadataStart(String databaseName) throws InvalidDatabaseException {
         ByteBuffer buffer = this.threadBuffer.get();
         int fileSize = buffer.capacity();
 
@@ -225,7 +216,10 @@ public final class MaxMindDbReader implements Closeable {
             }
             return fileSize - i;
         }
-        return -1;
+        throw new InvalidDatabaseException(
+               "Could not find a MaxMind DB metadata marker in this file ("
+                        + databaseName
+                        + "). Is this a valid MaxMind DB file?");
     }
 
     Metadata getMetadata() {
@@ -234,7 +228,7 @@ public final class MaxMindDbReader implements Closeable {
 
     /**
      * Closes the MaxMind DB and returns resources to the system.
-     * 
+     *
      * @throws IOException
      *             if an I/O error occurs.
      */
