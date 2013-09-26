@@ -18,8 +18,6 @@ public final class MaxMindDbReader implements Closeable {
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
             'c', 'o', 'm' };
 
-    private final static boolean DEBUG = System.getenv().get(
-            "MAXMIND_DB_READER_DEBUG") != null;
     private final Decoder decoder;
     private final Metadata metadata;
     private final ThreadBuffer threadBuffer;
@@ -43,7 +41,7 @@ public final class MaxMindDbReader implements Closeable {
     /**
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
-     *
+     * 
      * @param database
      *            the MaxMind DB file to use.
      * @throws IOException
@@ -56,7 +54,7 @@ public final class MaxMindDbReader implements Closeable {
     /**
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
-     *
+     * 
      * @param database
      *            the MaxMind DB file to use.
      * @param fileMode
@@ -72,15 +70,11 @@ public final class MaxMindDbReader implements Closeable {
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
         this.decoder = new Decoder(this.threadBuffer,
                 this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
-
-        if (MaxMindDbReader.DEBUG) {
-            Log.debug(this.metadata.toString());
-        }
     }
 
     /**
      * Looks up the <code>address</code> in the MaxMind DB.
-     *
+     * 
      * @param ipAddress
      *            the IP address to look up.
      * @return the record for the IP address.
@@ -99,13 +93,6 @@ public final class MaxMindDbReader implements Closeable {
             throws InvalidDatabaseException {
         byte[] rawAddress = address.getAddress();
 
-        if (MaxMindDbReader.DEBUG) {
-            Log.debugNewLine();
-            Log.debug("IP address", address);
-            Log.debug("IP address", rawAddress);
-            Log.debugNewLine();
-        }
-
         boolean isIp4AddressInIp6Db = rawAddress.length == 4
                 && this.metadata.ipVersion == 6;
         int ipStartBit = isIp4AddressInIp6Db ? 96 : 0;
@@ -122,27 +109,12 @@ public final class MaxMindDbReader implements Closeable {
             }
             int record = this.readNode(nodeNum, bit);
 
-            if (MaxMindDbReader.DEBUG) {
-                Log.debug("Bit #", i);
-                Log.debug("Bit value", bit);
-                Log.debug("Record", bit == 1 ? "right" : "left");
-                Log.debug("Record value", record);
-            }
-
             if (record == this.metadata.nodeCount) {
-                if (MaxMindDbReader.DEBUG) {
-                    Log.debug("Record is empty");
-                }
+                // record is empty
                 return 0;
             } else if (record > this.metadata.nodeCount) {
-                if (MaxMindDbReader.DEBUG) {
-                    Log.debug("Record is a data pointer");
-                }
+                // record is a data pointer
                 return record;
-            }
-
-            if (MaxMindDbReader.DEBUG) {
-                Log.debug("Record is a node number");
             }
 
             nodeNum = record;
@@ -182,13 +154,6 @@ public final class MaxMindDbReader implements Closeable {
         int resolved = (pointer - this.metadata.nodeCount)
                 + this.metadata.searchTreeSize;
 
-        if (MaxMindDbReader.DEBUG) {
-            int treeSize = this.metadata.searchTreeSize;
-            Log.debug("Resolved data pointer", "( " + pointer + " - "
-                    + this.metadata.nodeCount + " ) + " + treeSize + " = "
-                    + resolved);
-        }
-
         // We only want the data from the decoder, not the offset where it was
         // found.
         return this.decoder.decode(resolved).getNode();
@@ -197,12 +162,13 @@ public final class MaxMindDbReader implements Closeable {
     /*
      * Apparently searching a file for a sequence is not a solved problem in
      * Java. This searches from the end of the file for metadata start.
-     *
+     * 
      * This is an extremely naive but reasonably readable implementation. There
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private int findMetadataStart(String databaseName) throws InvalidDatabaseException {
+    private int findMetadataStart(String databaseName)
+            throws InvalidDatabaseException {
         ByteBuffer buffer = this.threadBuffer.get();
         int fileSize = buffer.capacity();
 
@@ -217,9 +183,8 @@ public final class MaxMindDbReader implements Closeable {
             return fileSize - i;
         }
         throw new InvalidDatabaseException(
-               "Could not find a MaxMind DB metadata marker in this file ("
-                        + databaseName
-                        + "). Is this a valid MaxMind DB file?");
+                "Could not find a MaxMind DB metadata marker in this file ("
+                        + databaseName + "). Is this a valid MaxMind DB file?");
     }
 
     Metadata getMetadata() {
@@ -228,7 +193,7 @@ public final class MaxMindDbReader implements Closeable {
 
     /**
      * Closes the MaxMind DB and returns resources to the system.
-     *
+     * 
      * @throws IOException
      *             if an I/O error occurs.
      */

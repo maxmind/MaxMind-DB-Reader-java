@@ -19,9 +19,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 final class Decoder {
-
-    private final static boolean DEBUG = System.getenv().get(
-            "MAXMIND_DB_DECODER_DEBUG") != null;
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
@@ -91,13 +88,7 @@ final class Decoder {
 
         Type type = Type.fromControlByte(ctrlByte);
 
-        if (Decoder.DEBUG) {
-            Log.debug("Offset", String.valueOf(offset));
-            Log.debugBinary("Control byte", ctrlByte);
-            Log.debug("Type", type.name());
-        }
-
-        // Pointers are a special case, we don't read the next $size bytes, we
+        // Pointers are a special case, we don't read the next 'size' bytes, we
         // use the size to determine the length of the pointer and then follow
         // it.
         if (type.equals(Type.POINTER)) {
@@ -114,10 +105,6 @@ final class Decoder {
 
         if (type.equals(Type.EXTENDED)) {
             int nextByte = buffer.get();
-
-            if (Decoder.DEBUG) {
-                Log.debug("Next byte", nextByte);
-            }
 
             int typeNum = nextByte + 7;
 
@@ -136,11 +123,6 @@ final class Decoder {
         int size = sizeArray[0];
         offset = sizeArray[1];
 
-        if (Decoder.DEBUG) {
-            Log.debug("Size", String.valueOf(size));
-            Log.debug("Offset", offset);
-            Log.debug("Size", size);
-        }
         return this.decodeByType(type, offset, size);
     }
 
@@ -184,7 +166,6 @@ final class Decoder {
             default:
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
-
         }
     }
 
@@ -197,15 +178,6 @@ final class Decoder {
         int packed = this.decodeInteger(base, pointerSize);
         long pointer = packed + this.pointerBase
                 + this.pointerValueOffset[pointerSize];
-
-        if (Decoder.DEBUG) {
-            Log.debug("Pointer size", String.valueOf(pointerSize));
-            Log.debug("Packed pointer", String.valueOf(packed));
-            Log.debug("Pointer base", this.pointerBase);
-            Log.debug("Pointer value offset",
-                    this.pointerValueOffset[pointerSize]);
-            Log.debug("Pointer to", String.valueOf(pointer));
-        }
 
         return new Result(new LongNode(pointer), offset + pointerSize);
     }
@@ -280,11 +252,6 @@ final class Decoder {
             array.add(r.getNode());
         }
 
-        if (Decoder.DEBUG) {
-            Log.debug("Array size", size);
-            Log.debug("Decoded array", array.toString());
-        }
-
         return new Result(array, offset);
     }
 
@@ -301,11 +268,6 @@ final class Decoder {
             offset = valueResult.getOffset();
 
             map.put(key, value);
-        }
-
-        if (Decoder.DEBUG) {
-            Log.debug("Map size", size);
-            Log.debug("Decoded map", map.toString());
         }
 
         return new Result(map, offset);
