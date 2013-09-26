@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNull;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,24 +20,31 @@ public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
 
     @Test
-    public void test() throws InvalidDatabaseException, IOException {
+    public void test() throws InvalidDatabaseException, IOException,
+            URISyntaxException {
         for (long recordSize : new long[] { 24, 28, 32 }) {
             for (int ipVersion : new int[] { 4, 6 }) {
-                String fileName = "test-data/Test-IPv" + ipVersion + "-"
-                        + recordSize + ".mmdb";
-                MaxMindDbReader reader = new MaxMindDbReader(new File(fileName));
-                this.testMetadata(reader, ipVersion, recordSize);
+                URI file = ReaderTest.class.getResource(
+                        "/maxmind-db/test-data/MaxMind-DB-test-ipv" + ipVersion
+                                + "-" + recordSize + ".mmdb").toURI();
+                MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+                try {
+                    this.testMetadata(reader, ipVersion, recordSize);
+                } finally {
+                    reader.close();
+                }
 
                 if (ipVersion == 4) {
-                    this.testIpV4(reader, fileName);
+                    this.testIpV4(reader, file);
                 } else {
-                    this.testIpV6(reader, fileName);
+                    this.testIpV6(reader, file);
                 }
             }
         }
     }
 
-    private void testMetadata(MaxMindDbReader reader, int ipVersion, long recordSize) {
+    private void testMetadata(MaxMindDbReader reader, int ipVersion,
+            long recordSize) {
 
         Metadata metadata = reader.getMetadata();
 
@@ -54,7 +63,7 @@ public class ReaderTest {
         assertEquals(recordSize, metadata.recordSize);
     }
 
-    private void testIpV4(MaxMindDbReader reader, String fileName)
+    private void testIpV4(MaxMindDbReader reader, URI file)
             throws InvalidDatabaseException, IOException {
 
         for (int i = 0; i <= 5; i++) {
@@ -63,8 +72,7 @@ public class ReaderTest {
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
-                    + fileName, data,
-                    reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address)));
         }
 
         Map<String, String> pairs = new HashMap<String, String>();
@@ -80,8 +88,7 @@ public class ReaderTest {
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "
-                    + fileName, data,
-                    reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address)));
         }
 
         for (String ip : new String[] { "1.1.1.33", "255.254.253.123" }) {
@@ -90,7 +97,7 @@ public class ReaderTest {
     }
 
     // XXX - logic could be combined with above
-    private void testIpV6(MaxMindDbReader reader, String fileName)
+    private void testIpV6(MaxMindDbReader reader, URI file)
             throws InvalidDatabaseException, IOException {
         String[] subnets = new String[] { "::1:ffff:ffff", "::2:0:0",
                 "::2:0:40", "::2:0:50", "::2:0:58" };
@@ -100,8 +107,7 @@ public class ReaderTest {
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
-                    + fileName, data,
-                    reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address)));
         }
 
         Map<String, String> pairs = new HashMap<String, String>();
@@ -119,8 +125,7 @@ public class ReaderTest {
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "
-                    + fileName, data,
-                    reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address)));
         }
 
         for (String ip : new String[] { "1.1.1.33", "255.254.253.123", "89fa::" }) {

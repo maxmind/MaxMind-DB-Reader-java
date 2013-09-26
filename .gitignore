@@ -11,6 +11,7 @@
 .pmd
 .project
 .settings
+bin
 doc
 hs_err*.log
 target
