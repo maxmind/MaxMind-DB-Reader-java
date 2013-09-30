@@ -18,6 +18,7 @@ public final class MaxMindDbReader implements Closeable {
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
             'c', 'o', 'm' };
 
+    private int ipV4Start;
     private final Decoder decoder;
     private final Metadata metadata;
     private final ThreadBuffer threadBuffer;
@@ -93,20 +94,11 @@ public final class MaxMindDbReader implements Closeable {
             throws InvalidDatabaseException {
         byte[] rawAddress = address.getAddress();
 
-        boolean isIp4AddressInIp6Db = rawAddress.length == 4
-                && this.metadata.ipVersion == 6;
-        int ipStartBit = isIp4AddressInIp6Db ? 96 : 0;
+        int nodeNum = this.startNode(rawAddress.length * 8);
 
-        // The first node of the tree is always node 0, at the beginning of the
-        // value
-        int nodeNum = 0;
-
-        for (int i = 0; i < rawAddress.length * 8 + ipStartBit; i++) {
-            int bit = 0;
-            if (i >= ipStartBit) {
-                int b = 0xFF & rawAddress[(i - ipStartBit) / 8];
-                bit = 1 & (b >> 7 - (i % 8));
-            }
+        for (int i = 0; i < rawAddress.length * 8; i++) {
+            int b = 0xFF & rawAddress[i / 8];
+            int bit = 1 & (b >> 7 - (i % 8));
             int record = this.readNode(nodeNum, bit);
 
             if (record == this.metadata.nodeCount) {
@@ -120,6 +112,35 @@ public final class MaxMindDbReader implements Closeable {
             nodeNum = record;
         }
         throw new InvalidDatabaseException("Something bad happened");
+    }
+
+    private int startNode(int length) throws InvalidDatabaseException {
+        // Check if we are looking up an IPv4 address in an IPv6 tree. If this
+        // is the case, we can skip over the first 96 nodes.
+        if (this.metadata.ipVersion == 6 && length == 32) {
+            return this.ipV4StartNode();
+        }
+        // The first node of the tree is always node 0, at the beginning of the
+        // value
+        return 0;
+    }
+
+    private int ipV4StartNode() throws InvalidDatabaseException {
+        // This is a defensive check. There is no reason to call this when you
+        // have an IPv4 tree.
+        if (this.metadata.ipVersion == 4) {
+            return 0;
+        }
+
+        if (this.ipV4Start != 0) {
+            return this.ipV4Start;
+        }
+        int nodeNum = 0;
+        for (int i = 0; i < 96; i++) {
+            nodeNum = this.readNode(nodeNum, 0);
+        }
+        this.ipV4Start = nodeNum;
+        return nodeNum;
     }
 
     private int readNode(int nodeNumber, int index)
