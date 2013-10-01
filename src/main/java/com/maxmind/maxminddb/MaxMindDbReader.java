@@ -136,9 +136,12 @@ public final class MaxMindDbReader implements Closeable {
         }
         int node = 0;
         int nextNode = 0;
-        for (int i = 0; i < 96 && nextNode < this.metadata.nodeCount; i++) {
-            node = nextNode;
+        for (int i = 0; i < 96; i++) {
             nextNode = this.readNode(node, 0);
+            if (nextNode >= this.metadata.nodeCount) {
+                break;
+            }
+            node = nextNode;
         }
         this.ipV4Start = node;
         return node;
