@@ -98,17 +98,19 @@ public final class MaxMindDbReader implements Closeable {
         int record = this.startNode(bitLength);
 
         for (int i = 0; i < bitLength; i++) {
+            if (record >= this.metadata.nodeCount) {
+                break;
+            }
             int b = 0xFF & rawAddress[i / 8];
             int bit = 1 & (b >> 7 - (i % 8));
             record = this.readNode(record, bit);
-
-            if (record == this.metadata.nodeCount) {
-                // record is empty
-                return 0;
-            } else if (record > this.metadata.nodeCount) {
-                // record is a data pointer
-                return record;
-            }
+        }
+        if (record == this.metadata.nodeCount) {
+            // record is empty
+            return 0;
+        } else if (record > this.metadata.nodeCount) {
+            // record is a data pointer
+            return record;
         }
         throw new InvalidDatabaseException("Something bad happened");
     }
@@ -135,12 +137,8 @@ public final class MaxMindDbReader implements Closeable {
             return this.ipV4Start;
         }
         int node = 0;
-        for (int i = 0; i < 96; i++) {
-            int nextNode = this.readNode(node, 0);
-            if (nextNode >= this.metadata.nodeCount) {
-                break;
-            }
-            node = nextNode;
+        for (int i = 0; i < 96 && node < this.metadata.nodeCount; i++) {
+            node = this.readNode(node, 0);
         }
         this.ipV4Start = node;
         return node;

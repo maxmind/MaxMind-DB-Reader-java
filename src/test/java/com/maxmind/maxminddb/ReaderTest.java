@@ -53,6 +53,8 @@ public class ReaderTest {
 
         assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"))
                 .textValue());
+        assertEquals("::/64", reader.get(InetAddress.getByName("192.1.1.1"))
+                .textValue());
     }
 
     private void testMetadata(MaxMindDbReader reader, int ipVersion,
