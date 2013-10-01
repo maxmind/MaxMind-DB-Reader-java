@@ -51,7 +51,7 @@ public class ReaderTest {
 
         MaxMindDbReader reader = new MaxMindDbReader(new File(file));
 
-        assertEquals("::/64", reader.get(InetAddress.getByName("::1:1.1.1.1"))
+        assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"))
                 .textValue());
     }
 

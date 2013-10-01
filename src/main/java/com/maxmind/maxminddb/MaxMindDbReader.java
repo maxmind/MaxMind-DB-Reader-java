@@ -94,12 +94,13 @@ public final class MaxMindDbReader implements Closeable {
             throws InvalidDatabaseException {
         byte[] rawAddress = address.getAddress();
 
-        int nodeNum = this.startNode(rawAddress.length * 8);
+        int bitLength = rawAddress.length * 8;
+        int record = this.startNode(bitLength);
 
-        for (int i = 0; i < rawAddress.length * 8; i++) {
+        for (int i = 0; i < bitLength; i++) {
             int b = 0xFF & rawAddress[i / 8];
             int bit = 1 & (b >> 7 - (i % 8));
-            int record = this.readNode(nodeNum, bit);
+            record = this.readNode(record, bit);
 
             if (record == this.metadata.nodeCount) {
                 // record is empty
@@ -108,16 +109,14 @@ public final class MaxMindDbReader implements Closeable {
                 // record is a data pointer
                 return record;
             }
-
-            nodeNum = record;
         }
         throw new InvalidDatabaseException("Something bad happened");
     }
 
-    private int startNode(int length) throws InvalidDatabaseException {
+    private int startNode(int bitLength) throws InvalidDatabaseException {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
-        if (this.metadata.ipVersion == 6 && length == 32) {
+        if (this.metadata.ipVersion == 6 && bitLength == 32) {
             return this.ipV4StartNode();
         }
         // The first node of the tree is always node 0, at the beginning of the
@@ -135,12 +134,14 @@ public final class MaxMindDbReader implements Closeable {
         if (this.ipV4Start != 0) {
             return this.ipV4Start;
         }
-        int nodeNum = 0;
-        for (int i = 0; i < 96; i++) {
-            nodeNum = this.readNode(nodeNum, 0);
+        int node = 0;
+        int nextNode = 0;
+        for (int i = 0; i < 96 && nextNode < this.metadata.nodeCount; i++) {
+            node = nextNode;
+            nextNode = this.readNode(node, 0);
         }
-        this.ipV4Start = nodeNum;
-        return nodeNum;
+        this.ipV4Start = node;
+        return node;
     }
 
     private int readNode(int nodeNumber, int index)
