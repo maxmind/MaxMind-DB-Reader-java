@@ -66,7 +66,7 @@ public final class MaxMindDbReader implements Closeable {
         this.threadBuffer = new ThreadBuffer(database, fileMode);
         int start = this.findMetadataStart(database.getName());
 
-        Decoder metadataDecoder = new Decoder(this.threadBuffer, 0);
+        Decoder metadataDecoder = new Decoder(this.threadBuffer, start);
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
         this.decoder = new Decoder(this.threadBuffer,
                 this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);

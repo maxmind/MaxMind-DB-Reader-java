@@ -43,6 +43,18 @@ public class ReaderTest {
         }
     }
 
+    @Test
+    public void testNoIpV4SearchTree() throws IOException, URISyntaxException {
+        URI file = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
+                .toURI();
+
+        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+
+        assertEquals("::/64", reader.get(InetAddress.getByName("::1:1.1.1.1"))
+                .textValue());
+    }
+
     private void testMetadata(MaxMindDbReader reader, int ipVersion,
             long recordSize) {
 
