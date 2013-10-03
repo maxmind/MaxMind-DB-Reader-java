@@ -62,6 +62,54 @@ public class ReaderTest {
     }
 
     @Test
+    public void testDecodingTypes() throws URISyntaxException, IOException {
+        URI file = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
+
+        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        JsonNode record = reader.get(InetAddress.getByName("::1.1.1.0"));
+
+        assertEquals(true, record.get("boolean").booleanValue());
+
+        assertArrayEquals(new byte[] { 0, 0, 0, (byte) 42 }, record
+                .get("bytes").binaryValue());
+
+        assertEquals("unicode! ☯ - ♫", record.get("utf8_string").textValue());
+
+        assertTrue(record.get("array").isArray());
+        JsonNode array = record.get("array");
+        assertEquals(3, array.size());
+        assertEquals(3, array.size());
+        assertEquals(1, array.get(0).intValue());
+        assertEquals(2, array.get(1).intValue());
+        assertEquals(3, array.get(2).intValue());
+
+        assertTrue(record.get("map").isObject());
+        assertEquals(1, record.get("map").size());
+
+        JsonNode mapX = record.get("map").get("mapX");
+        assertEquals(2, mapX.size());
+
+        JsonNode arrayX = mapX.get("arrayX");
+        assertEquals(3, arrayX.size());
+        assertEquals(7, arrayX.get(0).intValue());
+        assertEquals(8, arrayX.get(1).intValue());
+        assertEquals(9, arrayX.get(2).intValue());
+
+        assertEquals("hello", mapX.get("utf8_stringX").textValue());
+
+        assertEquals(42.123456, record.get("double").doubleValue(), 0.000000001);
+        assertEquals(1.1, record.get("float").floatValue(), 0.000001);
+        assertEquals(-268435456, record.get("int32").intValue());
+        assertEquals(100, record.get("uint16").intValue());
+        assertEquals(268435456, record.get("uint32").intValue());
+        assertEquals(new BigInteger("1152921504606846976"), record
+                .get("uint64").bigIntegerValue());
+        assertEquals(new BigInteger("1329227995784915872903807060280344576"),
+                record.get("uint128").bigIntegerValue());
+    }
+
+    @Test
     public void testZeros() throws URISyntaxException, IOException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
