@@ -1,10 +1,13 @@
 package com.maxmind.maxminddb;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -13,6 +16,7 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -55,6 +59,35 @@ public class ReaderTest {
                 .textValue());
         assertEquals("::/64", reader.get(InetAddress.getByName("192.1.1.1"))
                 .textValue());
+    }
+
+    @Test
+    public void testZeros() throws URISyntaxException, IOException {
+        URI file = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
+
+        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        JsonNode record = reader.get(InetAddress.getByName("::"));
+
+        assertEquals(false, record.get("boolean").booleanValue());
+
+        assertArrayEquals(new byte[0], record.get("bytes").binaryValue());
+
+        assertEquals("", record.get("utf8_string").textValue());
+
+        assertTrue(record.get("array").isArray());
+        assertEquals(0, record.get("array").size());
+
+        assertTrue(record.get("map").isObject());
+        assertEquals(0, record.get("map").size());
+
+        assertEquals(0, record.get("double").doubleValue(), 0.000000001);
+        assertEquals(0, record.get("float").floatValue(), 0.000001);
+        assertEquals(0, record.get("int32").intValue());
+        assertEquals(0, record.get("uint16").intValue());
+        assertEquals(0, record.get("uint32").intValue());
+        assertEquals(BigInteger.ZERO, record.get("uint64").bigIntegerValue());
+        assertEquals(BigInteger.ZERO, record.get("uint128").bigIntegerValue());
     }
 
     private void testMetadata(MaxMindDbReader reader, int ipVersion,

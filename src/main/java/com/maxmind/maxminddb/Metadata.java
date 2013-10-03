@@ -32,7 +32,6 @@ final class Metadata {
         this.recordSize = metadata.get("record_size").asInt();
         this.nodeByteSize = this.recordSize / 4;
         this.searchTreeSize = this.nodeCount * this.nodeByteSize;
-
     }
 
     /*
