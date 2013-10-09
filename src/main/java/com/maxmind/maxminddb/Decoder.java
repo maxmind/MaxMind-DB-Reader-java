@@ -81,6 +81,11 @@ final class Decoder {
 
     Result decode(int offset) throws IOException {
         ByteBuffer buffer = this.threadBuffer.get();
+        if (offset >= buffer.capacity()) {
+            throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains bad data: "
+                            + "pointer larger than the database.");
+        }
 
         buffer.position(offset);
         int ctrlByte = 0xFF & buffer.get();
@@ -142,9 +147,9 @@ final class Decoder {
                 TextNode s = new TextNode(this.decodeString(size));
                 return new Result(s, newOffset);
             case DOUBLE:
-                return new Result(this.decodeDouble(), newOffset);
+                return new Result(this.decodeDouble(size), newOffset);
             case FLOAT:
-                return new Result(this.decodeFloat(), newOffset);
+                return new Result(this.decodeFloat(size), newOffset);
             case BYTES:
                 BinaryNode b = new BinaryNode(this.getByteArray(size));
                 return new Result(b, newOffset);
@@ -231,16 +236,36 @@ final class Decoder {
         return new BigIntegerNode(new BigInteger(1, bytes));
     }
 
-    private DoubleNode decodeDouble() {
+    private DoubleNode decodeDouble(int size) throws InvalidDatabaseException {
+        if (size != 8) {
+            throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains bad data: "
+                            + "invalid size of double.");
+        }
         return new DoubleNode(this.threadBuffer.get().getDouble());
     }
 
-    private FloatNode decodeFloat() {
+    private FloatNode decodeFloat(int size) throws InvalidDatabaseException {
+        if (size != 4) {
+            throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains bad data: "
+                            + "invalid size of float.");
+        }
         return new FloatNode(this.threadBuffer.get().getFloat());
     }
 
-    private static BooleanNode decodeBoolean(int size) {
-        return size == 0 ? BooleanNode.FALSE : BooleanNode.TRUE;
+    private static BooleanNode decodeBoolean(int size)
+            throws InvalidDatabaseException {
+        switch (size) {
+            case 0:
+                return BooleanNode.FALSE;
+            case 1:
+                return BooleanNode.TRUE;
+            default:
+                throw new InvalidDatabaseException(
+                        "The MaxMind DB file's data section contains bad data: "
+                                + "invalid size of boolean.");
+        }
     }
 
     private Result decodeArray(int size, int offset) throws IOException {

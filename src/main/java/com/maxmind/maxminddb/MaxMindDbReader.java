@@ -176,6 +176,12 @@ public final class MaxMindDbReader implements Closeable {
         int resolved = (pointer - this.metadata.nodeCount)
                 + this.metadata.searchTreeSize;
 
+        if (resolved >= this.threadBuffer.get().capacity()) {
+            throw new InvalidDatabaseException(
+                    "The MaxMind DB file's search tree is corrupt: "
+                            + "contains pointer larger than the database.");
+        }
+
         // We only want the data from the decoder, not the offset where it was
         // found.
         return this.decoder.decode(resolved).getNode();

@@ -1,5 +1,6 @@
 package com.maxmind.maxminddb;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -11,10 +12,13 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -136,6 +140,59 @@ public class ReaderTest {
         assertEquals(0, record.get("uint32").intValue());
         assertEquals(BigInteger.ZERO, record.get("uint64").bigIntegerValue());
         assertEquals(BigInteger.ZERO, record.get("uint128").bigIntegerValue());
+    }
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
+    @Test
+    public void testBrokenDatabase() throws URISyntaxException, IOException {
+        URI file = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
+                .toURI();
+
+        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+
+        this.thrown.expect(InvalidDatabaseException.class);
+        this.thrown
+                .expectMessage(containsString("The MaxMind DB file's data section contains bad data"));
+
+        reader.get(InetAddress.getByName("2001:220::"));
+    }
+
+    @Test
+    public void testBrokenSearchTreePointer() throws URISyntaxException,
+            IOException {
+        URI file = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
+                .toURI();
+
+        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+
+        this.thrown.expect(InvalidDatabaseException.class);
+        this.thrown
+                .expectMessage(containsString("The MaxMind DB file's search tree is corrupt"));
+
+        reader.get(InetAddress.getByName("1.1.1.32"));
+    }
+
+    @Test
+    public void testBrokenDataPointer() throws UnknownHostException,
+            IOException, URISyntaxException {
+        URI file = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
+                .toURI();
+
+        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+
+        this.thrown.expect(InvalidDatabaseException.class);
+        this.thrown
+                .expectMessage(containsString("The MaxMind DB file's data section contains bad data"));
+
+        reader.get(InetAddress.getByName("1.1.1.16"));
     }
 
     private void testMetadata(MaxMindDbReader reader, int ipVersion,
