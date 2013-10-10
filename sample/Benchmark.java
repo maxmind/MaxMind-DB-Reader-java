@@ -13,7 +13,7 @@ public class Benchmark {
 
     public static void main(String[] args) throws IOException,
             InvalidDatabaseException {
-        File file = new File("GeoIP2-City.mmdb");
+        File file = new File("GeoLite2-City.mmdb");
 
         MaxMindDbReader r = new MaxMindDbReader(file, FileMode.MEMORY_MAPPED);
         Random random = new Random();
