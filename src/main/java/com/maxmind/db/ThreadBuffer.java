@@ -1,4 +1,4 @@
-package com.maxmind.maxminddb;
+package com.maxmind.db;
 
 import java.io.Closeable;
 import java.io.File;
@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-import com.maxmind.maxminddb.MaxMindDbReader.FileMode;
+import com.maxmind.db.Reader.FileMode;
 
 final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
     // DO NOT PASS THESE OUTSIDE THIS CLASS. Doing so will remove thread

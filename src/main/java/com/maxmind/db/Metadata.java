@@ -1,4 +1,4 @@
-package com.maxmind.maxminddb;
+package com.maxmind.db;
 
 import java.math.BigInteger;
 

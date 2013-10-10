@@ -5,4 +5,4 @@
  * @author greg
  * 
  */
-package com.maxmind.maxminddb;
+package com.maxmind.db;

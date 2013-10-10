@@ -1,4 +1,4 @@
-package com.maxmind.maxminddb;
+package com.maxmind.db;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -22,6 +22,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.maxmind.db.Decoder;
+import com.maxmind.db.InvalidDatabaseException;
+import com.maxmind.db.ThreadBuffer;
 
 @SuppressWarnings({ "boxing", "static-method" })
 public class DecoderTest {

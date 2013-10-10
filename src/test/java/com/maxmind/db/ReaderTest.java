@@ -1,4 +1,4 @@
-package com.maxmind.maxminddb;
+package com.maxmind.db;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertArrayEquals;
@@ -23,6 +23,9 @@ import org.junit.rules.ExpectedException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.maxmind.db.InvalidDatabaseException;
+import com.maxmind.db.Reader;
+import com.maxmind.db.Metadata;
 
 public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
@@ -35,7 +38,7 @@ public class ReaderTest {
                 URI file = ReaderTest.class.getResource(
                         "/maxmind-db/test-data/MaxMind-DB-test-ipv" + ipVersion
                                 + "-" + recordSize + ".mmdb").toURI();
-                MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+                Reader reader = new Reader(new File(file));
                 try {
                     this.testMetadata(reader, ipVersion, recordSize);
                 } finally {
@@ -57,7 +60,7 @@ public class ReaderTest {
                 "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
                 .toURI();
 
-        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        Reader reader = new Reader(new File(file));
 
         assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"))
                 .textValue());
@@ -70,7 +73,7 @@ public class ReaderTest {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
-        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        Reader reader = new Reader(new File(file));
         JsonNode record = reader.get(InetAddress.getByName("::1.1.1.0"));
 
         assertEquals(true, record.get("boolean").booleanValue());
@@ -118,7 +121,7 @@ public class ReaderTest {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
-        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        Reader reader = new Reader(new File(file));
         JsonNode record = reader.get(InetAddress.getByName("::"));
 
         assertEquals(false, record.get("boolean").booleanValue());
@@ -152,7 +155,7 @@ public class ReaderTest {
                         "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
                 .toURI();
 
-        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        Reader reader = new Reader(new File(file));
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -169,7 +172,7 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .toURI();
 
-        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        Reader reader = new Reader(new File(file));
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -186,7 +189,7 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .toURI();
 
-        MaxMindDbReader reader = new MaxMindDbReader(new File(file));
+        Reader reader = new Reader(new File(file));
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -195,7 +198,7 @@ public class ReaderTest {
         reader.get(InetAddress.getByName("1.1.1.16"));
     }
 
-    private void testMetadata(MaxMindDbReader reader, int ipVersion,
+    private void testMetadata(Reader reader, int ipVersion,
             long recordSize) {
 
         Metadata metadata = reader.getMetadata();
@@ -215,7 +218,7 @@ public class ReaderTest {
         assertEquals(recordSize, metadata.recordSize);
     }
 
-    private void testIpV4(MaxMindDbReader reader, URI file)
+    private void testIpV4(Reader reader, URI file)
             throws InvalidDatabaseException, IOException {
 
         for (int i = 0; i <= 5; i++) {
@@ -249,7 +252,7 @@ public class ReaderTest {
     }
 
     // XXX - logic could be combined with above
-    private void testIpV6(MaxMindDbReader reader, URI file)
+    private void testIpV6(Reader reader, URI file)
             throws InvalidDatabaseException, IOException {
         String[] subnets = new String[] { "::1:ffff:ffff", "::2:0:0",
                 "::2:0:40", "::2:0:50", "::2:0:58" };

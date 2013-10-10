@@ -17,7 +17,7 @@ To do this, add the dependency to your pom.xml:
 
 ```xml
     <dependency>
-        <groupId>com.maxmind.maxminddb</groupId>
+        <groupId>com.maxmind.db</groupId>
         <artifactId>maxminddb</artifactId>
         <version>0.2.0</version>
     </dependency>
