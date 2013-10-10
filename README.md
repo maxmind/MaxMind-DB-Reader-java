@@ -47,7 +47,7 @@ interacting with the data in this format.
 ```java
 
 File database = new File("/path/to/database/GeoIP2-City.mmdb");
-MaxMindDbReader reader = new MaxMindDbReader(database);
+Reader reader = new Reader(database);
 
 InetAddress address = InetAddress.getByName("24.24.24.24");
 
