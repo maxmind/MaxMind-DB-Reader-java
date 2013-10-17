@@ -1,14 +1,13 @@
 CHANGELOG
 =========
 
-0.3.0 (2013-10-XX)
+0.3.0 (2013-10-17)
 ------------------
 
 * IMPORTANT: The package name was changed to `com.maxmind.db`. The
   `MaxMindDbReader` class was renamed to `Reader`.
 * Improved error handling and test coverage.
 * Performance improvements.
-
 
 0.2.0 (2013-07-08)
 ------------------

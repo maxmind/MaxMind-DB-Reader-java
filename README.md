@@ -1,12 +1,12 @@
 # MaxMind DB Reader #
 
-**NOTE**: This is an alpha release, and the API may change before the final
+**NOTE**: This is a beta release, and the API may change before the final
 production release.
 
 ## Description ##
 
-This is the Java API for reading MaxMind DB files. MaxMind DB is a binary
-file format that stores data indexed by IP address subnets (IPv4 or IPv6).
+This is the Java API for reading MaxMind DB files. MaxMind DB is a binary file
+format that stores data indexed by IP address subnets (IPv4 or IPv6).
 
 ## Installation ##
 
@@ -19,7 +19,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxminddb</artifactId>
-        <version>0.2.0</version>
+        <version>0.3.0</version>
     </dependency>
 ```
 
@@ -58,11 +58,13 @@ System.out.println(result);
 result.close();
 
 ```
+
 ## Format ##
 
-The MaxMind DB format is an open format for quickly mapping IP addresses
-to records. The [specification](https://github.com/maxmind/MaxMind-DB-perl/blob/master/docs/MaxMind-IPDB-spec.md) is available as part of our
-[Perl writer](https://github.com/maxmind/MaxMind-DB-perl) for the format.
+The MaxMind DB format is an open format for quickly mapping IP addresses to
+records. The [specification](https://github.com/maxmind/MaxMind-DB-perl/blob/master/docs/MaxMind-IPDB-spec.md)
+is available as part of our [Perl writer](https://github.com/maxmind/MaxMind-
+DB-perl) for the format.
 
 ## Bug Tracker ##
 
@@ -75,9 +77,8 @@ specific to this reader, please [contact MaxMind support]
 
 ## Requirements  ##
 
-MaxMind has tested this API with Java 6 and above. Reasonable patches
-for Java 5 will be accepted. Patches for 1.4 or earlier will not be
-accepted.
+MaxMind has tested this API with Java 6 and above. Reasonable patches for Java
+5 will be accepted. Patches for 1.4 or earlier will not be accepted.
 
 ## Contributing ##
 
