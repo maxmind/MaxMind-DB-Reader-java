@@ -20,12 +20,12 @@
     <url>http://www.maxmind.com/</url>
   </organization>
   <scm>
-    <url>https://github.com/maxmind/MaxMind-DB-java</url>
-    <connection>scm:git:git@git.maxmind.com:MaxMind-DB-java</connection>
-    <developerConnection>scm:git:git@git.maxmind.com:MaxMind-DB-java</developerConnection>
+    <url>https://github.com/maxmind/MaxMind-DB-Reader-java</url>
+    <connection>scm:git:git@git.maxmind.com:MaxMind-DB-Reader-java</connection>
+    <developerConnection>scm:git:git@git.maxmind.com:MaxMind-DB-Reader-java</developerConnection>
   </scm>
   <issueManagement>
-    <url>https://github.com/maxmind/MaxMind-DB-java/issues</url>
+    <url>https://github.com/maxmind/MaxMind-DB-Reader-java/issues</url>
     <system>GitHub</system>
   </issueManagement>
   <developers>
