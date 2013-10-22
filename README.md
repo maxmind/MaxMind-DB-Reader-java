@@ -25,22 +25,22 @@ To do this, add the dependency to your pom.xml:
 
 ## Usage ##
 
-*Note:* For accessing MaxMind GeoIP2 databases, we generally recommend
-using the GeoIP2 Java API rather than using this package directly.
+*Note:* For accessing MaxMind GeoIP2 databases, we generally recommend using
+the GeoIP2 Java API rather than using this package directly.
 
-To use the API, you must first create a `Reader` object. The constructor
-for the reader object takes a `File` representing your MaxMind DB. Optionally
-you may pass a second parameter with a `FileMode` of `MEMORY_MAP` or
-`IN_MEMORY`. The default mode is `MEMORY_MAP`, which maps the file to virtual
+To use the API, you must first create a `Reader` object. The constructor for
+the reader object takes a `File` representing your MaxMind DB. Optionally you
+may pass a second parameter with a `FileMode` with a valueof `MEMORY_MAP` or
+`MEMORY`. The default mode is `MEMORY_MAP`, which maps the file to virtual
 memory. This often provides performance comparable to loading the file into
-real memory with `IN_MEMORY` while using significantly less memory.
+real memory with `MEMORY`.
 
 To look up an IP address, pass the address as an `InetAddress` to the `get`
 method on `Reader`. This method will return the result as a
-`com.fasterxml.jackson.databind.JsonNode` object. `JsonNode` objects are
-used as they provide a convenient representation of multi-type data
-structures and the databind package of Jackson 2 supplies many tools for
-interacting with the data in this format.
+`com.fasterxml.jackson.databind.JsonNode` object. `JsonNode` objects are used
+as they provide a convenient representation of multi-type data structures and
+the databind package of Jackson 2 supplies many tools for interacting with the
+data in this format.
 
 ## Example ##
 
@@ -51,11 +51,11 @@ Reader reader = new Reader(database);
 
 InetAddress address = InetAddress.getByName("24.24.24.24");
 
-JsonNode result = reader.get(address);
+JsonNode response = reader.get(address);
 
-System.out.println(result);
+System.out.println(response);
 
-result.close();
+reader.close();
 
 ```
 
@@ -69,7 +69,7 @@ DB-perl) for the format.
 ## Bug Tracker ##
 
 Please report all issues with this code using the [GitHub issue tracker]
-(https://github.com/maxmind/MaxMind-DB-java/issues).
+(https://github.com/maxmind/MaxMind-DB-Reader-java/issues).
 
 If you are having an issue with a MaxMind database or service that is not
 specific to this reader, please [contact MaxMind support]
