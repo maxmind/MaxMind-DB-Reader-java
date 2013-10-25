@@ -18,8 +18,8 @@ To do this, add the dependency to your pom.xml:
 ```xml
     <dependency>
         <groupId>com.maxmind.db</groupId>
-        <artifactId>maxminddb</artifactId>
-        <version>0.3.0</version>
+        <artifactId>maxmind-db</artifactId>
+        <version>0.3.1-SNAPSHOT</version>
     </dependency>
 ```
 
