@@ -23,9 +23,6 @@ import org.junit.rules.ExpectedException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.maxmind.db.InvalidDatabaseException;
-import com.maxmind.db.Reader;
-import com.maxmind.db.Metadata;
 
 public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
