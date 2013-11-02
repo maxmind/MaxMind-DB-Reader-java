@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URL;
 import java.nio.ByteBuffer;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -53,6 +54,17 @@ public final class Reader implements Closeable {
     }
 
     /**
+     * Constructs a Reader as if in mode {@link FileMode#MEMORY}, without using
+     * a <code>File</code> instance.
+     * @param source the URL that points to the MaxMind DB file.
+     * @throws IOException
+     *             if there is an error opening or reading from the file.
+     */
+    public Reader(URL source) throws IOException {
+        this(ThreadBuffer.newInstance(source), source.getFile());
+    }
+
+    /**
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
      * 
@@ -64,8 +76,12 @@ public final class Reader implements Closeable {
      *             if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode) throws IOException {
-        this.threadBuffer = new ThreadBuffer(database, fileMode);
-        int start = this.findMetadataStart(database.getName());
+        this(new ThreadBuffer(database, fileMode), database.getName());
+    }
+
+    private Reader(ThreadBuffer buffer, String name) throws IOException {
+        this.threadBuffer = buffer;
+        int start = this.findMetadataStart(name);
 
         Decoder metadataDecoder = new Decoder(this.threadBuffer, start);
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());

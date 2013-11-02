@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URL;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -52,12 +53,23 @@ public class ReaderTest {
     }
 
     @Test
-    public void testNoIpV4SearchTree() throws IOException, URISyntaxException {
+    public void testNoIpV4SearchTreeFile() throws IOException, URISyntaxException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testNoIpV4SearchTree(reader);
+    }
+    @Test
+    public void testNoIpV4SearchTreeURL() throws IOException, URISyntaxException {
+        URL resource = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb");
+        Reader reader = new Reader(resource);
+        testNoIpV4SearchTree(reader);
+    }
+    private void testNoIpV4SearchTree(Reader reader) throws IOException, URISyntaxException {
+
 
         assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"))
                 .textValue());
@@ -66,11 +78,22 @@ public class ReaderTest {
     }
 
     @Test
-    public void testDecodingTypes() throws URISyntaxException, IOException {
+    public void testDecodingTypesFile() throws URISyntaxException, IOException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
         Reader reader = new Reader(new File(file));
+        testDecodingTypes(reader);
+    }
+    @Test
+    public void testDecodingTypesURL() throws URISyntaxException, IOException {
+        URL resource = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb");
+
+        Reader reader = new Reader(resource);
+        testDecodingTypes(reader);
+    }
+    private void testDecodingTypes(Reader reader) throws URISyntaxException, IOException {
         JsonNode record = reader.get(InetAddress.getByName("::1.1.1.0"));
 
         assertEquals(true, record.get("boolean").booleanValue());
@@ -114,11 +137,22 @@ public class ReaderTest {
     }
 
     @Test
-    public void testZeros() throws URISyntaxException, IOException {
+    public void testZerosFile() throws URISyntaxException, IOException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
         Reader reader = new Reader(new File(file));
+        testZeros(reader);
+    }
+    @Test
+    public void testZerosURL() throws URISyntaxException, IOException {
+        URL resource = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb");
+
+        Reader reader = new Reader(resource);
+        testZeros(reader);
+    }
+    private void testZeros(Reader reader) throws URISyntaxException, IOException {
         JsonNode record = reader.get(InetAddress.getByName("::"));
 
         assertEquals(false, record.get("boolean").booleanValue());
@@ -146,13 +180,25 @@ public class ReaderTest {
     public ExpectedException thrown = ExpectedException.none();
 
     @Test
-    public void testBrokenDatabase() throws URISyntaxException, IOException {
+    public void testBrokenDatabaseFile() throws URISyntaxException, IOException {
         URI file = ReaderTest.class
                 .getResource(
                         "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testBrokenDatabase(reader);
+    }
+    @Test
+    public void testBrokenDatabaseURL() throws URISyntaxException, IOException {
+        URL resource = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb");
+
+        Reader reader = new Reader(resource);
+        testBrokenDatabase(reader);
+    }
+    private void testBrokenDatabase(Reader reader) throws URISyntaxException, IOException {
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -162,7 +208,7 @@ public class ReaderTest {
     }
 
     @Test
-    public void testBrokenSearchTreePointer() throws URISyntaxException,
+    public void testBrokenSearchTreePointerFile() throws URISyntaxException,
             IOException {
         URI file = ReaderTest.class
                 .getResource(
@@ -170,6 +216,20 @@ public class ReaderTest {
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testBrokenSearchTreePointer(reader);
+    }
+    @Test
+    public void testBrokenSearchTreePointerURL() throws URISyntaxException,
+            IOException {
+        URL resource = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb");
+
+        Reader reader = new Reader(resource);
+        testBrokenSearchTreePointer(reader);
+    }
+    private void testBrokenSearchTreePointer(Reader reader) throws URISyntaxException,
+                IOException {
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -179,7 +239,7 @@ public class ReaderTest {
     }
 
     @Test
-    public void testBrokenDataPointer() throws UnknownHostException,
+    public void testBrokenDataPointerFile() throws UnknownHostException,
             IOException, URISyntaxException {
         URI file = ReaderTest.class
                 .getResource(
@@ -187,6 +247,20 @@ public class ReaderTest {
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testBrokenDataPointer(reader);
+    }
+    @Test
+    public void testBrokenDataPointerURL() throws UnknownHostException,
+            IOException, URISyntaxException {
+        URL resource = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb");
+
+        Reader reader = new Reader(resource);
+        testBrokenDataPointer(reader);
+    }
+    private void testBrokenDataPointer(Reader reader) throws UnknownHostException,
+                IOException, URISyntaxException {
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
