@@ -8,11 +8,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,15 +23,12 @@ import org.junit.rules.ExpectedException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.maxmind.db.InvalidDatabaseException;
-import com.maxmind.db.Reader;
-import com.maxmind.db.Metadata;
 
 public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
 
     @Test
-    public void test() throws InvalidDatabaseException, IOException,
+    public void test() throws IOException,
             URISyntaxException {
         for (long recordSize : new long[] { 24, 28, 32 }) {
             for (int ipVersion : new int[] { 4, 6 }) {
@@ -55,12 +52,24 @@ public class ReaderTest {
     }
 
     @Test
-    public void testNoIpV4SearchTree() throws IOException, URISyntaxException {
+    public void testNoIpV4SearchTreeFile() throws IOException, URISyntaxException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testNoIpV4SearchTree(reader);
+    }
+    @Test
+    public void testNoIpV4SearchTreeURL() throws IOException, URISyntaxException {
+        InputStream stream = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
+                .openStream();
+        Reader reader = new Reader(stream);
+        testNoIpV4SearchTree(reader);
+    }
+    private void testNoIpV4SearchTree(Reader reader) throws IOException, URISyntaxException {
+
 
         assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"))
                 .textValue());
@@ -69,11 +78,23 @@ public class ReaderTest {
     }
 
     @Test
-    public void testDecodingTypes() throws URISyntaxException, IOException {
+    public void testDecodingTypesFile() throws URISyntaxException, IOException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
         Reader reader = new Reader(new File(file));
+        testDecodingTypes(reader);
+    }
+    @Test
+    public void testDecodingTypesURL() throws URISyntaxException, IOException {
+        InputStream stream = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
+                .openStream();
+
+        Reader reader = new Reader(stream);
+        testDecodingTypes(reader);
+    }
+    private void testDecodingTypes(Reader reader) throws URISyntaxException, IOException {
         JsonNode record = reader.get(InetAddress.getByName("::1.1.1.0"));
 
         assertEquals(true, record.get("boolean").booleanValue());
@@ -117,11 +138,23 @@ public class ReaderTest {
     }
 
     @Test
-    public void testZeros() throws URISyntaxException, IOException {
+    public void testZerosFile() throws URISyntaxException, IOException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
         Reader reader = new Reader(new File(file));
+        testZeros(reader);
+    }
+    @Test
+    public void testZerosURL() throws URISyntaxException, IOException {
+        InputStream stream = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
+                .openStream();
+
+        Reader reader = new Reader(stream);
+        testZeros(reader);
+    }
+    private void testZeros(Reader reader) throws URISyntaxException, IOException {
         JsonNode record = reader.get(InetAddress.getByName("::"));
 
         assertEquals(false, record.get("boolean").booleanValue());
@@ -149,13 +182,26 @@ public class ReaderTest {
     public ExpectedException thrown = ExpectedException.none();
 
     @Test
-    public void testBrokenDatabase() throws URISyntaxException, IOException {
+    public void testBrokenDatabaseFile() throws URISyntaxException, IOException {
         URI file = ReaderTest.class
                 .getResource(
                         "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testBrokenDatabase(reader);
+    }
+    @Test
+    public void testBrokenDatabaseURL() throws URISyntaxException, IOException {
+        InputStream stream = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
+                .openStream();
+
+        Reader reader = new Reader(stream);
+        testBrokenDatabase(reader);
+    }
+    private void testBrokenDatabase(Reader reader) throws URISyntaxException, IOException {
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -165,7 +211,7 @@ public class ReaderTest {
     }
 
     @Test
-    public void testBrokenSearchTreePointer() throws URISyntaxException,
+    public void testBrokenSearchTreePointerFile() throws URISyntaxException,
             IOException {
         URI file = ReaderTest.class
                 .getResource(
@@ -173,6 +219,21 @@ public class ReaderTest {
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testBrokenSearchTreePointer(reader);
+    }
+    @Test
+    public void testBrokenSearchTreePointerURL() throws URISyntaxException,
+            IOException {
+        InputStream stream = ReaderTest.class
+                .getResource(
+                        "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
+                .openStream();
+
+        Reader reader = new Reader(stream);
+        testBrokenSearchTreePointer(reader);
+    }
+    private void testBrokenSearchTreePointer(Reader reader) throws URISyntaxException,
+                IOException {
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -182,14 +243,26 @@ public class ReaderTest {
     }
 
     @Test
-    public void testBrokenDataPointer() throws UnknownHostException,
-            IOException, URISyntaxException {
+    public void testBrokenDataPointerFile() throws IOException, URISyntaxException {
         URI file = ReaderTest.class
                 .getResource(
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .toURI();
 
         Reader reader = new Reader(new File(file));
+        testBrokenDataPointer(reader);
+    }
+    @Test
+    public void testBrokenDataPointerURL() throws IOException, URISyntaxException {
+        InputStream stream = ReaderTest.class
+                .getResource(
+                    "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
+                .openStream();
+
+        Reader reader = new Reader(stream);
+        testBrokenDataPointer(reader);
+    }
+    private void testBrokenDataPointer(Reader reader) throws IOException, URISyntaxException {
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -219,7 +292,7 @@ public class ReaderTest {
     }
 
     private void testIpV4(Reader reader, URI file)
-            throws InvalidDatabaseException, IOException {
+            throws IOException {
 
         for (int i = 0; i <= 5; i++) {
             String address = "1.1.1." + (int) Math.pow(2, i);
@@ -253,7 +326,7 @@ public class ReaderTest {
 
     // XXX - logic could be combined with above
     private void testIpV6(Reader reader, URI file)
-            throws InvalidDatabaseException, IOException {
+            throws IOException {
         String[] subnets = new String[] { "::1:ffff:ffff", "::2:0:0",
                 "::2:0:40", "::2:0:50", "::2:0:58" };
 
