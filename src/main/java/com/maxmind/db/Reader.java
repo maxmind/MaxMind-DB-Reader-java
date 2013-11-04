@@ -3,8 +3,8 @@ package com.maxmind.db;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
-import java.net.URL;
 import java.nio.ByteBuffer;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -56,12 +56,12 @@ public final class Reader implements Closeable {
     /**
      * Constructs a Reader as if in mode {@link FileMode#MEMORY}, without using
      * a <code>File</code> instance.
-     * @param source the URL that points to the MaxMind DB file.
+     * @param source the InputStream that contains the MaxMind DB file.
      * @throws IOException
-     *             if there is an error opening or reading from the file.
+     *             if there is an error reading from the Stream.
      */
-    public Reader(URL source) throws IOException {
-        this(ThreadBuffer.newInstance(source), source.getFile());
+    public Reader(InputStream source) throws IOException {
+        this(ThreadBuffer.newInstance(source), "an InputStream");
     }
 
     /**
