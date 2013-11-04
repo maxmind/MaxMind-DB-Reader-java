@@ -36,7 +36,7 @@ final class Metadata {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see java.lang.Object#toString()
      */
     @Override

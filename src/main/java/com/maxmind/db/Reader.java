@@ -43,7 +43,7 @@ public final class Reader implements Closeable {
     /**
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
-     * 
+     *
      * @param database
      *            the MaxMind DB file to use.
      * @throws IOException
@@ -56,18 +56,20 @@ public final class Reader implements Closeable {
     /**
      * Constructs a Reader as if in mode {@link FileMode#MEMORY}, without using
      * a <code>File</code> instance.
-     * @param source the InputStream that contains the MaxMind DB file.
+     *
+     * @param source
+     *            the InputStream that contains the MaxMind DB file.
      * @throws IOException
      *             if there is an error reading from the Stream.
      */
     public Reader(InputStream source) throws IOException {
-        this(ThreadBuffer.newInstance(source), "an InputStream");
+        this(new ThreadBuffer(source), "<InputStream>");
     }
 
     /**
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
-     * 
+     *
      * @param database
      *            the MaxMind DB file to use.
      * @param fileMode
@@ -91,7 +93,7 @@ public final class Reader implements Closeable {
 
     /**
      * Looks up the <code>address</code> in the MaxMind DB.
-     * 
+     *
      * @param ipAddress
      *            the IP address to look up.
      * @return the record for the IP address.
@@ -206,7 +208,7 @@ public final class Reader implements Closeable {
     /*
      * Apparently searching a file for a sequence is not a solved problem in
      * Java. This searches from the end of the file for metadata start.
-     * 
+     *
      * This is an extremely naive but reasonably readable implementation. There
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
@@ -237,7 +239,7 @@ public final class Reader implements Closeable {
 
     /**
      * Closes the MaxMind DB and returns resources to the system.
-     * 
+     *
      * @throws IOException
      *             if an I/O error occurs.
      */
