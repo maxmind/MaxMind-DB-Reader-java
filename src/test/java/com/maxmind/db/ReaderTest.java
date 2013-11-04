@@ -13,7 +13,6 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,7 +28,7 @@ public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
 
     @Test
-    public void test() throws InvalidDatabaseException, IOException,
+    public void test() throws IOException,
             URISyntaxException {
         for (long recordSize : new long[] { 24, 28, 32 }) {
             for (int ipVersion : new int[] { 4, 6 }) {
@@ -244,8 +243,7 @@ public class ReaderTest {
     }
 
     @Test
-    public void testBrokenDataPointerFile() throws UnknownHostException,
-            IOException, URISyntaxException {
+    public void testBrokenDataPointerFile() throws IOException, URISyntaxException {
         URI file = ReaderTest.class
                 .getResource(
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
@@ -255,8 +253,7 @@ public class ReaderTest {
         testBrokenDataPointer(reader);
     }
     @Test
-    public void testBrokenDataPointerURL() throws UnknownHostException,
-            IOException, URISyntaxException {
+    public void testBrokenDataPointerURL() throws IOException, URISyntaxException {
         InputStream stream = ReaderTest.class
                 .getResource(
                     "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
@@ -265,8 +262,7 @@ public class ReaderTest {
         Reader reader = new Reader(stream);
         testBrokenDataPointer(reader);
     }
-    private void testBrokenDataPointer(Reader reader) throws UnknownHostException,
-                IOException, URISyntaxException {
+    private void testBrokenDataPointer(Reader reader) throws IOException, URISyntaxException {
 
         this.thrown.expect(InvalidDatabaseException.class);
         this.thrown
@@ -296,7 +292,7 @@ public class ReaderTest {
     }
 
     private void testIpV4(Reader reader, URI file)
-            throws InvalidDatabaseException, IOException {
+            throws IOException {
 
         for (int i = 0; i <= 5; i++) {
             String address = "1.1.1." + (int) Math.pow(2, i);
@@ -330,7 +326,7 @@ public class ReaderTest {
 
     // XXX - logic could be combined with above
     private void testIpV6(Reader reader, URI file)
-            throws InvalidDatabaseException, IOException {
+            throws IOException {
         String[] subnets = new String[] { "::1:ffff:ffff", "::2:0:0",
                 "::2:0:40", "::2:0:50", "::2:0:58" };
 
