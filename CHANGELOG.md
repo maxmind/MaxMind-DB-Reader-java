@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+0.3.1 (2013-11-05)
+------------------
+
+* An `InputStream` constructor was added to the `Reader` class. This reads the
+  stream into memory as if it was using `FileMode.MEMORY`. Patch by Matthew
+  Daniel.
+* The source code is now attached during packaging. Patch by Matthew Daniel.
+* The artifact ID was changed to `maxmind-db` in order to increase naming
+  consistency.
+
 0.3.0 (2013-10-17)
 ------------------
 
