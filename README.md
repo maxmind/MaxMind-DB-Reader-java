@@ -42,6 +42,10 @@ as they provide a convenient representation of multi-type data structures and
 the databind package of Jackson 2 supplies many tools for interacting with the
 data in this format.
 
+We recommend reusing the `Reader` object rather than creating a new one for
+each lookup. The creation of this object is relatively expensive as it must
+read in metadata for the file.
+
 ## Example ##
 
 ```java
@@ -58,6 +62,12 @@ System.out.println(response);
 reader.close();
 
 ```
+
+## Multi-Threaded Use ##
+
+This API fully supports use in multi-threaded applications. In such
+applications, we suggest creating one `Reader` object and sharing that among
+threads.
 
 ## Format ##
 
