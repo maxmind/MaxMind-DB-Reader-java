@@ -69,6 +69,21 @@ This API fully supports use in multi-threaded applications. In such
 applications, we suggest creating one `Reader` object and sharing that among
 threads.
 
+## Common Problems ##
+
+### File Lock on Windows ###
+
+By default, this API uses the `MEMORY_MAP` mode, which memory maps the file.
+On Windows, this may create an exclusive lock on the file that prevents it
+from being renamed or deleted. Due to the implementation of memory mapping in
+Java, this lock will not be released when the `DatabaseReader` is closed; it
+will only be released when the object and the `MappedByteBuffer` it uses are
+garbage collected. Older JVM versions may also not release the lock on exit.
+
+To work around this problem, use the `MEMORY` mode or try upgrading your JVM
+version. You may also call `System.gc()` after dereferencing the
+`DatabaseReader` object to encourage the JVM to garbage collect sooner.
+
 ## Format ##
 
 The MaxMind DB format is an open format for quickly mapping IP addresses to
