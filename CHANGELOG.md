@@ -1,10 +1,10 @@
 CHANGELOG
 =========
 
-0.3.2 (201X-XX-XX)
+0.3.2 (2014-04-02)
 ------------------
 
-* Added tests and documentation for mutli-threaded use.
+* Added tests and documentation for multi-threaded use.
 
 0.3.1 (2013-11-05)
 ------------------
