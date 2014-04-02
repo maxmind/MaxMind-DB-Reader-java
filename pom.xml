@@ -21,8 +21,8 @@
     </organization>
     <scm>
         <url>https://github.com/maxmind/MaxMind-DB-Reader-java</url>
-        <connection>scm:git:git@git.maxmind.com:MaxMind-DB-Reader-java</connection>
-        <developerConnection>scm:git:git@git.maxmind.com:MaxMind-DB-Reader-java</developerConnection>
+        <connection>scm:git:git://github.com:maxmind/MaxMind-DB-Reader-java.git</connection>
+        <developerConnection>scm:git:git@github.com:maxmind/MaxMind-DB-Reader-java.git</developerConnection>
     </scm>
     <issueManagement>
         <url>https://github.com/maxmind/MaxMind-DB-Reader-java/issues</url>
