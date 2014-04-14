@@ -74,9 +74,9 @@ public class ReaderTest {
     private void testNoIpV4SearchTree(Reader reader) throws IOException,
             URISyntaxException {
 
-        assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"))
+        assertEquals("::0/64", reader.get(InetAddress.getByName("1.1.1.1"))
                 .textValue());
-        assertEquals("::/64", reader.get(InetAddress.getByName("192.1.1.1"))
+        assertEquals("::0/64", reader.get(InetAddress.getByName("192.1.1.1"))
                 .textValue());
     }
 
