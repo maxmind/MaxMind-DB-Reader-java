@@ -63,6 +63,10 @@ final class BufferHolder implements Closeable {
         this.fc = null;
     }
 
+    /*
+     * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
+     * should not be shared between threads.
+     */
     synchronized ByteBuffer get() {
         return this.buffer.duplicate();
     }
