@@ -22,9 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.maxmind.db.Decoder;
-import com.maxmind.db.InvalidDatabaseException;
-import com.maxmind.db.ThreadBuffer;
 
 @SuppressWarnings({ "boxing", "static-method" })
 public class DecoderTest {
@@ -426,7 +423,7 @@ public class DecoderTest {
             MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
             try {
 
-                Decoder decoder = new Decoder(new ThreadBuffer(mmap), 0);
+                Decoder decoder = new Decoder(mmap, 0);
                 decoder.POINTER_TEST_HACK = true;
 
                 // XXX - this could be streamlined

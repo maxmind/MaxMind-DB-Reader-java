@@ -10,9 +10,6 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.maxmind.db.Decoder;
-import com.maxmind.db.InvalidDatabaseException;
-import com.maxmind.db.ThreadBuffer;
 import com.maxmind.db.Reader.FileMode;
 
 public class PointerTest {
@@ -22,9 +19,9 @@ public class PointerTest {
             IOException, URISyntaxException {
         File file = new File(PointerTest.class.getResource(
                 "/maxmind-db/test-data/maps-with-pointers.raw").toURI());
-        ThreadBuffer ptf = new ThreadBuffer(file, FileMode.MEMORY);
+        BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
         try {
-            Decoder decoder = new Decoder(ptf, 0);
+            Decoder decoder = new Decoder(ptf.get(), 0);
 
             ObjectMapper om = new ObjectMapper();
 

@@ -20,9 +20,8 @@ public final class Reader implements Closeable {
             'c', 'o', 'm' };
 
     private int ipV4Start;
-    private final Decoder decoder;
     private final Metadata metadata;
-    private final ThreadBuffer threadBuffer;
+    private final BufferHolder bufferHolder;
 
     /**
      * The file mode to use when opening a MaxMind DB.
@@ -63,7 +62,7 @@ public final class Reader implements Closeable {
      *             if there is an error reading from the Stream.
      */
     public Reader(InputStream source) throws IOException {
-        this(new ThreadBuffer(source), "<InputStream>");
+        this(new BufferHolder(source), "<InputStream>");
     }
 
     /**
@@ -78,17 +77,17 @@ public final class Reader implements Closeable {
      *             if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode) throws IOException {
-        this(new ThreadBuffer(database, fileMode), database.getName());
+        this(new BufferHolder(database, fileMode), database.getName());
     }
 
-    private Reader(ThreadBuffer buffer, String name) throws IOException {
-        this.threadBuffer = buffer;
-        int start = this.findMetadataStart(name);
+    private Reader(BufferHolder bufferHolder, String name) throws IOException {
+        this.bufferHolder = bufferHolder;
 
-        Decoder metadataDecoder = new Decoder(this.threadBuffer, start);
+        ByteBuffer buffer = this.bufferHolder.get();
+        int start = this.findMetadataStart(buffer, name);
+
+        Decoder metadataDecoder = new Decoder(buffer, start);
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
-        this.decoder = new Decoder(this.threadBuffer,
-                this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
     }
 
     /**
@@ -101,19 +100,20 @@ public final class Reader implements Closeable {
      *             if a file I/O error occurs.
      */
     public JsonNode get(InetAddress ipAddress) throws IOException {
-        int pointer = this.findAddressInTree(ipAddress);
+        ByteBuffer buffer = this.bufferHolder.get();
+        int pointer = this.findAddressInTree(buffer, ipAddress);
         if (pointer == 0) {
             return null;
         }
-        return this.resolveDataPointer(pointer);
+        return this.resolveDataPointer(buffer, pointer);
     }
 
-    private int findAddressInTree(InetAddress address)
+    private int findAddressInTree(ByteBuffer buffer, InetAddress address)
             throws InvalidDatabaseException {
         byte[] rawAddress = address.getAddress();
 
         int bitLength = rawAddress.length * 8;
-        int record = this.startNode(bitLength);
+        int record = this.startNode(buffer, bitLength);
 
         for (int i = 0; i < bitLength; i++) {
             if (record >= this.metadata.nodeCount) {
@@ -121,7 +121,7 @@ public final class Reader implements Closeable {
             }
             int b = 0xFF & rawAddress[i / 8];
             int bit = 1 & (b >> 7 - (i % 8));
-            record = this.readNode(record, bit);
+            record = this.readNode(buffer, record, bit);
         }
         if (record == this.metadata.nodeCount) {
             // record is empty
@@ -133,18 +133,18 @@ public final class Reader implements Closeable {
         throw new InvalidDatabaseException("Something bad happened");
     }
 
-    private int startNode(int bitLength) throws InvalidDatabaseException {
+    private int startNode(ByteBuffer buffer, int bitLength) throws InvalidDatabaseException {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
         if (this.metadata.ipVersion == 6 && bitLength == 32) {
-            return this.ipV4StartNode();
+            return this.ipV4StartNode(buffer);
         }
         // The first node of the tree is always node 0, at the beginning of the
         // value
         return 0;
     }
 
-    private int ipV4StartNode() throws InvalidDatabaseException {
+    private int ipV4StartNode(ByteBuffer buffer) throws InvalidDatabaseException {
         // This is a defensive check. There is no reason to call this when you
         // have an IPv4 tree.
         if (this.metadata.ipVersion == 4) {
@@ -156,15 +156,14 @@ public final class Reader implements Closeable {
         }
         int node = 0;
         for (int i = 0; i < 96 && node < this.metadata.nodeCount; i++) {
-            node = this.readNode(node, 0);
+            node = this.readNode(buffer, node, 0);
         }
         this.ipV4Start = node;
         return node;
     }
 
-    private int readNode(int nodeNumber, int index)
+    private int readNode(ByteBuffer buffer, int nodeNumber, int index)
             throws InvalidDatabaseException {
-        ByteBuffer buffer = this.threadBuffer.get();
         int baseOffset = nodeNumber * this.metadata.nodeByteSize;
 
         switch (this.metadata.recordSize) {
@@ -190,11 +189,11 @@ public final class Reader implements Closeable {
         }
     }
 
-    private JsonNode resolveDataPointer(int pointer) throws IOException {
+    private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer) throws IOException {
         int resolved = (pointer - this.metadata.nodeCount)
                 + this.metadata.searchTreeSize;
 
-        if (resolved >= this.threadBuffer.get().capacity()) {
+        if (resolved >= buffer.capacity()) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's search tree is corrupt: "
                             + "contains pointer larger than the database.");
@@ -202,7 +201,9 @@ public final class Reader implements Closeable {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        return this.decoder.decode(resolved).getNode();
+        Decoder decoder = new Decoder(buffer,
+                this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
+        return decoder.decode(resolved).getNode();
     }
 
     /*
@@ -213,9 +214,8 @@ public final class Reader implements Closeable {
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private int findMetadataStart(String databaseName)
+    private int findMetadataStart(ByteBuffer buffer, String databaseName)
             throws InvalidDatabaseException {
-        ByteBuffer buffer = this.threadBuffer.get();
         int fileSize = buffer.capacity();
 
         FILE: for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
@@ -245,6 +245,6 @@ public final class Reader implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        this.threadBuffer.close();
+        this.bufferHolder.close();
     }
 }
