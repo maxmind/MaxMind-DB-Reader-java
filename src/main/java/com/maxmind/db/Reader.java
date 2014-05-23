@@ -19,7 +19,7 @@ public final class Reader implements Closeable {
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
             'c', 'o', 'm' };
 
-    private int ipV4Start;
+    private final int ipV4Start;
     private final Metadata metadata;
     private final BufferHolder bufferHolder;
 
@@ -88,6 +88,8 @@ public final class Reader implements Closeable {
 
         Decoder metadataDecoder = new Decoder(buffer, start);
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
+
+        this.ipV4Start = this.findIpV4StartNode(buffer);
     }
 
     /**
@@ -137,28 +139,22 @@ public final class Reader implements Closeable {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
         if (this.metadata.ipVersion == 6 && bitLength == 32) {
-            return this.ipV4StartNode(buffer);
+            return this.ipV4Start;
         }
         // The first node of the tree is always node 0, at the beginning of the
         // value
         return 0;
     }
 
-    private int ipV4StartNode(ByteBuffer buffer) throws InvalidDatabaseException {
-        // This is a defensive check. There is no reason to call this when you
-        // have an IPv4 tree.
+    private int findIpV4StartNode(ByteBuffer buffer) throws InvalidDatabaseException {
         if (this.metadata.ipVersion == 4) {
             return 0;
         }
 
-        if (this.ipV4Start != 0) {
-            return this.ipV4Start;
-        }
         int node = 0;
         for (int i = 0; i < 96 && node < this.metadata.nodeCount; i++) {
             node = this.readNode(buffer, node, 0);
         }
-        this.ipV4Start = node;
         return node;
     }
 
