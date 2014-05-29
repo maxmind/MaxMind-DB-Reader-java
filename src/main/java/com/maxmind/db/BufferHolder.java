@@ -12,14 +12,14 @@ import java.nio.channels.FileChannel.MapMode;
 
 import com.maxmind.db.Reader.FileMode;
 
-final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
+final class BufferHolder implements Closeable {
     // DO NOT PASS THESE OUTSIDE THIS CLASS. Doing so will remove thread
     // safety.
     private final ByteBuffer buffer;
     private final RandomAccessFile raf;
     private final FileChannel fc;
 
-    ThreadBuffer(File database, FileMode mode) throws IOException {
+    BufferHolder(File database, FileMode mode) throws IOException {
         this.raf = new RandomAccessFile(database, "r");
         this.fc = this.raf.getChannel();
         if (mode == FileMode.MEMORY) {
@@ -41,7 +41,7 @@ final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
      * @throws NullPointerException
      *             if you provide a NULL InputStream
      */
-    ThreadBuffer(InputStream stream) throws IOException {
+    BufferHolder(InputStream stream) throws IOException {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
@@ -57,14 +57,17 @@ final class ThreadBuffer extends ThreadLocal<ByteBuffer> implements Closeable {
     }
 
     // This is just to ease unit testing
-    ThreadBuffer(ByteBuffer buffer) {
+    BufferHolder(ByteBuffer buffer) {
         this.buffer = buffer;
         this.raf = null;
         this.fc = null;
     }
 
-    @Override
-    protected synchronized ByteBuffer initialValue() {
+    /*
+     * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
+     * should not be shared between threads.
+     */
+    synchronized ByteBuffer get() {
         return this.buffer.duplicate();
     }
 

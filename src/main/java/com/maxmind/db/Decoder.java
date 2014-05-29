@@ -18,6 +18,11 @@ import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
+/*
+ * Decoder for MaxMind DB data.
+ *
+ * This class CANNOT be shared between threads
+ */
 final class Decoder {
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
@@ -26,7 +31,7 @@ final class Decoder {
 
     private final ObjectMapper objectMapper;
 
-    private final ThreadBuffer threadBuffer;
+    private final ByteBuffer buffer;
 
     static enum Type {
         EXTENDED, POINTER, UTF8_STRING, DOUBLE, BYTES, UINT16, UINT32, MAP, INT32, UINT64, UINT128, ARRAY, CONTAINER, END_MARKER, BOOLEAN, FLOAT;
@@ -73,22 +78,21 @@ final class Decoder {
 
     }
 
-    Decoder(ThreadBuffer threadBuffer, long pointerBase) {
+    Decoder(ByteBuffer buffer, long pointerBase) {
         this.pointerBase = pointerBase;
-        this.threadBuffer = threadBuffer;
+        this.buffer = buffer;
         this.objectMapper = new ObjectMapper();
     }
 
     Result decode(int offset) throws IOException {
-        ByteBuffer buffer = this.threadBuffer.get();
-        if (offset >= buffer.capacity()) {
+        if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
                             + "pointer larger than the database.");
         }
 
-        buffer.position(offset);
-        int ctrlByte = 0xFF & buffer.get();
+        this.buffer.position(offset);
+        int ctrlByte = 0xFF & this.buffer.get();
         offset++;
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -109,7 +113,7 @@ final class Decoder {
         }
 
         if (type.equals(Type.EXTENDED)) {
-            int nextByte = buffer.get();
+            int nextByte = this.buffer.get();
 
             int typeNum = nextByte + 7;
 
@@ -188,7 +192,7 @@ final class Decoder {
     }
 
     private String decodeString(int size) {
-        ByteBuffer buffer = this.threadBuffer.get().slice();
+        ByteBuffer buffer = this.buffer.slice();
         buffer.limit(size);
         return Charset.forName("UTF-8").decode(buffer).toString();
     }
@@ -202,10 +206,9 @@ final class Decoder {
     }
 
     private long decodeLong(int size) {
-        ByteBuffer buffer = this.threadBuffer.get();
         long integer = 0;
         for (int i = 0; i < size; i++) {
-            integer = (integer << 8) | (buffer.get() & 0xFF);
+            integer = (integer << 8) | (this.buffer.get() & 0xFF);
         }
         return integer;
     }
@@ -219,8 +222,7 @@ final class Decoder {
     }
 
     private int decodeInteger(int base, int size) {
-        ByteBuffer buffer = this.threadBuffer.get();
-        return Decoder.decodeInteger(buffer, base, size);
+        return Decoder.decodeInteger(this.buffer, base, size);
     }
 
     static int decodeInteger(ByteBuffer buffer, int base, int size) {
@@ -242,7 +244,7 @@ final class Decoder {
                     "The MaxMind DB file's data section contains bad data: "
                             + "invalid size of double.");
         }
-        return new DoubleNode(this.threadBuffer.get().getDouble());
+        return new DoubleNode(this.buffer.getDouble());
     }
 
     private FloatNode decodeFloat(int size) throws InvalidDatabaseException {
@@ -251,7 +253,7 @@ final class Decoder {
                     "The MaxMind DB file's data section contains bad data: "
                             + "invalid size of float.");
         }
-        return new FloatNode(this.threadBuffer.get().getFloat());
+        return new FloatNode(this.buffer.getFloat());
     }
 
     private static BooleanNode decodeBoolean(int size)
@@ -317,7 +319,7 @@ final class Decoder {
     }
 
     private byte[] getByteArray(int length) {
-        return Decoder.getByteArray(this.threadBuffer.get(), length);
+        return Decoder.getByteArray(this.buffer, length);
     }
 
     private static byte[] getByteArray(ByteBuffer buffer, int length) {
