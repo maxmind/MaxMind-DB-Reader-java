@@ -70,7 +70,7 @@ public class MultiThreadedTest {
 
     private static void runThreads(Callable<JsonNode> task)
             throws InterruptedException, ExecutionException {
-        int threadCount = 1024;
+        int threadCount = 256;
         List<Callable<JsonNode>> tasks = Collections.nCopies(threadCount, task);
         ExecutorService executorService = Executors
                 .newFixedThreadPool(threadCount);
