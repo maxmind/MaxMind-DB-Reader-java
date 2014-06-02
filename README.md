@@ -19,7 +19,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>0.3.2</version>
+        <version>0.3.3</version>
     </dependency>
 ```
 
