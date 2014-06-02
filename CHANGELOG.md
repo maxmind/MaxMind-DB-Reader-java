@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+0.3.3 (2014-06-02)
+------------------
+
+* A potential (small) resource leak when using this library with a thread
+  pool was fixed.
+
 0.3.2 (2014-04-02)
 ------------------
 
