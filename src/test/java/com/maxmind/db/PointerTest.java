@@ -20,37 +20,32 @@ public class PointerTest {
         File file = new File(PointerTest.class.getResource(
                 "/maxmind-db/test-data/maps-with-pointers.raw").toURI());
         BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
-        try {
-            Decoder decoder = new Decoder(ptf.get(), 0);
+        Decoder decoder = new Decoder(ptf.get(), 0);
 
-            ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = new ObjectMapper();
 
-            ObjectNode map = om.createObjectNode();
-            map.put("long_key", "long_value1");
-            assertEquals(map, decoder.decode(0).getNode());
+        ObjectNode map = om.createObjectNode();
+        map.put("long_key", "long_value1");
+        assertEquals(map, decoder.decode(0).getNode());
 
-            map = om.createObjectNode();
-            map.put("long_key", "long_value2");
-            assertEquals(map, decoder.decode(22).getNode());
+        map = om.createObjectNode();
+        map.put("long_key", "long_value2");
+        assertEquals(map, decoder.decode(22).getNode());
 
-            map = om.createObjectNode();
-            map.put("long_key2", "long_value1");
-            assertEquals(map, decoder.decode(37).getNode());
+        map = om.createObjectNode();
+        map.put("long_key2", "long_value1");
+        assertEquals(map, decoder.decode(37).getNode());
 
-            map = om.createObjectNode();
-            map.put("long_key2", "long_value2");
-            assertEquals(map, decoder.decode(50).getNode());
+        map = om.createObjectNode();
+        map.put("long_key2", "long_value2");
+        assertEquals(map, decoder.decode(50).getNode());
 
-            map = om.createObjectNode();
-            map.put("long_key", "long_value1");
-            assertEquals(map, decoder.decode(55).getNode());
+        map = om.createObjectNode();
+        map.put("long_key", "long_value1");
+        assertEquals(map, decoder.decode(55).getNode());
 
-            map = om.createObjectNode();
-            map.put("long_key2", "long_value2");
-            assertEquals(map, decoder.decode(57).getNode());
-        } finally {
-            ptf.close();
-        }
-
+        map = om.createObjectNode();
+        map.put("long_key2", "long_value2");
+        assertEquals(map, decoder.decode(57).getNode());
     }
 }

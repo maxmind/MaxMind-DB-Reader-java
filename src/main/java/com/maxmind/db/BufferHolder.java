@@ -1,7 +1,6 @@
 package com.maxmind.db;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,21 +11,33 @@ import java.nio.channels.FileChannel.MapMode;
 
 import com.maxmind.db.Reader.FileMode;
 
-final class BufferHolder implements Closeable {
-    // DO NOT PASS THESE OUTSIDE THIS CLASS. Doing so will remove thread
-    // safety.
+final class BufferHolder {
+    // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
     private final ByteBuffer buffer;
-    private final RandomAccessFile raf;
-    private final FileChannel fc;
 
     BufferHolder(File database, FileMode mode) throws IOException {
-        this.raf = new RandomAccessFile(database, "r");
-        this.fc = this.raf.getChannel();
-        if (mode == FileMode.MEMORY) {
-            this.buffer = ByteBuffer.wrap(new byte[(int) this.fc.size()]);
-            this.fc.read(this.buffer);
-        } else {
-            this.buffer = this.fc.map(MapMode.READ_ONLY, 0, this.fc.size());
+        final RandomAccessFile file = new RandomAccessFile(database, "r");
+        boolean threw = true;
+        try {
+            final FileChannel channel = file.getChannel();
+            if (mode == FileMode.MEMORY) {
+                this.buffer = ByteBuffer.wrap(new byte[(int) channel.size()]);
+                channel.read(this.buffer);
+            } else {
+                this.buffer = channel.map(MapMode.READ_ONLY, 0, channel.size());
+            }
+            threw = false;
+        } finally {
+            try {
+                // Also closes the underlying channel.
+                file.close();
+            } catch (final IOException e) {
+                // If an exception was underway when we entered the finally block,
+                // don't stomp over it due to an error closing the file and channel.
+                if (!threw) {
+                    throw e;
+                }
+            }
         }
     }
 
@@ -52,15 +63,11 @@ final class BufferHolder implements Closeable {
             baos.write(bytes, 0, br);
         }
         this.buffer = ByteBuffer.wrap(baos.toByteArray());
-        this.raf = null;
-        this.fc = null;
     }
 
     // This is just to ease unit testing
     BufferHolder(ByteBuffer buffer) {
         this.buffer = buffer;
-        this.raf = null;
-        this.fc = null;
     }
 
     /*
@@ -69,15 +76,5 @@ final class BufferHolder implements Closeable {
      */
     synchronized ByteBuffer get() {
         return this.buffer.duplicate();
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (this.fc != null) {
-            this.fc.close();
-        }
-        if (this.raf != null) {
-            this.raf.close();
-        }
     }
 }

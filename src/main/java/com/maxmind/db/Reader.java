@@ -241,6 +241,6 @@ public final class Reader implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        this.bufferHolder.close();
+        // Nothing to do for now.
     }
 }
