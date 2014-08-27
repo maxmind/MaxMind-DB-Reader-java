@@ -103,7 +103,7 @@ public final class Reader implements Closeable {
      *             if a file I/O error occurs.
      */
     public JsonNode get(InetAddress ipAddress) throws IOException {
-        ByteBuffer buffer = getBufferHolder().get();
+        ByteBuffer buffer = this.getBufferHolder().get();
         int pointer = this.findAddressInTree(buffer, ipAddress);
         if (pointer == 0) {
             return null;
@@ -112,7 +112,7 @@ public final class Reader implements Closeable {
     }
 
     private BufferHolder getBufferHolder() throws ClosedDatabaseException {
-        BufferHolder bufferHolder = bufferHolderReference.get();
+        BufferHolder bufferHolder = this.bufferHolderReference.get();
         if (bufferHolder == null) {
             throw new ClosedDatabaseException();
         }
@@ -250,6 +250,6 @@ public final class Reader implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        bufferHolderReference.getAndSet(null).close();
+        this.bufferHolderReference.set(null);
     }
 }
