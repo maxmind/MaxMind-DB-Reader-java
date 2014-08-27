@@ -16,6 +16,8 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -26,6 +28,20 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
+
+    private Reader testReader;
+
+    @Before
+    public void setupReader() {
+        testReader = null;
+    }
+
+    @After
+    public void teardownReader() throws IOException {
+        if (testReader != null) {
+            testReader.close();
+        }
+    }
 
     @Test
     public void test() throws IOException, URISyntaxException {
@@ -56,8 +72,8 @@ public class ReaderTest {
                 "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
                 .toURI();
 
-        Reader reader = new Reader(new File(file));
-        this.testNoIpV4SearchTree(reader);
+        testReader = new Reader(new File(file));
+        this.testNoIpV4SearchTree(testReader);
     }
 
     @Test
@@ -66,8 +82,8 @@ public class ReaderTest {
         InputStream stream = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
                 .openStream();
-        Reader reader = new Reader(stream);
-        this.testNoIpV4SearchTree(reader);
+        testReader = new Reader(stream);
+        this.testNoIpV4SearchTree(testReader);
     }
 
     private void testNoIpV4SearchTree(Reader reader) throws IOException,
@@ -84,8 +100,8 @@ public class ReaderTest {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
-        Reader reader = new Reader(new File(file));
-        this.testDecodingTypes(reader);
+        testReader = new Reader(new File(file));
+        this.testDecodingTypes(testReader);
     }
 
     @Test
@@ -94,8 +110,8 @@ public class ReaderTest {
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
                 .openStream();
 
-        Reader reader = new Reader(stream);
-        this.testDecodingTypes(reader);
+        testReader = new Reader(stream);
+        this.testDecodingTypes(testReader);
     }
 
     private void testDecodingTypes(Reader reader) throws URISyntaxException,
@@ -147,8 +163,8 @@ public class ReaderTest {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
-        Reader reader = new Reader(new File(file));
-        this.testZeros(reader);
+        testReader = new Reader(new File(file));
+        this.testZeros(testReader);
     }
 
     @Test
@@ -157,8 +173,8 @@ public class ReaderTest {
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
                 .openStream();
 
-        Reader reader = new Reader(stream);
-        this.testZeros(reader);
+        testReader = new Reader(stream);
+        this.testZeros(testReader);
     }
 
     private void testZeros(Reader reader) throws URISyntaxException,
@@ -196,8 +212,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
                 .toURI();
 
-        Reader reader = new Reader(new File(file));
-        this.testBrokenDatabase(reader);
+        testReader = new Reader(new File(file));
+        this.testBrokenDatabase(testReader);
     }
 
     @Test
@@ -207,8 +223,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
                 .openStream();
 
-        Reader reader = new Reader(stream);
-        this.testBrokenDatabase(reader);
+        testReader = new Reader(stream);
+        this.testBrokenDatabase(testReader);
     }
 
     private void testBrokenDatabase(Reader reader) throws URISyntaxException,
@@ -229,8 +245,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .toURI();
 
-        Reader reader = new Reader(new File(file));
-        this.testBrokenSearchTreePointer(reader);
+        testReader = new Reader(new File(file));
+        this.testBrokenSearchTreePointer(testReader);
     }
 
     @Test
@@ -241,8 +257,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .openStream();
 
-        Reader reader = new Reader(stream);
-        this.testBrokenSearchTreePointer(reader);
+        testReader = new Reader(stream);
+        this.testBrokenSearchTreePointer(testReader);
     }
 
     private void testBrokenSearchTreePointer(Reader reader)
@@ -263,8 +279,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .toURI();
 
-        Reader reader = new Reader(new File(file));
-        this.testBrokenDataPointer(reader);
+        testReader = new Reader(new File(file));
+        this.testBrokenDataPointer(testReader);
     }
 
     @Test
@@ -275,8 +291,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .openStream();
 
-        Reader reader = new Reader(stream);
-        this.testBrokenDataPointer(reader);
+        testReader = new Reader(stream);
+        this.testBrokenDataPointer(testReader);
     }
 
     private void testBrokenDataPointer(Reader reader) throws IOException,
