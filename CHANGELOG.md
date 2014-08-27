@@ -1,6 +1,19 @@
 CHANGELOG
 =========
 
+0.3.4 (2014-08-27)
+------------------
+
+* Previously the Reader would hold onto the underlying file and FileChannel,
+  not closing them until the Reader was closed. This was unnecessary; they
+  are now closed immediately after they are used. Fix by Andrew Snare; GitHub
+  issue #7.
+* The Reader now discards the reference to the underlying buffer when
+  `close()` is called. This is done to help ensure that the buffer is garbage
+  collected sooner, which may mitigate file locking issues that some users
+  have experienced on Windows when updating the database. Patch by Andrew
+  Snare; GitHub issue #8.
+
 0.3.3 (2014-06-02)
 ------------------
 
