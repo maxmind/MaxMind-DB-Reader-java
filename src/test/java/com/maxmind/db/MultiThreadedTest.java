@@ -33,7 +33,11 @@ public class MultiThreadedTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
                         .toURI();
                 final Reader reader = new Reader(new File(file));
-                return reader.get(InetAddress.getByName("::1.1.1.0"));
+                try {
+                    return reader.get(InetAddress.getByName("::1.1.1.0"));
+                } finally {
+                    reader.close();
+                }
             }
         };
         MultiThreadedTest.runThreads(task);
@@ -45,7 +49,11 @@ public class MultiThreadedTest {
         final Reader reader = new Reader(ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
                 .openStream());
-        MultiThreadedTest.threadTest(reader);
+        try {
+            MultiThreadedTest.threadTest(reader);
+        } finally {
+            reader.close();
+        }
     }
 
     @Test
@@ -54,7 +62,11 @@ public class MultiThreadedTest {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
         final Reader reader = new Reader(new File(file));
-        MultiThreadedTest.threadTest(reader);
+        try {
+            MultiThreadedTest.threadTest(reader);
+        } finally {
+            reader.close();
+        }
     }
 
     private static void threadTest(final Reader reader) throws InterruptedException,

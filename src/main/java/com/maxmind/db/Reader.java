@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -21,7 +22,7 @@ public final class Reader implements Closeable {
 
     private final int ipV4Start;
     private final Metadata metadata;
-    private final BufferHolder bufferHolder;
+    private final AtomicReference<BufferHolder> bufferHolderReference;
 
     /**
      * The file mode to use when opening a MaxMind DB.
@@ -81,9 +82,9 @@ public final class Reader implements Closeable {
     }
 
     private Reader(BufferHolder bufferHolder, String name) throws IOException {
-        this.bufferHolder = bufferHolder;
+        this.bufferHolderReference = new AtomicReference<BufferHolder>(bufferHolder);
 
-        ByteBuffer buffer = this.bufferHolder.get();
+        ByteBuffer buffer = bufferHolder.get();
         int start = this.findMetadataStart(buffer, name);
 
         Decoder metadataDecoder = new Decoder(buffer, start);
@@ -102,12 +103,20 @@ public final class Reader implements Closeable {
      *             if a file I/O error occurs.
      */
     public JsonNode get(InetAddress ipAddress) throws IOException {
-        ByteBuffer buffer = this.bufferHolder.get();
+        ByteBuffer buffer = getBufferHolder().get();
         int pointer = this.findAddressInTree(buffer, ipAddress);
         if (pointer == 0) {
             return null;
         }
         return this.resolveDataPointer(buffer, pointer);
+    }
+
+    private BufferHolder getBufferHolder() throws ClosedDatabaseException {
+        BufferHolder bufferHolder = bufferHolderReference.get();
+        if (bufferHolder == null) {
+            throw new ClosedDatabaseException();
+        }
+        return bufferHolder;
     }
 
     private int findAddressInTree(ByteBuffer buffer, InetAddress address)
@@ -241,6 +250,6 @@ public final class Reader implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        // Nothing to do for now.
+        bufferHolderReference.getAndSet(null).close();
     }
 }
