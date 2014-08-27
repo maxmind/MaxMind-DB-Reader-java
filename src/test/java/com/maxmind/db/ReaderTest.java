@@ -37,14 +37,13 @@ public class ReaderTest {
                 Reader reader = new Reader(new File(file));
                 try {
                     this.testMetadata(reader, ipVersion, recordSize);
+                    if (ipVersion == 4) {
+                        this.testIpV4(reader, file);
+                    } else {
+                        this.testIpV6(reader, file);
+                    }
                 } finally {
                     reader.close();
-                }
-
-                if (ipVersion == 4) {
-                    this.testIpV4(reader, file);
-                } else {
-                    this.testIpV6(reader, file);
                 }
             }
         }
@@ -287,6 +286,19 @@ public class ReaderTest {
         this.thrown
                 .expectMessage(containsString("The MaxMind DB file's data section contains bad data"));
 
+        reader.get(InetAddress.getByName("1.1.1.16"));
+    }
+
+    @Test
+    public void testClosedReaderThrowsException() throws IOException, URISyntaxException {
+        URI file = ReaderTest.class.getResource(
+                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
+        Reader reader = new Reader(new File(file));
+
+        this.thrown.expect(ClosedDatabaseException.class);
+        this.thrown.expectMessage("The MaxMind DB has been closed.");
+
+        reader.close();
         reader.get(InetAddress.getByName("1.1.1.16"));
     }
 
