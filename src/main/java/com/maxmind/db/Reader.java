@@ -82,7 +82,8 @@ public final class Reader implements Closeable {
     }
 
     private Reader(BufferHolder bufferHolder, String name) throws IOException {
-        this.bufferHolderReference = new AtomicReference<BufferHolder>(bufferHolder);
+        this.bufferHolderReference = new AtomicReference<BufferHolder>(
+                bufferHolder);
 
         ByteBuffer buffer = bufferHolder.get();
         int start = this.findMetadataStart(buffer, name);
@@ -144,7 +145,8 @@ public final class Reader implements Closeable {
         throw new InvalidDatabaseException("Something bad happened");
     }
 
-    private int startNode(ByteBuffer buffer, int bitLength) throws InvalidDatabaseException {
+    private int startNode(ByteBuffer buffer, int bitLength)
+            throws InvalidDatabaseException {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
         if (this.metadata.ipVersion == 6 && bitLength == 32) {
@@ -155,7 +157,8 @@ public final class Reader implements Closeable {
         return 0;
     }
 
-    private int findIpV4StartNode(ByteBuffer buffer) throws InvalidDatabaseException {
+    private int findIpV4StartNode(ByteBuffer buffer)
+            throws InvalidDatabaseException {
         if (this.metadata.ipVersion == 4) {
             return 0;
         }
@@ -194,7 +197,8 @@ public final class Reader implements Closeable {
         }
     }
 
-    private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer) throws IOException {
+    private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer)
+            throws IOException {
         int resolved = (pointer - this.metadata.nodeCount)
                 + this.metadata.searchTreeSize;
 
@@ -206,8 +210,8 @@ public final class Reader implements Closeable {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        Decoder decoder = new Decoder(buffer,
-                this.metadata.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE);
+        Decoder decoder = new Decoder(buffer, this.metadata.searchTreeSize
+                + DATA_SECTION_SEPARATOR_SIZE);
         return decoder.decode(resolved).getNode();
     }
 

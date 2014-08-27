@@ -306,7 +306,8 @@ public class ReaderTest {
     }
 
     @Test
-    public void testClosedReaderThrowsException() throws IOException, URISyntaxException {
+    public void testClosedReaderThrowsException() throws IOException,
+            URISyntaxException {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
         Reader reader = new Reader(new File(file));

@@ -69,8 +69,8 @@ public class MultiThreadedTest {
         }
     }
 
-    private static void threadTest(final Reader reader) throws InterruptedException,
-            ExecutionException {
+    private static void threadTest(final Reader reader)
+            throws InterruptedException, ExecutionException {
         Callable<JsonNode> task = new Callable<JsonNode>() {
             @Override
             public JsonNode call() throws UnknownHostException, IOException {

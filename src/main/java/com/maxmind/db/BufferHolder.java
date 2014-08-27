@@ -32,8 +32,9 @@ final class BufferHolder {
                 // Also closes the underlying channel.
                 file.close();
             } catch (final IOException e) {
-                // If an exception was underway when we entered the finally block,
-                // don't stomp over it due to an error closing the file and channel.
+                // If an exception was underway when we entered the finally
+                // block, don't stomp over it due to an error closing the file
+                // and channel.
                 if (!threw) {
                     throw e;
                 }
