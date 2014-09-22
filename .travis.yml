@@ -16,3 +16,17 @@ notifications:
       - dev@maxmind.com
     on_success: change
     on_failure: always
+
+env:
+  global:
+   - secure: "KXF3RVBZDxeASAnleYlTaqvxRRB9FSzSAdVV9h7Kw81+p4UO64b8CPJR1p4fLIVwAp8C4R8h0xZDN3pAv/iyeA4ndIeh9tQXNZBm737RE5x+6x6nf/shP/Em1w9T1s3KmretXoTFK5NJGv2yTesgaIAV/JV1OFvlG6ArswhrPFc="
+
+addons:
+  coverity_scan:
+    project:
+      name: "maxmind/MaxMind-DB-Reader-java"
+      description: "Build submitted via Travis CI"
+    notification_email: dev@maxmind.com
+    build_command_prepend: "mvn clean"
+    build_command:   "mvn -DskipTests=true compile"
+    branch_pattern: .*coverity.*
