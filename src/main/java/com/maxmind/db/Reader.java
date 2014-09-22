@@ -128,17 +128,17 @@ public final class Reader implements Closeable {
         int record = this.startNode(buffer, bitLength);
 
         for (int i = 0; i < bitLength; i++) {
-            if (record >= this.metadata.nodeCount) {
+            if (record >= this.metadata.getNodeCount()) {
                 break;
             }
             int b = 0xFF & rawAddress[i / 8];
             int bit = 1 & (b >> 7 - (i % 8));
             record = this.readNode(buffer, record, bit);
         }
-        if (record == this.metadata.nodeCount) {
+        if (record == this.metadata.getNodeCount()) {
             // record is empty
             return 0;
-        } else if (record > this.metadata.nodeCount) {
+        } else if (record > this.metadata.getNodeCount()) {
             // record is a data pointer
             return record;
         }
@@ -149,7 +149,7 @@ public final class Reader implements Closeable {
             throws InvalidDatabaseException {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
-        if (this.metadata.ipVersion == 6 && bitLength == 32) {
+        if (this.metadata.getIpVersion() == 6 && bitLength == 32) {
             return this.ipV4Start;
         }
         // The first node of the tree is always node 0, at the beginning of the
@@ -159,12 +159,12 @@ public final class Reader implements Closeable {
 
     private int findIpV4StartNode(ByteBuffer buffer)
             throws InvalidDatabaseException {
-        if (this.metadata.ipVersion == 4) {
+        if (this.metadata.getIpVersion() == 4) {
             return 0;
         }
 
         int node = 0;
-        for (int i = 0; i < 96 && node < this.metadata.nodeCount; i++) {
+        for (int i = 0; i < 96 && node < this.metadata.getNodeCount(); i++) {
             node = this.readNode(buffer, node, 0);
         }
         return node;
@@ -172,9 +172,9 @@ public final class Reader implements Closeable {
 
     private int readNode(ByteBuffer buffer, int nodeNumber, int index)
             throws InvalidDatabaseException {
-        int baseOffset = nodeNumber * this.metadata.nodeByteSize;
+        int baseOffset = nodeNumber * this.metadata.getNodeByteSize();
 
-        switch (this.metadata.recordSize) {
+        switch (this.metadata.getRecordSize()) {
             case 24:
                 buffer.position(baseOffset + index * 3);
                 return Decoder.decodeInteger(buffer, 0, 3);
@@ -193,14 +193,14 @@ public final class Reader implements Closeable {
                 return Decoder.decodeInteger(buffer, 0, 4);
             default:
                 throw new InvalidDatabaseException("Unknown record size: "
-                        + this.metadata.recordSize);
+                        + this.metadata.getRecordSize());
         }
     }
 
     private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer)
             throws IOException {
-        int resolved = (pointer - this.metadata.nodeCount)
-                + this.metadata.searchTreeSize;
+        int resolved = (pointer - this.metadata.getNodeCount())
+                + this.metadata.getSearchTreeSize();
 
         if (resolved >= buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -210,7 +210,7 @@ public final class Reader implements Closeable {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        Decoder decoder = new Decoder(buffer, this.metadata.searchTreeSize
+        Decoder decoder = new Decoder(buffer, this.metadata.getSearchTreeSize()
                 + DATA_SECTION_SEPARATOR_SIZE);
         return decoder.decode(resolved).getNode();
     }
@@ -242,7 +242,10 @@ public final class Reader implements Closeable {
                         + databaseName + "). Is this a valid MaxMind DB file?");
     }
 
-    Metadata getMetadata() {
+    /**
+     * @return the metadata for the MaxMind DB file.
+     */
+    public Metadata getMetadata() {
         return this.metadata;
     }
 

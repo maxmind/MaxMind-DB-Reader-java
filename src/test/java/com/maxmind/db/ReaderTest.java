@@ -13,7 +13,11 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.After;
@@ -33,13 +37,13 @@ public class ReaderTest {
 
     @Before
     public void setupReader() {
-        testReader = null;
+        this.testReader = null;
     }
 
     @After
     public void teardownReader() throws IOException {
-        if (testReader != null) {
-            testReader.close();
+        if (this.testReader != null) {
+            this.testReader.close();
         }
     }
 
@@ -72,8 +76,8 @@ public class ReaderTest {
                 "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
                 .toURI();
 
-        testReader = new Reader(new File(file));
-        this.testNoIpV4SearchTree(testReader);
+        this.testReader = new Reader(new File(file));
+        this.testNoIpV4SearchTree(this.testReader);
     }
 
     @Test
@@ -82,8 +86,8 @@ public class ReaderTest {
         InputStream stream = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-no-ipv4-search-tree.mmdb")
                 .openStream();
-        testReader = new Reader(stream);
-        this.testNoIpV4SearchTree(testReader);
+        this.testReader = new Reader(stream);
+        this.testNoIpV4SearchTree(this.testReader);
     }
 
     private void testNoIpV4SearchTree(Reader reader) throws IOException,
@@ -100,8 +104,8 @@ public class ReaderTest {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
-        testReader = new Reader(new File(file));
-        this.testDecodingTypes(testReader);
+        this.testReader = new Reader(new File(file));
+        this.testDecodingTypes(this.testReader);
     }
 
     @Test
@@ -110,8 +114,8 @@ public class ReaderTest {
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
                 .openStream();
 
-        testReader = new Reader(stream);
-        this.testDecodingTypes(testReader);
+        this.testReader = new Reader(stream);
+        this.testDecodingTypes(this.testReader);
     }
 
     private void testDecodingTypes(Reader reader) throws URISyntaxException,
@@ -163,8 +167,8 @@ public class ReaderTest {
         URI file = ReaderTest.class.getResource(
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
 
-        testReader = new Reader(new File(file));
-        this.testZeros(testReader);
+        this.testReader = new Reader(new File(file));
+        this.testZeros(this.testReader);
     }
 
     @Test
@@ -173,8 +177,8 @@ public class ReaderTest {
                 "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
                 .openStream();
 
-        testReader = new Reader(stream);
-        this.testZeros(testReader);
+        this.testReader = new Reader(stream);
+        this.testZeros(this.testReader);
     }
 
     private void testZeros(Reader reader) throws URISyntaxException,
@@ -212,8 +216,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
                 .toURI();
 
-        testReader = new Reader(new File(file));
-        this.testBrokenDatabase(testReader);
+        this.testReader = new Reader(new File(file));
+        this.testBrokenDatabase(this.testReader);
     }
 
     @Test
@@ -223,8 +227,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/GeoIP2-City-Test-Broken-Double-Format.mmdb")
                 .openStream();
 
-        testReader = new Reader(stream);
-        this.testBrokenDatabase(testReader);
+        this.testReader = new Reader(stream);
+        this.testBrokenDatabase(this.testReader);
     }
 
     private void testBrokenDatabase(Reader reader) throws URISyntaxException,
@@ -245,8 +249,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .toURI();
 
-        testReader = new Reader(new File(file));
-        this.testBrokenSearchTreePointer(testReader);
+        this.testReader = new Reader(new File(file));
+        this.testBrokenSearchTreePointer(this.testReader);
     }
 
     @Test
@@ -257,8 +261,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .openStream();
 
-        testReader = new Reader(stream);
-        this.testBrokenSearchTreePointer(testReader);
+        this.testReader = new Reader(stream);
+        this.testBrokenSearchTreePointer(this.testReader);
     }
 
     private void testBrokenSearchTreePointer(Reader reader)
@@ -279,8 +283,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .toURI();
 
-        testReader = new Reader(new File(file));
-        this.testBrokenDataPointer(testReader);
+        this.testReader = new Reader(new File(file));
+        this.testBrokenDataPointer(this.testReader);
     }
 
     @Test
@@ -291,8 +295,8 @@ public class ReaderTest {
                         "/maxmind-db/test-data/MaxMind-DB-test-broken-pointers-24.mmdb")
                 .openStream();
 
-        testReader = new Reader(stream);
-        this.testBrokenDataPointer(testReader);
+        this.testReader = new Reader(stream);
+        this.testBrokenDataPointer(this.testReader);
     }
 
     private void testBrokenDataPointer(Reader reader) throws IOException,
@@ -323,19 +327,26 @@ public class ReaderTest {
 
         Metadata metadata = reader.getMetadata();
 
-        assertEquals("major version", 2, metadata.binaryFormatMajorVersion);
-        assertEquals(0, metadata.binaryFormatMinorVersion);
-        assertEquals(ipVersion, metadata.ipVersion);
-        assertEquals("Test", metadata.databaseType);
-        assertEquals("en", metadata.languages.get(0).asText());
-        assertEquals("zh", metadata.languages.get(1).asText());
+        assertEquals("major version", 2, metadata.getBinaryFormatMajorVersion());
+        assertEquals(0, metadata.getBinaryFormatMinorVersion());
+        assertEquals(ipVersion, metadata.getIpVersion());
+        assertEquals("Test", metadata.getDatabaseType());
 
-        ObjectNode description = this.om.createObjectNode();
+        List<String> languages = new ArrayList<String>(Arrays.asList("en", "zh"));
+
+        assertEquals(languages, metadata.getLanguages());
+
+        Map<String, String> description = new HashMap<String, String>();
         description.put("en", "Test Database");
         description.put("zh", "Test Database Chinese");
 
-        assertEquals(description, metadata.description);
-        assertEquals(recordSize, metadata.recordSize);
+        assertEquals(description, metadata.getDescription());
+        assertEquals(recordSize, metadata.getRecordSize());
+
+        Calendar cal = Calendar.getInstance();
+        cal.set(2014, Calendar.JANUARY, 1);
+
+        assertTrue(metadata.getBuildDate().compareTo(cal.getTime()) > 0);
     }
 
     private void testIpV4(Reader reader, URI file) throws IOException {
