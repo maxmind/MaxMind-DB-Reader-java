@@ -285,7 +285,7 @@ final class Decoder {
             JsonNode value = valueResult.getNode();
             offset = valueResult.getOffset();
 
-            map.put(key, value);
+            map.set(key, value);
         }
 
         return new Result(map, offset);
