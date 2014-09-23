@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.4.0 (2014-09-23)
+------------------
+
+* Made `com.maxmind.db.Metadata` public and added public getters for most
+  of the interesting metadata. This is accessible through the `getMetadata()`
+  method on a `Reader` object.
+
 0.3.4 (2014-08-27)
 ------------------
 
