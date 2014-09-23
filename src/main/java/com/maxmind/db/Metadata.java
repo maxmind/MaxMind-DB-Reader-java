@@ -10,7 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-final class Metadata {
+public final class Metadata {
     private final int binaryFormatMajorVersion;
     private final int binaryFormatMinorVersion;
 
