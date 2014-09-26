@@ -51,7 +51,6 @@ final class BufferHolder {
      *
      * @param stream
      *            the source of my bytes.
-     * @return a newly constructed instance based on the contents of your URL.
      * @throws IOException
      *             if unable to read from your source.
      * @throws NullPointerException

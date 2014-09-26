@@ -27,7 +27,7 @@ public class MultiThreadedTest {
             ExecutionException {
         Callable<JsonNode> task = new Callable<JsonNode>() {
             @Override
-            public JsonNode call() throws UnknownHostException, IOException,
+            public JsonNode call() throws IOException,
                     URISyntaxException {
                 URI file = ReaderTest.class.getResource(
                         "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
@@ -73,7 +73,7 @@ public class MultiThreadedTest {
             throws InterruptedException, ExecutionException {
         Callable<JsonNode> task = new Callable<JsonNode>() {
             @Override
-            public JsonNode call() throws UnknownHostException, IOException {
+            public JsonNode call() throws IOException {
                 return reader.get(InetAddress.getByName("::1.1.1.0"));
             }
         };

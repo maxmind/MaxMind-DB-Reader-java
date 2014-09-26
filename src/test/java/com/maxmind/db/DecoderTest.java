@@ -138,7 +138,7 @@ public class DecoderTest {
         return pointers;
     }
 
-    static Map<String, byte[]> strings() {
+    private static Map<String, byte[]> strings() {
         Map<String, byte[]> strings = new HashMap<String, byte[]>();
 
         DecoderTest.addTestString(strings, (byte) 0x40, "");
@@ -170,7 +170,7 @@ public class DecoderTest {
 
     }
 
-    static Map<byte[], byte[]> bytes() {
+    private static Map<byte[], byte[]> bytes() {
         Map<byte[], byte[]> bytes = new HashMap<byte[], byte[]>();
 
         Map<String, byte[]> strings = DecoderTest.strings();
@@ -209,7 +209,7 @@ public class DecoderTest {
         tests.put(str, bytes);
     }
 
-    static Map<Double, byte[]> doubles() {
+    private static Map<Double, byte[]> doubles() {
         Map<Double, byte[]> doubles = new HashMap<Double, byte[]>();
         doubles.put(0.0, new byte[] { 0x68, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                 0x0 });
@@ -231,7 +231,7 @@ public class DecoderTest {
         return doubles;
     }
 
-    static Map<Float, byte[]> floats() {
+    private static Map<Float, byte[]> floats() {
         Map<Float, byte[]> floats = new HashMap<Float, byte[]>();
         floats.put((float) 0.0, new byte[] { 0x4, 0x8, 0x0, 0x0, 0x0, 0x0 });
         floats.put((float) 1.0, new byte[] { 0x4, 0x8, 0x3F, (byte) 0x80, 0x0,
@@ -254,7 +254,7 @@ public class DecoderTest {
         return floats;
     }
 
-    static Map<Boolean, byte[]> booleans() {
+    private static Map<Boolean, byte[]> booleans() {
         Map<Boolean, byte[]> booleans = new HashMap<Boolean, byte[]>();
 
         booleans.put(Boolean.FALSE, new byte[] { 0x0, 0x7 });
@@ -262,7 +262,7 @@ public class DecoderTest {
         return booleans;
     }
 
-    static Map<ObjectNode, byte[]> maps() {
+    private static Map<ObjectNode, byte[]> maps() {
         Map<ObjectNode, byte[]> maps = new HashMap<ObjectNode, byte[]>();
 
         ObjectMapper om = new ObjectMapper();
@@ -289,7 +289,7 @@ public class DecoderTest {
         0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba });
 
         ObjectNode nested = om.createObjectNode();
-        nested.put("name", two);
+        nested.set("name", two);
 
         maps.put(nested, new byte[] { (byte) 0xe1, /* name */
         0x44, 0x6e, 0x61, 0x6d, 0x65, (byte) 0xe2,/* en */
@@ -305,7 +305,7 @@ public class DecoderTest {
         ArrayNode languages = om.createArrayNode();
         languages.add("en");
         languages.add("zh");
-        guess.put("languages", languages);
+        guess.set("languages", languages);
         maps.put(guess, new byte[] { (byte) 0xe1,/* languages */
         0x49, 0x6c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x73,
         /* array */
@@ -318,7 +318,7 @@ public class DecoderTest {
         return maps;
     }
 
-    static Map<ArrayNode, byte[]> arrays() {
+    private static Map<ArrayNode, byte[]> arrays() {
         Map<ArrayNode, byte[]> arrays = new HashMap<ArrayNode, byte[]>();
         ObjectMapper om = new ObjectMapper();
 
@@ -344,75 +344,75 @@ public class DecoderTest {
     }
 
     @Test
-    public void testUint16() throws InvalidDatabaseException, IOException {
+    public void testUint16() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT16, uint16());
     }
 
     @Test
-    public void testUint32() throws InvalidDatabaseException, IOException {
+    public void testUint32() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT32, uint32());
     }
 
     @Test
-    public void testInt32() throws InvalidDatabaseException, IOException {
+    public void testInt32() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.INT32, int32());
     }
 
     @Test
-    public void testUint64() throws InvalidDatabaseException, IOException {
+    public void testUint64() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT64, largeUint(64));
     }
 
     @Test
-    public void testUint128() throws InvalidDatabaseException, IOException {
+    public void testUint128() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UINT128, largeUint(128));
     }
 
     @Test
-    public void testDoubles() throws InvalidDatabaseException, IOException {
+    public void testDoubles() throws IOException {
         DecoderTest
                 .testTypeDecoding(Decoder.Type.DOUBLE, DecoderTest.doubles());
     }
 
     @Test
-    public void testFloats() throws InvalidDatabaseException, IOException {
+    public void testFloats() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.FLOAT, DecoderTest.floats());
     }
 
     @Test
-    public void testPointers() throws InvalidDatabaseException, IOException {
+    public void testPointers() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.POINTER, pointers());
     }
 
     @Test
-    public void testStrings() throws InvalidDatabaseException, IOException {
+    public void testStrings() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.UTF8_STRING,
                 DecoderTest.strings());
     }
 
     @Test
-    public void testBooleans() throws InvalidDatabaseException, IOException {
+    public void testBooleans() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.BOOLEAN,
                 DecoderTest.booleans());
     }
 
     @Test
-    public void testBytes() throws InvalidDatabaseException, IOException {
+    public void testBytes() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.BYTES, DecoderTest.bytes());
     }
 
     @Test
-    public void testMaps() throws InvalidDatabaseException, IOException {
+    public void testMaps() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.MAP, DecoderTest.maps());
     }
 
     @Test
-    public void testArrays() throws InvalidDatabaseException, IOException {
+    public void testArrays() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.ARRAY, DecoderTest.arrays());
     }
 
-    static <T> void testTypeDecoding(Decoder.Type type, Map<T, byte[]> tests)
-            throws InvalidDatabaseException, IOException {
+    private static <T> void testTypeDecoding(Decoder.Type type, Map<T, byte[]> tests)
+            throws IOException {
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
             T expect = entry.getKey();
@@ -460,9 +460,7 @@ public class DecoderTest {
                     assertEquals(desc, expect, decoder.decode(0).getNode());
                 }
             } finally {
-                if (fc != null) {
                     fc.close();
-                }
             }
         }
     }

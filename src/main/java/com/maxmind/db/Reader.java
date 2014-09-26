@@ -125,7 +125,7 @@ public final class Reader implements Closeable {
         byte[] rawAddress = address.getAddress();
 
         int bitLength = rawAddress.length * 8;
-        int record = this.startNode(buffer, bitLength);
+        int record = this.startNode(bitLength);
 
         for (int i = 0; i < bitLength; i++) {
             if (record >= this.metadata.getNodeCount()) {
@@ -145,8 +145,7 @@ public final class Reader implements Closeable {
         throw new InvalidDatabaseException("Something bad happened");
     }
 
-    private int startNode(ByteBuffer buffer, int bitLength)
-            throws InvalidDatabaseException {
+    private int startNode(int bitLength) {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
         if (this.metadata.getIpVersion() == 6 && bitLength == 32) {

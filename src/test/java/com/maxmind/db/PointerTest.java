@@ -15,7 +15,7 @@ import com.maxmind.db.Reader.FileMode;
 public class PointerTest {
     @SuppressWarnings("static-method")
     @Test
-    public void testWithPointers() throws InvalidDatabaseException,
+    public void testWithPointers() throws
             IOException, URISyntaxException {
         File file = new File(PointerTest.class.getResource(
                 "/maxmind-db/test-data/maps-with-pointers.raw").toURI());
