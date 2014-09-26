@@ -49,12 +49,9 @@ final class BufferHolder {
     /**
      * Construct a ThreadBuffer from the provided URL.
      *
-     * @param stream
-     *            the source of my bytes.
-     * @throws IOException
-     *             if unable to read from your source.
-     * @throws NullPointerException
-     *             if you provide a NULL InputStream
+     * @param stream the source of my bytes.
+     * @throws IOException          if unable to read from your source.
+     * @throws NullPointerException if you provide a NULL InputStream
      */
     BufferHolder(InputStream stream) throws IOException {
         if (null == stream) {

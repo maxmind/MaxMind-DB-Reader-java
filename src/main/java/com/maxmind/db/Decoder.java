@@ -169,8 +169,8 @@ final class Decoder {
         }
     }
 
-    private final int[] pointerValueOffset = { 0, 0, 1 << 11,
-            (1 << 19) + ((1) << 11), 0 };
+    private final int[] pointerValueOffset = {0, 0, 1 << 11,
+            (1 << 19) + ((1) << 11), 0};
 
     private Result decodePointer(int ctrlByte, int offset) {
         int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
@@ -306,7 +306,7 @@ final class Decoder {
                     & (0x0FFFFFFF >>> (32 - (8 * bytesToRead)));
             size = 65821 + i;
         }
-        return new int[] { size, offset + bytesToRead };
+        return new int[]{size, offset + bytesToRead};
     }
 
     private byte[] getByteArray(int length) {

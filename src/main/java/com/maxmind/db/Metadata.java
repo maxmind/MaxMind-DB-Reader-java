@@ -71,8 +71,8 @@ public final class Metadata {
 
     /**
      * @return a string that indicates the structure of each data record
-     *         associated with an IP address. The actual definition of these
-     *         structures is left up to the database creator.
+     * associated with an IP address. The actual definition of these
+     * structures is left up to the database creator.
      */
     public String getDatabaseType() {
         return this.databaseType;
@@ -89,7 +89,7 @@ public final class Metadata {
 
     /**
      * @return whether the database contains IPv4 or IPv6 address data. The only
-     *         possible values are 4 and 6.
+     * possible values are 4 and 6.
      */
     public int getIpVersion() {
         return this.ipVersion;
@@ -120,7 +120,7 @@ public final class Metadata {
 
     /**
      * @return the number of bits in a record in the search tree. Note that each
-     *         node consists of two records.
+     * node consists of two records.
      */
     int getRecordSize() {
         return this.recordSize;

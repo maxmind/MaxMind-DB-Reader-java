@@ -16,9 +16,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public final class Reader implements Closeable {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
-    private static final byte[] METADATA_START_MARKER = { (byte) 0xAB,
+    private static final byte[] METADATA_START_MARKER = {(byte) 0xAB,
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
-            'c', 'o', 'm' };
+            'c', 'o', 'm'};
 
     private final int ipV4Start;
     private final Metadata metadata;
@@ -44,10 +44,8 @@ public final class Reader implements Closeable {
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
      *
-     * @param database
-     *            the MaxMind DB file to use.
-     * @throws IOException
-     *             if there is an error opening or reading from the file.
+     * @param database the MaxMind DB file to use.
+     * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database) throws IOException {
         this(database, FileMode.MEMORY_MAPPED);
@@ -57,10 +55,8 @@ public final class Reader implements Closeable {
      * Constructs a Reader as if in mode {@link FileMode#MEMORY}, without using
      * a <code>File</code> instance.
      *
-     * @param source
-     *            the InputStream that contains the MaxMind DB file.
-     * @throws IOException
-     *             if there is an error reading from the Stream.
+     * @param source the InputStream that contains the MaxMind DB file.
+     * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source) throws IOException {
         this(new BufferHolder(source), "<InputStream>");
@@ -70,12 +66,9 @@ public final class Reader implements Closeable {
      * Constructs a Reader for the MaxMind DB format. The file passed to it must
      * be a valid MaxMind DB file such as a GeoIP2 database file.
      *
-     * @param database
-     *            the MaxMind DB file to use.
-     * @param fileMode
-     *            the mode to open the file with.
-     * @throws IOException
-     *             if there is an error opening or reading from the file.
+     * @param database the MaxMind DB file to use.
+     * @param fileMode the mode to open the file with.
+     * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode) throws IOException {
         this(new BufferHolder(database, fileMode), database.getName());
@@ -97,11 +90,9 @@ public final class Reader implements Closeable {
     /**
      * Looks up the <code>address</code> in the MaxMind DB.
      *
-     * @param ipAddress
-     *            the IP address to look up.
+     * @param ipAddress the IP address to look up.
      * @return the record for the IP address.
-     * @throws IOException
-     *             if a file I/O error occurs.
+     * @throws IOException if a file I/O error occurs.
      */
     public JsonNode get(InetAddress ipAddress) throws IOException {
         ByteBuffer buffer = this.getBufferHolder().get();
@@ -226,7 +217,8 @@ public final class Reader implements Closeable {
             throws InvalidDatabaseException {
         int fileSize = buffer.capacity();
 
-        FILE: for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
+        FILE:
+        for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
             for (int j = 0; j < METADATA_START_MARKER.length; j++) {
                 byte b = buffer.get(fileSize - i - j - 1);
                 if (b != METADATA_START_MARKER[METADATA_START_MARKER.length - j
@@ -251,8 +243,7 @@ public final class Reader implements Closeable {
     /**
      * Closes the MaxMind DB and returns resources to the system.
      *
-     * @throws IOException
-     *             if an I/O error occurs.
+     * @throws IOException if an I/O error occurs.
      */
     @Override
     public void close() throws IOException {

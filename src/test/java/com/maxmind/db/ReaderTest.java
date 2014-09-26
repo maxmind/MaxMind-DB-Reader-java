@@ -49,8 +49,8 @@ public class ReaderTest {
 
     @Test
     public void test() throws IOException, URISyntaxException {
-        for (long recordSize : new long[] { 24, 28, 32 }) {
-            for (int ipVersion : new int[] { 4, 6 }) {
+        for (long recordSize : new long[]{24, 28, 32}) {
+            for (int ipVersion : new int[]{4, 6}) {
                 URI file = ReaderTest.class.getResource(
                         "/maxmind-db/test-data/MaxMind-DB-test-ipv" + ipVersion
                                 + "-" + recordSize + ".mmdb").toURI();
@@ -124,7 +124,7 @@ public class ReaderTest {
 
         assertEquals(true, record.get("boolean").booleanValue());
 
-        assertArrayEquals(new byte[] { 0, 0, 0, (byte) 42 }, record
+        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, record
                 .get("bytes").binaryValue());
 
         assertEquals("unicode! ☯ - ♫", record.get("utf8_string").textValue());
@@ -376,15 +376,15 @@ public class ReaderTest {
                     + file, data, reader.get(InetAddress.getByName(address)));
         }
 
-        for (String ip : new String[] { "1.1.1.33", "255.254.253.123" }) {
+        for (String ip : new String[]{"1.1.1.33", "255.254.253.123"}) {
             assertNull(reader.get(InetAddress.getByName(ip)));
         }
     }
 
     // XXX - logic could be combined with above
     private void testIpV6(Reader reader, URI file) throws IOException {
-        String[] subnets = new String[] { "::1:ffff:ffff", "::2:0:0",
-                "::2:0:40", "::2:0:50", "::2:0:58" };
+        String[] subnets = new String[]{"::1:ffff:ffff", "::2:0:0",
+                "::2:0:40", "::2:0:50", "::2:0:58"};
 
         for (String address : subnets) {
             ObjectNode data = this.om.createObjectNode();
@@ -412,7 +412,7 @@ public class ReaderTest {
                     + file, data, reader.get(InetAddress.getByName(address)));
         }
 
-        for (String ip : new String[] { "1.1.1.33", "255.254.253.123", "89fa::" }) {
+        for (String ip : new String[]{"1.1.1.33", "255.254.253.123", "89fa::"}) {
             assertNull(reader.get(InetAddress.getByName(ip)));
         }
     }
