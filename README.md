@@ -1,8 +1,5 @@
 # MaxMind DB Reader #
 
-**NOTE**: This is a beta release, and the API may change before the final
-production release.
-
 ## Description ##
 
 This is the Java API for reading MaxMind DB files. MaxMind DB is a binary file
@@ -19,18 +16,19 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>0.4.0</version>
+        <version>1.0.0</version>
     </dependency>
 ```
 
 ## Usage ##
 
 *Note:* For accessing MaxMind GeoIP2 databases, we generally recommend using
-the GeoIP2 Java API rather than using this package directly.
+the [GeoIP2 Java API](http://maxmind.github.io/GeoIP2-java/) rather than using
+this package directly.
 
 To use the API, you must first create a `Reader` object. The constructor for
 the reader object takes a `File` representing your MaxMind DB. Optionally you
-may pass a second parameter with a `FileMode` with a valueof `MEMORY_MAP` or
+may pass a second parameter with a `FileMode` with a value of `MEMORY_MAP` or
 `MEMORY`. The default mode is `MEMORY_MAP`, which maps the file to virtual
 memory. This often provides performance comparable to loading the file into
 real memory with `MEMORY`.
@@ -49,7 +47,6 @@ read in metadata for the file.
 ## Example ##
 
 ```java
-
 File database = new File("/path/to/database/GeoIP2-City.mmdb");
 Reader reader = new Reader(database);
 
@@ -60,7 +57,6 @@ JsonNode response = reader.get(address);
 System.out.println(response);
 
 reader.close();
-
 ```
 
 ## Multi-Threaded Use ##
@@ -118,6 +114,6 @@ The MaxMind DB Reader API uses [Semantic Versioning](http://semver.org/).
 
 ## Copyright and License ##
 
-This software is Copyright (c) 2013 by MaxMind, Inc.
+This software is Copyright (c) 2014 by MaxMind, Inc.
 
 This is free software, licensed under the Apache License, Version 2.0.
