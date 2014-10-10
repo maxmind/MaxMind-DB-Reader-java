@@ -241,7 +241,17 @@ public final class Reader implements Closeable {
     }
 
     /**
-     * Closes the MaxMind DB and returns resources to the system.
+     /**
+     * <p>
+     * Closes the database.
+     * </p>
+     * <p>
+     * If you are using <code>FileMode.MEMORY_MAPPED</code>, this will
+     * <em>not</em> unmap the underlying file due to a limitation in Java's
+     * <code>MappedByteBuffer</code>. It will however set the reference to
+     * the buffer to <code>null</code>, allowing the garbage collector to
+     * collect it.
+     * </p>
      *
      * @throws IOException if an I/O error occurs.
      */
