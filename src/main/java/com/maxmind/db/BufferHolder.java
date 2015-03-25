@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
@@ -77,5 +78,14 @@ final class BufferHolder {
      */
     synchronized ByteBuffer get() {
         return this.buffer.duplicate();
+    }
+
+    /**
+     * Unmap buffer when it is mapped one.
+     */
+    void unmapByteBuffer() {
+        if (this.buffer instanceof MappedByteBuffer) {
+            ByteBufferCleaner.cleanMapping((MappedByteBuffer)this.buffer);
+        }
     }
 }
