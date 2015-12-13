@@ -3,7 +3,9 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +25,8 @@ final class Decoder {
     private final long pointerBase;
 
     private final ObjectMapper objectMapper;
+
+    private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
 
     private final ByteBuffer buffer;
 
@@ -184,10 +188,10 @@ final class Decoder {
         return new Result(new LongNode(pointer), offset + pointerSize);
     }
 
-    private String decodeString(int size) {
+    private String decodeString(int size) throws CharacterCodingException {
         int oldLimit = buffer.limit();
         buffer.limit(buffer.position() + size);
-        String s = UTF_8.decode(buffer).toString();
+        String s = utfDecoder.decode(buffer).toString();
         buffer.limit(oldLimit);
         return s;
     }
