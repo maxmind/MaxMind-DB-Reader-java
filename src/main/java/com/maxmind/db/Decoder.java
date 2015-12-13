@@ -15,6 +15,8 @@ import com.fasterxml.jackson.databind.node.*;
  * This class CANNOT be shared between threads
  */
 final class Decoder {
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
+
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
@@ -183,9 +185,11 @@ final class Decoder {
     }
 
     private String decodeString(int size) {
-        ByteBuffer buffer = this.buffer.slice();
-        buffer.limit(size);
-        return Charset.forName("UTF-8").decode(buffer).toString();
+        int oldLimit = buffer.limit();
+        buffer.limit(buffer.position() + size);
+        String s = UTF_8.decode(buffer).toString();
+        buffer.limit(oldLimit);
+        return s;
     }
 
     private IntNode decodeUint16(int size) {
