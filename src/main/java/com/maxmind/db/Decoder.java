@@ -3,7 +3,9 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,12 +17,16 @@ import com.fasterxml.jackson.databind.node.*;
  * This class CANNOT be shared between threads
  */
 final class Decoder {
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
+
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
     private final long pointerBase;
 
     private final ObjectMapper objectMapper;
+
+    private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
 
     private final ByteBuffer buffer;
 
@@ -182,10 +188,12 @@ final class Decoder {
         return new Result(new LongNode(pointer), offset + pointerSize);
     }
 
-    private String decodeString(int size) {
-        ByteBuffer buffer = this.buffer.slice();
-        buffer.limit(size);
-        return Charset.forName("UTF-8").decode(buffer).toString();
+    private String decodeString(int size) throws CharacterCodingException {
+        int oldLimit = buffer.limit();
+        buffer.limit(buffer.position() + size);
+        String s = utfDecoder.decode(buffer).toString();
+        buffer.limit(oldLimit);
+        return s;
     }
 
     private IntNode decodeUint16(int size) {
