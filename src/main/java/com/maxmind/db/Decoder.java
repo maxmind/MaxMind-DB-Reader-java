@@ -28,6 +28,8 @@ final class Decoder {
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
 
+    private final NodeCache cache;
+
     private final long pointerBase;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
@@ -77,12 +79,25 @@ final class Decoder {
             this.offset = offset;
         }
 
+        @Override
+        public String toString() {
+            return "Result[" + offset + " " + node.getNodeType() + " " + node.asText() + "]";
+        }
+
     }
 
-    Decoder(ByteBuffer buffer, long pointerBase) {
+    Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
+        this.cache = cache;
         this.pointerBase = pointerBase;
         this.buffer = buffer;
     }
+
+    private final NodeCache.Loader cacheLoader = new NodeCache.Loader() {
+        @Override
+        public JsonNode load(int key) throws IOException {
+            return decode(key).getNode();
+        }
+    };
 
     Result decode(int offset) throws IOException {
         if (offset >= this.buffer.capacity()) {
@@ -112,9 +127,9 @@ final class Decoder {
                 return new Result(new LongNode(pointer), newOffset);
             }
 
-            Result result = this.decode((int) pointer);
-            result.setOffset(newOffset);
-            return result;
+            int targetOffset = (int) pointer;
+            JsonNode node = cache.get(targetOffset, cacheLoader);
+            return new Result(node, newOffset);
         }
 
         if (type.equals(Type.EXTENDED)) {

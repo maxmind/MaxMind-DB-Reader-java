@@ -20,7 +20,7 @@ public class PointerTest {
         File file = new File(PointerTest.class.getResource(
                 "/maxmind-db/test-data/maps-with-pointers.raw").toURI());
         BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
-        Decoder decoder = new Decoder(ptf.get(), 0);
+        Decoder decoder = new Decoder(new NoCache(), ptf.get(), 0);
 
         ObjectMapper om = new ObjectMapper();
 

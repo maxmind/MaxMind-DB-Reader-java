@@ -4,7 +4,10 @@ import java.net.InetAddress;
 import java.util.Random;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.maxmind.db.CHMCache;
 import com.maxmind.db.InvalidDatabaseException;
+import com.maxmind.db.NoCache;
+import com.maxmind.db.NodeCache;
 import com.maxmind.db.Reader;
 import com.maxmind.db.Reader.FileMode;
 
@@ -17,14 +20,19 @@ public class Benchmark {
 
     public static void main(String[] args) throws IOException, InvalidDatabaseException {
         File file = new File(args.length > 0 ? args[0] : "GeoLite2-City.mmdb");
-        loop("Warming up", file, WARMUPS);
-        loop("Benchmarking", file, BENCHMARKS);
+        System.out.println("No caching");
+        loop("Warming up", file, WARMUPS, new NoCache());
+        loop("Benchmarking", file, BENCHMARKS, new NoCache());
+
+        System.out.println("With caching");
+        loop("Warming up", file, WARMUPS, new CHMCache());
+        loop("Benchmarking", file, BENCHMARKS, new CHMCache());
     }
 
-    private static void loop(String msg, File file, int loops) throws IOException {
+    private static void loop(String msg, File file, int loops, NodeCache cache) throws IOException {
         System.out.println(msg);
         for (int i = 0; i < loops; i++) {
-            Reader r = new Reader(file, FileMode.MEMORY_MAPPED);
+            Reader r = new Reader(file, FileMode.MEMORY_MAPPED, cache);
             bench(r, COUNT, i);
         }
         System.out.println();

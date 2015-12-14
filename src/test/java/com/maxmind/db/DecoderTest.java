@@ -414,6 +414,8 @@ public class DecoderTest {
     private static <T> void testTypeDecoding(Decoder.Type type, Map<T, byte[]> tests)
             throws IOException {
 
+        NodeCache cache = new CHMCache();
+
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
             T expect = entry.getKey();
             byte[] input = entry.getValue();
@@ -423,7 +425,7 @@ public class DecoderTest {
             MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
             try {
 
-                Decoder decoder = new Decoder(mmap, 0);
+                Decoder decoder = new Decoder(cache, mmap, 0);
                 decoder.POINTER_TEST_HACK = true;
 
                 // XXX - this could be streamlined
