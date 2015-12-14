@@ -4,8 +4,8 @@ CHANGELOG
 1.X.X (201X-XX-XX)
 ------------------
 
-* Several optimizations have been made when decoding a String from the
-  database. Pull request by Viktor Szathmáry. GitHub #16.
+* Several optimizations have been made to reduce allocations when decoding a
+  record. Pull requests by Viktor Szathmáry. GitHub #16 & #17.
 
 
 1.0.0 (2014-09-29)
