@@ -20,9 +20,12 @@ public final class Reader implements Closeable {
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
             'c', 'o', 'm'};
 
+    private static final NodeCache NO_CACHE = new NoCache();
+
     private final int ipV4Start;
     private final Metadata metadata;
     private final AtomicReference<BufferHolder> bufferHolderReference;
+    private final NodeCache cache;
 
     /**
      * The file mode to use when opening a MaxMind DB.
@@ -41,47 +44,93 @@ public final class Reader implements Closeable {
     }
 
     /**
-     * Constructs a Reader for the MaxMind DB format. The file passed to it must
-     * be a valid MaxMind DB file such as a GeoIP2 database file.
+     * Constructs a Reader for the MaxMind DB format, with no caching. The file
+     * passed to it must be a valid MaxMind DB file such as a GeoIP2 database
+     * file.
      *
      * @param database the MaxMind DB file to use.
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database) throws IOException {
-        this(database, FileMode.MEMORY_MAPPED);
+        this(database, NO_CACHE);
     }
 
     /**
-     * Constructs a Reader as if in mode {@link FileMode#MEMORY}, without using
-     * a <code>File</code> instance.
+     * Constructs a Reader for the MaxMind DB format, with the specified backing
+     * cache. The file passed to it must be a valid MaxMind DB file such as a
+     * GeoIP2 database file.
+     *
+     * @param database the MaxMind DB file to use.
+     * @param cache backing cache instance
+     * @throws IOException if there is an error opening or reading from the file.
+     */
+    public Reader(File database, NodeCache cache) throws IOException {
+        this(database, FileMode.MEMORY_MAPPED, cache);
+    }
+
+    /**
+     * Constructs a Reader with no caching, as if in mode
+     * {@link FileMode#MEMORY}, without using a <code>File</code> instance.
      *
      * @param source the InputStream that contains the MaxMind DB file.
      * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source) throws IOException {
-        this(new BufferHolder(source), "<InputStream>");
+        this(source, NO_CACHE);
     }
 
     /**
-     * Constructs a Reader for the MaxMind DB format. The file passed to it must
-     * be a valid MaxMind DB file such as a GeoIP2 database file.
+     * Constructs a Reader with the specified backing cache, as if in mode
+     * {@link FileMode#MEMORY}, without using a <code>File</code> instance.
+     *
+     * @param source the InputStream that contains the MaxMind DB file.
+     * @param cache backing cache instance
+     * @throws IOException if there is an error reading from the Stream.
+     */
+    public Reader(InputStream source, NodeCache cache) throws IOException {
+        this(new BufferHolder(source), "<InputStream>", cache);
+    }
+
+    /**
+     * Constructs a Reader for the MaxMind DB format, with no caching. The file
+     * passed to it must be a valid MaxMind DB file such as a GeoIP2 database
+     * file.
      *
      * @param database the MaxMind DB file to use.
      * @param fileMode the mode to open the file with.
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode) throws IOException {
-        this(new BufferHolder(database, fileMode), database.getName());
+        this(database, fileMode, NO_CACHE);
     }
 
-    private Reader(BufferHolder bufferHolder, String name) throws IOException {
+    /**
+     * Constructs a Reader for the MaxMind DB format, with the specified backing
+     * cache. The file passed to it must be a valid MaxMind DB file such as a
+     * GeoIP2 database file.
+     *
+     * @param database the MaxMind DB file to use.
+     * @param fileMode the mode to open the file with.
+     * @param cache backing cache instance
+     * @throws IOException if there is an error opening or reading from the file.
+     */
+    public Reader(File database, FileMode fileMode, NodeCache cache) throws IOException {
+        this(new BufferHolder(database, fileMode), database.getName(), cache);
+    }
+
+    private Reader(BufferHolder bufferHolder, String name, NodeCache cache) throws IOException {
         this.bufferHolderReference = new AtomicReference<BufferHolder>(
                 bufferHolder);
+
+        if (cache == null) {
+            throw new NullPointerException("Cache cannot be null");
+        }
+        this.cache = cache;
 
         ByteBuffer buffer = bufferHolder.get();
         int start = this.findMetadataStart(buffer, name);
 
-        Decoder metadataDecoder = new Decoder(buffer, start);
+        Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
         this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
 
         this.ipV4Start = this.findIpV4StartNode(buffer);
@@ -200,8 +249,8 @@ public final class Reader implements Closeable {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        Decoder decoder = new Decoder(buffer, this.metadata.getSearchTreeSize()
-                + DATA_SECTION_SEPARATOR_SIZE);
+        Decoder decoder = new Decoder(this.cache, buffer,
+                this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE);
         return decoder.decode(resolved).getNode();
     }
 
