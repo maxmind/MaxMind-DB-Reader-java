@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+1.X.X (201X-XX-XX)
+------------------
+
+* Several optimizations have been made when decoding a String from the
+  database. Pull request by Viktor Szathmáry. GitHub #16.
+
+
 1.0.0 (2014-09-29)
 ------------------
 
