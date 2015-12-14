@@ -17,14 +17,16 @@ import com.fasterxml.jackson.databind.node.*;
  * This class CANNOT be shared between threads
  */
 final class Decoder {
+
     private static final Charset UTF_8 = Charset.forName("UTF-8");
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
-    private final long pointerBase;
 
-    private final ObjectMapper objectMapper;
+    private final long pointerBase;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
 
@@ -78,7 +80,6 @@ final class Decoder {
     Decoder(ByteBuffer buffer, long pointerBase) {
         this.pointerBase = pointerBase;
         this.buffer = buffer;
-        this.objectMapper = new ObjectMapper();
     }
 
     Result decode(int offset) throws IOException {
@@ -175,7 +176,7 @@ final class Decoder {
         }
     }
 
-    private final int[] pointerValueOffset = {0, 0, 1 << 11,
+    private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11,
             (1 << 19) + ((1) << 11), 0};
 
     private Result decodePointer(int ctrlByte, int offset) {
@@ -183,7 +184,7 @@ final class Decoder {
         int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
         int packed = this.decodeInteger(base, pointerSize);
         long pointer = packed + this.pointerBase
-                + this.pointerValueOffset[pointerSize];
+                + POINTER_VALUE_OFFSETS[pointerSize];
 
         return new Result(new LongNode(pointer), offset + pointerSize);
     }
@@ -270,7 +271,7 @@ final class Decoder {
     }
 
     private Result decodeArray(int size, int offset) throws IOException {
-        ArrayNode array = this.objectMapper.createArrayNode();
+        ArrayNode array = OBJECT_MAPPER.createArrayNode();
 
         for (int i = 0; i < size; i++) {
             Result r = this.decode(offset);
@@ -282,7 +283,7 @@ final class Decoder {
     }
 
     private Result decodeMap(int size, int offset) throws IOException {
-        ObjectNode map = this.objectMapper.createObjectNode();
+        ObjectNode map = OBJECT_MAPPER.createObjectNode();
 
         for (int i = 0; i < size; i++) {
             Result keyResult = this.decode(offset);
