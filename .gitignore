@@ -15,5 +15,7 @@ bin
 doc
 hs_err*.log
 target
+/sample/GeoLite2-City.mmdb
+/sample/run.sh
 reports
 Test.java

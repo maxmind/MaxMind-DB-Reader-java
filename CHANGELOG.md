@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-1.X.X (201X-XX-XX)
+1.0.1 (2015-12-17)
 ------------------
 
 * Several optimizations have been made to reduce allocations when decoding a
