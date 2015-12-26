@@ -22,6 +22,8 @@ final class Decoder {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private static final int[] POINTER_VALUE_OFFSETS = { 0, 0, 1 << 11, (1 << 19) + ((1) << 11), 0 };
+
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
     boolean POINTER_TEST_HACK = false;
@@ -99,14 +101,19 @@ final class Decoder {
         // use the size to determine the length of the pointer and then follow
         // it.
         if (type.equals(Type.POINTER)) {
-            Result pointer = this.decodePointer(ctrlByte, offset);
+            int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+            int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
+            int packed = this.decodeInteger(base, pointerSize);
+            long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
+            int newOffset = offset + pointerSize;
 
             // for unit testing
             if (this.POINTER_TEST_HACK) {
-                return pointer;
+                return new Result(new LongNode(pointer), newOffset);
             }
-            Result result = this.decode((pointer.getNode().asInt()));
-            result.setOffset(pointer.getOffset());
+
+            Result result = this.decode((int) pointer);
+            result.setOffset(newOffset);
             return result;
         }
 
@@ -126,9 +133,22 @@ final class Decoder {
             offset++;
         }
 
-        int[] sizeArray = this.sizeFromCtrlByte(ctrlByte, offset);
-        int size = sizeArray[0];
-        offset = sizeArray[1];
+        int size = ctrlByte & 0x1f;
+        if (size >= 29) {
+            int bytesToRead = size - 28;
+            int i = this.decodeInteger(bytesToRead);
+            switch (size) {
+            case 29:
+                size = 29 + i;
+                break;
+            case 30:
+                size = 285 + i;
+                break;
+            default:
+                size = 65821 + (i & (0x0FFFFFFF >>> 32 - 8 * bytesToRead));
+            }
+            offset += bytesToRead;
+        }
 
         return this.decodeByType(type, offset, size);
     }
@@ -174,19 +194,6 @@ final class Decoder {
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
         }
-    }
-
-    private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11,
-            (1 << 19) + ((1) << 11), 0};
-
-    private Result decodePointer(int ctrlByte, int offset) {
-        int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
-        int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
-        int packed = this.decodeInteger(base, pointerSize);
-        long pointer = packed + this.pointerBase
-                + POINTER_VALUE_OFFSETS[pointerSize];
-
-        return new Result(new LongNode(pointer), offset + pointerSize);
     }
 
     private String decodeString(int size) throws CharacterCodingException {
@@ -298,24 +305,6 @@ final class Decoder {
         }
 
         return new Result(map, offset);
-    }
-
-    private int[] sizeFromCtrlByte(int ctrlByte, int offset) {
-        int size = ctrlByte & 0x1f;
-        int bytesToRead = size < 29 ? 0 : size - 28;
-
-        if (size == 29) {
-            int i = this.decodeInteger(bytesToRead);
-            size = 29 + i;
-        } else if (size == 30) {
-            int i = this.decodeInteger(bytesToRead);
-            size = 285 + i;
-        } else if (size > 30) {
-            int i = this.decodeInteger(bytesToRead)
-                    & (0x0FFFFFFF >>> (32 - (8 * bytesToRead)));
-            size = 65821 + i;
-        }
-        return new int[]{size, offset + bytesToRead};
     }
 
     private byte[] getByteArray(int length) {
