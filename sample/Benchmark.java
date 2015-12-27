@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.util.Random;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.net.InetAddresses;
 import com.maxmind.db.InvalidDatabaseException;
 import com.maxmind.db.Reader;
 import com.maxmind.db.Reader.FileMode;
@@ -34,8 +33,10 @@ public class Benchmark {
     private static void bench(Reader r, int count, int seed) throws IOException {
         Random random = new Random(seed);
         long startTime = System.nanoTime();
+        byte[] address = new byte[4];
         for (int i = 0; i < count; i++) {
-            InetAddress ip = InetAddresses.fromInteger(random.nextInt());
+            random.nextBytes(address);
+            InetAddress ip = InetAddress.getByAddress(address);
             JsonNode t = r.get(ip);
             if (TRACE) {
                 if (i % 50000 == 0) {
