@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 
 import org.junit.Test;
 
@@ -15,10 +14,8 @@ import com.maxmind.db.Reader.FileMode;
 public class PointerTest {
     @SuppressWarnings("static-method")
     @Test
-    public void testWithPointers() throws
-            IOException, URISyntaxException {
-        File file = new File(PointerTest.class.getResource(
-                "/maxmind-db/test-data/maps-with-pointers.raw").toURI());
+    public void testWithPointers() throws IOException {
+        File file = ReaderTest.getFile("maps-with-pointers.raw");
         BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
         Decoder decoder = new Decoder(ptf.get(), 0);
 

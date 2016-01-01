@@ -2,12 +2,8 @@ package com.maxmind.db;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -27,12 +23,8 @@ public class MultiThreadedTest {
             ExecutionException {
         Callable<JsonNode> task = new Callable<JsonNode>() {
             @Override
-            public JsonNode call() throws IOException,
-                    URISyntaxException {
-                URI file = ReaderTest.class.getResource(
-                        "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
-                        .toURI();
-                final Reader reader = new Reader(new File(file));
+            public JsonNode call() throws IOException {
+                Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"));
                 try {
                     return reader.get(InetAddress.getByName("::1.1.1.0"));
                 } finally {
@@ -46,9 +38,7 @@ public class MultiThreadedTest {
     @Test
     public void streamThreadTest() throws IOException, InterruptedException,
             ExecutionException {
-        final Reader reader = new Reader(ReaderTest.class.getResource(
-                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb")
-                .openStream());
+        Reader reader = new Reader(ReaderTest.getStream("MaxMind-DB-test-decoder.mmdb"));
         try {
             MultiThreadedTest.threadTest(reader);
         } finally {
@@ -58,10 +48,8 @@ public class MultiThreadedTest {
 
     @Test
     public void mmapThreadTest() throws IOException, InterruptedException,
-            ExecutionException, URISyntaxException {
-        URI file = ReaderTest.class.getResource(
-                "/maxmind-db/test-data/MaxMind-DB-test-decoder.mmdb").toURI();
-        final Reader reader = new Reader(new File(file));
+            ExecutionException {
+        Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"));
         try {
             MultiThreadedTest.threadTest(reader);
         } finally {
