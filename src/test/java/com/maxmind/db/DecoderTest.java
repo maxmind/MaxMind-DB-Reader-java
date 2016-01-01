@@ -472,6 +472,7 @@ public class DecoderTest {
      */
     private static FileChannel getFileChannel(byte[] data) throws IOException {
         File file = File.createTempFile(UUID.randomUUID().toString(), "tmp");
+        file.deleteOnExit();
         RandomAccessFile raf = new RandomAccessFile(file, "rw");
         FileChannel fc = raf.getChannel();
         fc.write(ByteBuffer.wrap(data));
