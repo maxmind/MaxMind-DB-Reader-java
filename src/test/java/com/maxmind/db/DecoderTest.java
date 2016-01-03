@@ -430,36 +430,28 @@ public class DecoderTest {
 
                 // XXX - this could be streamlined
                 if (type.equals(Decoder.Type.BYTES)) {
-                    assertArrayEquals(desc, (byte[]) expect, decoder.decode(0)
-                            .getNode().binaryValue());
+                    assertArrayEquals(desc, (byte[]) expect, decoder.decode(0).binaryValue());
                 } else if (type.equals(Decoder.Type.ARRAY)) {
-                    assertEquals(desc, expect, decoder.decode(0).getNode());
+                    assertEquals(desc, expect, decoder.decode(0));
                 } else if (type.equals(Decoder.Type.UINT16)
                         || type.equals(Decoder.Type.INT32)) {
-                    assertEquals(desc, expect, decoder.decode(0).getNode()
-                            .asInt());
+                    assertEquals(desc, expect, decoder.decode(0).asInt());
                 } else if (type.equals(Decoder.Type.UINT32)
                         || type.equals(Decoder.Type.POINTER)) {
-                    assertEquals(desc, expect, decoder.decode(0).getNode()
-                            .asLong());
+                    assertEquals(desc, expect, decoder.decode(0).asLong());
                 } else if (type.equals(Decoder.Type.UINT64)
                         || type.equals(Decoder.Type.UINT128)) {
-                    assertEquals(desc, expect, decoder.decode(0).getNode()
-                            .bigIntegerValue());
+                    assertEquals(desc, expect, decoder.decode(0).bigIntegerValue());
                 } else if (type.equals(Decoder.Type.DOUBLE)) {
-                    assertEquals(desc, expect, decoder.decode(0).getNode()
-                            .asDouble());
+                    assertEquals(desc, expect, decoder.decode(0).asDouble());
                 } else if (type.equals(Decoder.Type.FLOAT)) {
-                    assertEquals(desc, new FloatNode((Float) expect), decoder
-                            .decode(0).getNode());
+                    assertEquals(desc, new FloatNode((Float) expect), decoder.decode(0));
                 } else if (type.equals(Decoder.Type.UTF8_STRING)) {
-                    assertEquals(desc, expect, decoder.decode(0).getNode()
-                            .asText());
+                    assertEquals(desc, expect, decoder.decode(0).asText());
                 } else if (type.equals(Decoder.Type.BOOLEAN)) {
-                    assertEquals(desc, expect, decoder.decode(0).getNode()
-                            .asBoolean());
+                    assertEquals(desc, expect, decoder.decode(0).asBoolean());
                 } else {
-                    assertEquals(desc, expect, decoder.decode(0).getNode());
+                    assertEquals(desc, expect, decoder.decode(0));
                 }
             } finally {
                 fc.close();
