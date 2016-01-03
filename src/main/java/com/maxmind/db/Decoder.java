@@ -58,34 +58,6 @@ final class Decoder {
         }
     }
 
-    static class Result {
-        private final JsonNode node;
-        private int offset;
-
-        Result(JsonNode node, int offset) {
-            this.node = node;
-            this.offset = offset;
-        }
-
-        JsonNode getNode() {
-            return this.node;
-        }
-
-        int getOffset() {
-            return this.offset;
-        }
-
-        void setOffset(int offset) {
-            this.offset = offset;
-        }
-
-        @Override
-        public String toString() {
-            return "Result[" + offset + " " + node.getNodeType() + " " + node.asText() + "]";
-        }
-
-    }
-
     Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
         this.cache = cache;
         this.pointerBase = pointerBase;
@@ -95,11 +67,11 @@ final class Decoder {
     private final NodeCache.Loader cacheLoader = new NodeCache.Loader() {
         @Override
         public JsonNode load(int key) throws IOException {
-            return decode(key).getNode();
+            return decode(key);
         }
     };
 
-    Result decode(int offset) throws IOException {
+    JsonNode decode(int offset) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
@@ -107,8 +79,11 @@ final class Decoder {
         }
 
         this.buffer.position(offset);
+        return decode();
+    }
+
+    JsonNode decode() throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
-        offset++;
 
         Type type = Type.fromControlByte(ctrlByte);
 
@@ -120,16 +95,17 @@ final class Decoder {
             int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
             int packed = this.decodeInteger(base, pointerSize);
             long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
-            int newOffset = offset + pointerSize;
 
             // for unit testing
             if (this.POINTER_TEST_HACK) {
-                return new Result(new LongNode(pointer), newOffset);
+                return new LongNode(pointer);
             }
 
             int targetOffset = (int) pointer;
+            int position = buffer.position();
             JsonNode node = cache.get(targetOffset, cacheLoader);
-            return new Result(node, newOffset);
+            buffer.position(position);
+            return node;
         }
 
         if (type.equals(Type.EXTENDED)) {
@@ -145,7 +121,6 @@ final class Decoder {
             }
 
             type = Type.get(typeNum);
-            offset++;
         }
 
         int size = ctrlByte & 0x1f;
@@ -162,49 +137,38 @@ final class Decoder {
             default:
                 size = 65821 + (i & (0x0FFFFFFF >>> 32 - 8 * bytesToRead));
             }
-            offset += bytesToRead;
         }
 
-        return this.decodeByType(type, offset, size);
+        return this.decodeByType(type, size);
     }
 
-    private Result decodeByType(Type type, int offset, int size)
+    private JsonNode decodeByType(Type type, int size)
             throws IOException {
-        // MAP, ARRAY, and BOOLEAN do not use newOffset as we don't read the
-        // next <code>size</code> bytes. For all other types, we do.
-        int newOffset = offset + size;
         switch (type) {
             case MAP:
-                return this.decodeMap(size, offset);
+                return this.decodeMap(size);
             case ARRAY:
-                return this.decodeArray(size, offset);
+                return this.decodeArray(size);
             case BOOLEAN:
-                return new Result(Decoder.decodeBoolean(size), offset);
+                return Decoder.decodeBoolean(size);
             case UTF8_STRING:
-                TextNode s = new TextNode(this.decodeString(size));
-                return new Result(s, newOffset);
+                return new TextNode(this.decodeString(size));
             case DOUBLE:
-                return new Result(this.decodeDouble(size), newOffset);
+                return this.decodeDouble(size);
             case FLOAT:
-                return new Result(this.decodeFloat(size), newOffset);
+                return this.decodeFloat(size);
             case BYTES:
-                BinaryNode b = new BinaryNode(this.getByteArray(size));
-                return new Result(b, newOffset);
+                return new BinaryNode(this.getByteArray(size));
             case UINT16:
-                IntNode i = this.decodeUint16(size);
-                return new Result(i, newOffset);
+                return this.decodeUint16(size);
             case UINT32:
-                LongNode l = this.decodeUint32(size);
-                return new Result(l, newOffset);
+                return this.decodeUint32(size);
             case INT32:
-                IntNode int32 = this.decodeInt32(size);
-                return new Result(int32, newOffset);
+                return this.decodeInt32(size);
             case UINT64:
-                BigIntegerNode bi = this.decodeBigInteger(size);
-                return new Result(bi, newOffset);
+                return this.decodeBigInteger(size);
             case UINT128:
-                BigIntegerNode uint128 = this.decodeBigInteger(size);
-                return new Result(uint128, newOffset);
+                return this.decodeBigInteger(size);
             default:
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
@@ -292,34 +256,27 @@ final class Decoder {
         }
     }
 
-    private Result decodeArray(int size, int offset) throws IOException {
+    private JsonNode decodeArray(int size) throws IOException {
         ArrayNode array = OBJECT_MAPPER.createArrayNode();
 
         for (int i = 0; i < size; i++) {
-            Result r = this.decode(offset);
-            offset = r.getOffset();
-            array.add(r.getNode());
+            JsonNode r = this.decode();
+            array.add(r);
         }
 
-        return new Result(array, offset);
+        return array;
     }
 
-    private Result decodeMap(int size, int offset) throws IOException {
+    private JsonNode decodeMap(int size) throws IOException {
         ObjectNode map = OBJECT_MAPPER.createObjectNode();
 
         for (int i = 0; i < size; i++) {
-            Result keyResult = this.decode(offset);
-            String key = keyResult.getNode().asText();
-            offset = keyResult.getOffset();
-
-            Result valueResult = this.decode(offset);
-            JsonNode value = valueResult.getNode();
-            offset = valueResult.getOffset();
-
+            String key = this.decode().asText();
+            JsonNode value = this.decode();
             map.set(key, value);
         }
 
-        return new Result(map, offset);
+        return map;
     }
 
     private byte[] getByteArray(int length) {

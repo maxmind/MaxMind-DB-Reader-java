@@ -23,26 +23,26 @@ public class PointerTest {
 
         ObjectNode map = om.createObjectNode();
         map.put("long_key", "long_value1");
-        assertEquals(map, decoder.decode(0).getNode());
+        assertEquals(map, decoder.decode(0));
 
         map = om.createObjectNode();
         map.put("long_key", "long_value2");
-        assertEquals(map, decoder.decode(22).getNode());
+        assertEquals(map, decoder.decode(22));
 
         map = om.createObjectNode();
         map.put("long_key2", "long_value1");
-        assertEquals(map, decoder.decode(37).getNode());
+        assertEquals(map, decoder.decode(37));
 
         map = om.createObjectNode();
         map.put("long_key2", "long_value2");
-        assertEquals(map, decoder.decode(50).getNode());
+        assertEquals(map, decoder.decode(50));
 
         map = om.createObjectNode();
         map.put("long_key", "long_value1");
-        assertEquals(map, decoder.decode(55).getNode());
+        assertEquals(map, decoder.decode(55));
 
         map = om.createObjectNode();
         map.put("long_key2", "long_value2");
-        assertEquals(map, decoder.decode(57).getNode());
+        assertEquals(map, decoder.decode(57));
     }
 }

@@ -131,7 +131,7 @@ public final class Reader implements Closeable {
         int start = this.findMetadataStart(buffer, name);
 
         Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
-        this.metadata = new Metadata(metadataDecoder.decode(start).getNode());
+        this.metadata = new Metadata(metadataDecoder.decode(start));
 
         this.ipV4Start = this.findIpV4StartNode(buffer);
     }
@@ -251,7 +251,7 @@ public final class Reader implements Closeable {
         // found.
         Decoder decoder = new Decoder(this.cache, buffer,
                 this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE);
-        return decoder.decode(resolved).getNode();
+        return decoder.decode(resolved);
     }
 
     /*
