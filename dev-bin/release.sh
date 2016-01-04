@@ -27,7 +27,22 @@ if [ "$SHOULD_CONTINUE" != "y" ]; then
     exit 1
 fi
 
-perl -pi -e 's/(?=<version>)[^<]*/$ENV{VERSION}/' README.md
+export VERSION
+perl -pi -e 's/(?<=<version>)[^<]*/$ENV{VERSION}/' README.md
+cat README.md >> "$PAGE"
+
+if [ -n "$(git status --porcelain)" ]; then
+    git diff
+
+    read -e -p "Commit README.md changes? " SHOULD_COMMIT
+    if [ "$SHOULD_COMMIT" != "y" ]; then
+        echo "Aborting"
+        exit 1
+    fi
+    git add README.md
+    git commit -m 'update version number in README.md'
+fi
+
 
 # could be combined with the primary build
 mvn release:clean
