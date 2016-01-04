@@ -21,8 +21,8 @@ public class Benchmark {
     public static void main(String[] args) throws IOException, InvalidDatabaseException {
         File file = new File(args.length > 0 ? args[0] : "GeoLite2-City.mmdb");
         System.out.println("No caching");
-        loop("Warming up", file, WARMUPS, new NoCache());
-        loop("Benchmarking", file, BENCHMARKS, new NoCache());
+        loop("Warming up", file, WARMUPS, NoCache.getInstance());
+        loop("Benchmarking", file, BENCHMARKS, NoCache.getInstance());
 
         System.out.println("With caching");
         loop("Warming up", file, WARMUPS, new CHMCache());
