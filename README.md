@@ -16,7 +16,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </dependency>
 ```
 
@@ -57,6 +57,19 @@ JsonNode response = reader.get(address);
 System.out.println(response);
 
 reader.close();
+```
+
+### Caching ###
+
+The database API supports pluggable caching (by default, no caching is
+performed). A simple implementation is provided by `com.maxmind.db.CHMCache`.
+Using this cache, lookup performance is significantly improved at the cost of
+a small (~2MB) memory overhead.
+
+Usage:
+
+```java
+Reader reader = new Reader(database, new CHMCache());
 ```
 
 ## Multi-Threaded Use ##
@@ -100,8 +113,7 @@ specific to this reader, please [contact MaxMind support]
 
 ## Requirements  ##
 
-MaxMind has tested this API with Java 6 and above. Reasonable patches for Java
-5 will be accepted. Patches for 1.4 or earlier will not be accepted.
+MaxMind has tested this API with Java 6 and above.
 
 ## Contributing ##
 

@@ -27,6 +27,8 @@ if [ "$SHOULD_CONTINUE" != "y" ]; then
     exit 1
 fi
 
+perl -pi -e 's/(?=<version>)[^<]*/$ENV{VERSION}/' README.md
+
 # could be combined with the primary build
 mvn release:clean
 mvn release:prepare -DreleaseVersion="$VERSION" -Dtag="$TAG"

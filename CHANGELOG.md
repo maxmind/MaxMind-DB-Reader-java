@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+1.1.0 (2016-01-04)
+------------------
+
+* The reader now supports pluggable caching of the decoded data. By default,
+  no caching is performed. Please see the `README.md` file or the API docs
+  for information on how to enable caching. Pull requests by Viktor Szathmáry.
+  GitHub #21.
+* This release also includes several additional performance enhancements as
+  well as code cleanup from Viktor Szathmáry. GitHub #18, #19, #20, #22,and
+  #23.
+
 1.0.1 (2015-12-17)
 ------------------
 
