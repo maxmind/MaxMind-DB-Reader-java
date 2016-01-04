@@ -20,8 +20,6 @@ public final class Reader implements Closeable {
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
             'c', 'o', 'm'};
 
-    private static final NodeCache NO_CACHE = new NoCache();
-
     private final int ipV4Start;
     private final Metadata metadata;
     private final AtomicReference<BufferHolder> bufferHolderReference;
@@ -52,7 +50,7 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database) throws IOException {
-        this(database, NO_CACHE);
+        this(database, NoCache.getInstance());
     }
 
     /**
@@ -76,7 +74,7 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source) throws IOException {
-        this(source, NO_CACHE);
+        this(source, NoCache.getInstance());
     }
 
     /**
@@ -101,7 +99,7 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode) throws IOException {
-        this(database, fileMode, NO_CACHE);
+        this(database, fileMode, NoCache.getInstance());
     }
 
     /**
