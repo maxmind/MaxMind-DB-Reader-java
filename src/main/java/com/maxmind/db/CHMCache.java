@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ContainerNode;
 
 /**
  * A simplistic cache using a {@link ConcurrentHashMap}. There's no eviction
@@ -41,9 +40,6 @@ public class CHMCache implements NodeCache {
                     cacheFull = true;
                 }
             }
-        }
-        if (value instanceof ContainerNode) {
-            value = value.deepCopy();
         }
         return value;
     }
