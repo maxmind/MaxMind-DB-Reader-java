@@ -1,32 +1,24 @@
 package com.maxmind.db;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.util.*;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.*;
 
 public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
@@ -241,6 +233,24 @@ public class ReaderTest {
                 .expectMessage(containsString("The MaxMind DB file's data section contains bad data"));
 
         reader.get(InetAddress.getByName("1.1.1.16"));
+    }
+
+    @Test
+    public void testObjectNodeMutation() throws IOException {
+        Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+        ObjectNode record = (ObjectNode) reader.get(InetAddress.getByName("::1.1.1.0"));
+
+        thrown.expect(UnsupportedOperationException.class);
+        record.put("Test", "value");
+    }
+
+    @Test
+    public void testArrayNodeMutation() throws IOException {
+        Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+        ObjectNode record = (ObjectNode) reader.get(InetAddress.getByName("::1.1.1.0"));
+
+        thrown.expect(UnsupportedOperationException.class);
+        ((ArrayNode) record.get("array")).add(1);
     }
 
     @Test

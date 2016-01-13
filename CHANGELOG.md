@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+1.2.0 (2016-01-13)
+------------------
+
+* `JsonNode` containers returned by the `get(ip)` are now backed by
+  unmodifiable collections. Any mutation done to them will fail with an
+  `UnsupportedOperationException` exception. This allows safe caching of the
+  nodes to be done without doing a deep copy of the cached data. Pull request
+  by Viktor Szathmáry. GitHub #24.
+
 1.1.0 (2016-01-04)
 ------------------
 
