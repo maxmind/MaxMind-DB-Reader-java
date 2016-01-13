@@ -29,7 +29,6 @@ fi
 
 export VERSION
 perl -pi -e 's/(?<=<version>)[^<]*/$ENV{VERSION}/' README.md
-cat README.md >> "$PAGE"
 
 if [ -n "$(git status --porcelain)" ]; then
     git diff
