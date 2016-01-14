@@ -1,34 +1,31 @@
+---
+sudo: false
+addons:
+  coverity_scan:
+    project:
+      description: Build submitted via Travis CI
+      name: maxmind/MaxMind-DB-Reader-java
+    notification_email: dev-ci@maxmind.com
+    build_command_prepend: mvn clean
+    build_command: mvn -DskipTests=true compile
+    branch_pattern: .*coverity.*
 language: java
-
 jdk:
   - openjdk6
   - openjdk7
   - oraclejdk7
   - oraclejdk8
-
-install: mvn install -DskipTests=true -Dgpg.skip=true
-
-after_script: mvn cobertura:cobertura coveralls:cobertura
-
-notifications:
-  email:
-    recipients:
-      - dev-ci@maxmind.com
-    on_success: change
-    on_failure: always
-
-sudo: false
-
 env:
   global:
-   - secure: "KXF3RVBZDxeASAnleYlTaqvxRRB9FSzSAdVV9h7Kw81+p4UO64b8CPJR1p4fLIVwAp8C4R8h0xZDN3pAv/iyeA4ndIeh9tQXNZBm737RE5x+6x6nf/shP/Em1w9T1s3KmretXoTFK5NJGv2yTesgaIAV/JV1OFvlG6ArswhrPFc="
-
-addons:
-  coverity_scan:
-    project:
-      name: "maxmind/MaxMind-DB-Reader-java"
-      description: "Build submitted via Travis CI"
-    notification_email: dev-ci@maxmind.com
-    build_command_prepend: "mvn clean"
-    build_command:   "mvn -DskipTests=true compile"
-    branch_pattern: .*coverity.*
+    - secure: KXF3RVBZDxeASAnleYlTaqvxRRB9FSzSAdVV9h7Kw81+p4UO64b8CPJR1p4fLIVwAp8C4R8h0xZDN3pAv/iyeA4ndIeh9tQXNZBm737RE5x+6x6nf/shP/Em1w9T1s3KmretXoTFK5NJGv2yTesgaIAV/JV1OFvlG6ArswhrPFc=
+install: mvn install -DskipTests=true -Dgpg.skip=true
+after_script: mvn cobertura:cobertura coveralls:cobertura
+notifications:
+  email:
+    on_failure: always
+    on_success: change
+    recipients:
+      - dev-ci@maxmind.com
+  slack:
+    rooms:
+      secure: "LhzslDxUg5Vcz5zP2oB7asZpwMZPK4rIppujE4Fa5wDuj1F2olJCQompQdiwh98E40ke4e3eLIif58nK34risw6FXhwWPBRyPnIy0JsYVwFHO1/tHk8jjHf1j6XuDVcLkE/drFaRNtDraS5CQ91BHYFnroq3vj9tL1LA4GavzNg=\n"
