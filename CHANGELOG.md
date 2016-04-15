@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+1.2.1 (2016-04-15)
+------------------
+
+* Specify a hard minimum dependency for `jackson-databind`. This API will not
+  work with versions earlier than 2.7.0, and Maven's nearest-first resolution
+  rule often pulled in older versions.
+
 1.2.0 (2016-01-13)
 ------------------
 
