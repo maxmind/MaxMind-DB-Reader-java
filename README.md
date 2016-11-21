@@ -7,7 +7,7 @@ format that stores data indexed by IP address subnets (IPv4 or IPv6).
 
 ## Installation ##
 
-### Define Your Dependencies ###
+### Maven ###
 
 We recommend installing this package with [Maven](http://maven.apache.org/).
 To do this, add the dependency to your pom.xml:
@@ -18,6 +18,19 @@ To do this, add the dependency to your pom.xml:
         <artifactId>maxmind-db</artifactId>
         <version>1.2.1</version>
     </dependency>
+```
+
+### Gradle ###
+
+Add the following to your `build.gradle` file:
+
+```
+repositories {
+    mavenCentral()
+}
+dependencies {
+    compile 'ccom.maxmind.db:maxmind-db:1.2.1'
+}
 ```
 
 ## Usage ##
