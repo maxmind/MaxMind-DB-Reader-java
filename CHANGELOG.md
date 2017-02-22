@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+1.2.2 (2017-02-22)
+------------------
+
+* Remove the version range. As of today, `jackson-databind` is no longer
+  resolved correctly when a range is used. GitHub #28.
+
 1.2.1 (2016-04-15)
 ------------------
 
