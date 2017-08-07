@@ -29,7 +29,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'ccom.maxmind.db:maxmind-db:1.2.2'
+    compile 'com.maxmind.db:maxmind-db:1.2.2'
 }
 ```
 
