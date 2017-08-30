@@ -35,7 +35,7 @@ fi
 
 mvn versions:display-dependency-updates
 
-read -e -p "Continue given above dependencies? (y/n) " should_continue
+read -r -n 1 -p "Continue given above dependencies? (y/n) " should_continue
 
 if [ "$should_continue" != "y" ]; then
     echo "Aborting"
@@ -48,7 +48,7 @@ perl -pi -e "s/(?<=com\.maxmind\.db\:maxmind-db\:)\d+\.\d+\.\d+([\w\-]+)?/$versi
 if [ -n "$(git status --porcelain)" ]; then
     git diff
 
-    read -e -p "Commit README.md changes? " should_commit
+    read -r -n 1 -p "Commit README.md changes? " should_commit
     if [ "$should_commit" != "y" ]; then
         echo "Aborting"
         exit 1
@@ -63,7 +63,7 @@ mvn release:clean
 mvn release:prepare -DreleaseVersion="$version" -Dtag="$tag"
 mvn release:perform
 
-read -e -p "Push to origin? " should_push
+read -r -n 1 -p "Push to origin? " should_push
 
 if [ "$should_push" != "y" ]; then
     echo "Aborting"
