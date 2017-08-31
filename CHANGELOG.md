@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+1.3.0
+------------------
+
+* IMPORTANT: Java 7 is now required. If you need Java 6 support, please
+  continue using 1.2.2 or earlier.
+
 1.2.2 (2017-02-22)
 ------------------
 
