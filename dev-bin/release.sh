@@ -21,7 +21,7 @@ version="${BASH_REMATCH[1]}"
 date="${BASH_REMATCH[2]}"
 notes="$(echo "${BASH_REMATCH[3]}" | sed -n -e '/^[0-9]\+\.[0-9]\+\.[0-9]\+/,$!p')"
 
-if [[ "$date" -ne  $(date +"%Y-%m-%d") ]]; then
+if [[ "$date" !=  $(date +"%Y-%m-%d") ]]; then
     echo "$date is not today!"
     exit 1
 fi
@@ -103,12 +103,26 @@ rm -fr ".gh-pages/doc/$tag"
 cp -r target/apidocs ".gh-pages/doc/$tag"
 ln -fs "$tag" .gh-pages/doc/latest
 
+pushd .gh-pages
+
+git add doc/
+git commit -m "Updated for $tag" -a
+
+echo "Release notes for $version:
+
+$notes
+
+"
 read -r -n 1 -p "Push to origin? " should_push
 
 if [ "$should_push" != "y" ]; then
     echo "Aborting"
     exit 1
 fi
+
+git push
+
+popd
 
 git push
 git push --tags
