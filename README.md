@@ -106,6 +106,14 @@ To work around this problem, use the `MEMORY` mode or try upgrading your JVM
 version. You may also call `System.gc()` after dereferencing the
 `DatabaseReader` object to encourage the JVM to garbage collect sooner.
 
+### Packaging Database in a JAR ###
+
+If you are packaging the database file as a resource in a JAR file using
+Maven, you must
+[disable binary file filtering](http://maven.apache.org/plugins/maven-resources-plugin/examples/binaries-filtering.html).
+Failure to do so will result in `InvalidDatabaseException` exceptions being
+thrown when querying the database.
+
 ## Format ##
 
 The MaxMind DB format is an open format for quickly mapping IP addresses to
