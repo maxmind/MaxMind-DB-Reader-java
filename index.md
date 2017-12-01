@@ -2,7 +2,7 @@
 layout: default
 title: MaxMind DB Java API
 language: java
-version: 1.2.2
+version: v1.2.2
 ---
 
 # MaxMind DB Reader #
