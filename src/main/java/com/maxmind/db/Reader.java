@@ -22,7 +22,7 @@ public final class Reader implements Closeable {
 
     private final int ipV4Start;
     private final Metadata metadata;
-    private final AtomicReference<BufferHolder> bufferHolderReference;
+    private final AtomicReference<ByteBuffer> byteBufferReference;
     private final NodeCache cache;
 
     /**
@@ -86,7 +86,7 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source, NodeCache cache) throws IOException {
-        this(new BufferHolder(source), "<InputStream>", cache);
+        this(BufferHelper.open(source), "<InputStream>", cache);
     }
 
     /**
@@ -113,25 +113,23 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode, NodeCache cache) throws IOException {
-        this(new BufferHolder(database, fileMode), database.getName(), cache);
+        this(BufferHelper.open(database, fileMode), database.getName(), cache);
     }
 
-    private Reader(BufferHolder bufferHolder, String name, NodeCache cache) throws IOException {
-        this.bufferHolderReference = new AtomicReference<BufferHolder>(
-                bufferHolder);
+    private Reader(ByteBuffer byteBuffer, String name, NodeCache cache) throws IOException {
+        this.byteBufferReference = new AtomicReference<>(byteBuffer);
 
         if (cache == null) {
             throw new NullPointerException("Cache cannot be null");
         }
         this.cache = cache;
 
-        ByteBuffer buffer = bufferHolder.get();
-        int start = this.findMetadataStart(buffer, name);
+        int start = this.findMetadataStart(byteBuffer, name);
 
-        Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
+        Decoder metadataDecoder = new Decoder(this.cache, byteBuffer, start);
         this.metadata = new Metadata(metadataDecoder.decode(start));
 
-        this.ipV4Start = this.findIpV4StartNode(buffer);
+        this.ipV4Start = this.findIpV4StartNode(byteBuffer);
     }
 
     /**
@@ -142,7 +140,7 @@ public final class Reader implements Closeable {
      * @throws IOException if a file I/O error occurs.
      */
     public JsonNode get(InetAddress ipAddress) throws IOException {
-        ByteBuffer buffer = this.getBufferHolder().get();
+        ByteBuffer buffer = this.getBufferHolder();
         int pointer = this.findAddressInTree(buffer, ipAddress);
         if (pointer == 0) {
             return null;
@@ -150,12 +148,12 @@ public final class Reader implements Closeable {
         return this.resolveDataPointer(buffer, pointer);
     }
 
-    private BufferHolder getBufferHolder() throws ClosedDatabaseException {
-        BufferHolder bufferHolder = this.bufferHolderReference.get();
-        if (bufferHolder == null) {
+    private ByteBuffer getBufferHolder() throws ClosedDatabaseException {
+        ByteBuffer byteBuffer = this.byteBufferReference.get();
+        if (byteBuffer == null) {
             throw new ClosedDatabaseException();
         }
-        return bufferHolder;
+        return byteBuffer;
     }
 
     private int findAddressInTree(ByteBuffer buffer, InetAddress address)
@@ -213,8 +211,7 @@ public final class Reader implements Closeable {
 
         switch (this.metadata.getRecordSize()) {
             case 24:
-                buffer.position(baseOffset + index * 3);
-                return Decoder.decodeInteger(buffer, 0, 3);
+                return Decoder.decodeInteger(baseOffset + index * 3, buffer, 0, 3);
             case 28:
                 int middle = buffer.get(baseOffset + 3);
 
@@ -223,11 +220,9 @@ public final class Reader implements Closeable {
                 } else {
                     middle = 0x0F & middle;
                 }
-                buffer.position(baseOffset + index * 4);
-                return Decoder.decodeInteger(buffer, middle, 3);
+                return Decoder.decodeInteger(baseOffset + index * 4, buffer, middle, 3);
             case 32:
-                buffer.position(baseOffset + index * 4);
-                return Decoder.decodeInteger(buffer, 0, 4);
+                return Decoder.decodeInteger(baseOffset + index * 4, buffer, 0, 4);
             default:
                 throw new InvalidDatabaseException("Unknown record size: "
                         + this.metadata.getRecordSize());
@@ -304,6 +299,6 @@ public final class Reader implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        this.bufferHolderReference.set(null);
+        this.byteBufferReference.set(null);
     }
 }

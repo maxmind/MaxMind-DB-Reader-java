@@ -6,11 +6,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,8 +15,6 @@ import com.fasterxml.jackson.databind.node.*;
 
 /*
  * Decoder for MaxMind DB data.
- *
- * This class CANNOT be shared between threads
  */
 final class Decoder {
 
@@ -36,8 +31,6 @@ final class Decoder {
     private final NodeCache cache;
 
     private final long pointerBase;
-
-    private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
 
     private final ByteBuffer buffer;
 
@@ -83,12 +76,11 @@ final class Decoder {
                             + "pointer larger than the database.");
         }
 
-        this.buffer.position(offset);
-        return decode();
+        return decode(new AtomicInteger(offset));
     }
 
-    JsonNode decode() throws IOException {
-        int ctrlByte = 0xFF & this.buffer.get();
+    JsonNode decode(AtomicInteger offset) throws IOException {
+        int ctrlByte = 0xFF & this.buffer.get(offset.getAndIncrement());
 
         Type type = Type.fromControlByte(ctrlByte);
 
@@ -98,7 +90,7 @@ final class Decoder {
         if (type.equals(Type.POINTER)) {
             int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
             int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
-            int packed = this.decodeInteger(base, pointerSize);
+            int packed = this.decodeInteger(offset, base, pointerSize);
             long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
 
             // for unit testing
@@ -107,14 +99,12 @@ final class Decoder {
             }
 
             int targetOffset = (int) pointer;
-            int position = buffer.position();
             JsonNode node = cache.get(targetOffset, cacheLoader);
-            buffer.position(position);
             return node;
         }
 
         if (type.equals(Type.EXTENDED)) {
-            int nextByte = this.buffer.get();
+            int nextByte = this.buffer.get(offset.getAndIncrement());
 
             int typeNum = nextByte + 7;
 
@@ -131,7 +121,7 @@ final class Decoder {
         int size = ctrlByte & 0x1f;
         if (size >= 29) {
             int bytesToRead = size - 28;
-            int i = this.decodeInteger(bytesToRead);
+            int i = this.decodeInteger(offset, bytesToRead);
             switch (size) {
             case 29:
                 size = 29 + i;
@@ -144,107 +134,115 @@ final class Decoder {
             }
         }
 
-        return this.decodeByType(type, size);
+        return this.decodeByType(offset, type, size);
     }
 
-    private JsonNode decodeByType(Type type, int size)
+    private JsonNode decodeByType(AtomicInteger offset, Type type, int size)
             throws IOException {
         switch (type) {
             case MAP:
-                return this.decodeMap(size);
+                return this.decodeMap(offset, size);
             case ARRAY:
-                return this.decodeArray(size);
+                return this.decodeArray(offset, size);
             case BOOLEAN:
                 return Decoder.decodeBoolean(size);
             case UTF8_STRING:
-                return new TextNode(this.decodeString(size));
+                return new TextNode(this.decodeString(offset, size));
             case DOUBLE:
-                return this.decodeDouble(size);
+                return this.decodeDouble(offset, size);
             case FLOAT:
-                return this.decodeFloat(size);
+                return this.decodeFloat(offset, size);
             case BYTES:
-                return new BinaryNode(this.getByteArray(size));
+                return new BinaryNode(this.getByteArray(offset, size));
             case UINT16:
-                return this.decodeUint16(size);
+                return this.decodeUint16(offset, size);
             case UINT32:
-                return this.decodeUint32(size);
+                return this.decodeUint32(offset, size);
             case INT32:
-                return this.decodeInt32(size);
+                return this.decodeInt32(offset, size);
             case UINT64:
-                return this.decodeBigInteger(size);
+                return this.decodeBigInteger(offset, size);
             case UINT128:
-                return this.decodeBigInteger(size);
+                return this.decodeBigInteger(offset, size);
             default:
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
         }
     }
 
-    private String decodeString(int size) throws CharacterCodingException {
-        int oldLimit = buffer.limit();
-        buffer.limit(buffer.position() + size);
-        String s = utfDecoder.decode(buffer).toString();
-        buffer.limit(oldLimit);
-        return s;
+    private String decodeString(AtomicInteger offset, int size) throws CharacterCodingException {
+        // the best case when it has direct access to buffer
+        if (buffer.hasArray()) {
+            return new String(buffer.array(), offset.getAndAdd(size), size, UTF_8);
+        // it hasn't so it should read the buffer
+        } else {
+            byte[] bytes = getByteArray(offset, size);
+            return new String(bytes, UTF_8);
+        }
     }
 
-    private IntNode decodeUint16(int size) {
-        return new IntNode(this.decodeInteger(size));
+    private IntNode decodeUint16(AtomicInteger offset, int size) {
+        return new IntNode(this.decodeInteger(offset, size));
     }
 
-    private IntNode decodeInt32(int size) {
-        return new IntNode(this.decodeInteger(size));
+    private IntNode decodeInt32(AtomicInteger offset, int size) {
+        return new IntNode(this.decodeInteger(offset, size));
     }
 
-    private long decodeLong(int size) {
+    private long decodeLong(AtomicInteger offset, int size) {
         long integer = 0;
+        final int o = offset.getAndAdd(size);
         for (int i = 0; i < size; i++) {
-            integer = (integer << 8) | (this.buffer.get() & 0xFF);
+            integer = (integer << 8) | (this.buffer.get(o + i) & 0xFF);
         }
         return integer;
     }
 
-    private LongNode decodeUint32(int size) {
-        return new LongNode(this.decodeLong(size));
+    private LongNode decodeUint32(AtomicInteger offset, int size) {
+        return new LongNode(this.decodeLong(offset, size));
     }
 
-    private int decodeInteger(int size) {
-        return this.decodeInteger(0, size);
+    private int decodeInteger(AtomicInteger offset, int size) {
+        return this.decodeInteger(offset,0, size);
     }
 
-    private int decodeInteger(int base, int size) {
-        return Decoder.decodeInteger(this.buffer, base, size);
+    private int decodeInteger(AtomicInteger offset, int base, int size) {
+        return Decoder.decodeInteger(offset, this.buffer, base, size);
     }
 
-    static int decodeInteger(ByteBuffer buffer, int base, int size) {
+    static int decodeInteger(AtomicInteger offset, ByteBuffer buffer, int base, int size) {
+        return decodeInteger(offset.getAndAdd(size), buffer, base, size);
+    }
+
+    static int decodeInteger(int offset, ByteBuffer buffer, int base, int size) {
         int integer = base;
         for (int i = 0; i < size; i++) {
-            integer = (integer << 8) | (buffer.get() & 0xFF);
+            integer = (integer << 8) | (buffer.get(offset + i) & 0xFF);
         }
         return integer;
     }
 
-    private BigIntegerNode decodeBigInteger(int size) {
-        byte[] bytes = this.getByteArray(size);
+    private BigIntegerNode decodeBigInteger(AtomicInteger offset, int size) {
+        byte[] bytes = this.getByteArray(offset, size);
         return new BigIntegerNode(new BigInteger(1, bytes));
     }
 
-    private DoubleNode decodeDouble(int size) throws InvalidDatabaseException {
+    private DoubleNode decodeDouble(AtomicInteger offset, int size) throws InvalidDatabaseException {
         if (size != 8) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
                             + "invalid size of double.");
         }
-        return new DoubleNode(this.buffer.getDouble());
+        return new DoubleNode(this.buffer.getDouble(offset.getAndAdd(8)));
     }
 
-    private FloatNode decodeFloat(int size) throws InvalidDatabaseException {
+    private FloatNode decodeFloat(AtomicInteger offset, int size) throws InvalidDatabaseException {
         if (size != 4) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
                             + "invalid size of float.");
         }
-        return new FloatNode(this.buffer.getFloat());
+        return new FloatNode(this.buffer.getFloat(offset.getAndAdd(4)));
     }
 
     private static BooleanNode decodeBoolean(int size)
@@ -261,37 +259,46 @@ final class Decoder {
         }
     }
 
-    private JsonNode decodeArray(int size) throws IOException {
+    private JsonNode decodeArray(AtomicInteger offset, int size) throws IOException {
 
         List<JsonNode> array = new ArrayList<JsonNode>(size);
         for (int i = 0; i < size; i++) {
-            JsonNode r = this.decode();
+            JsonNode r = this.decode(offset);
             array.add(r);
         }
 
         return new ArrayNode(OBJECT_MAPPER.getNodeFactory(), Collections.unmodifiableList(array));
     }
 
-    private JsonNode decodeMap(int size) throws IOException {
+    private JsonNode decodeMap(AtomicInteger offset, int size) throws IOException {
         int capacity = (int) (size / 0.75F + 1.0F);
         Map<String, JsonNode> map = new HashMap<String, JsonNode>(capacity);
 
         for (int i = 0; i < size; i++) {
-            String key = this.decode().asText();
-            JsonNode value = this.decode();
+            String key = this.decode(offset).asText();
+            JsonNode value = this.decode(offset);
             map.put(key, value);
         }
 
         return new ObjectNode(OBJECT_MAPPER.getNodeFactory(), Collections.unmodifiableMap(map));
     }
 
-    private byte[] getByteArray(int length) {
-        return Decoder.getByteArray(this.buffer, length);
+    private byte[] getByteArray(AtomicInteger offset, int length) {
+        return Decoder.getByteArray(offset, this.buffer, length);
     }
 
-    private static byte[] getByteArray(ByteBuffer buffer, int length) {
+    private static byte[] getByteArray(AtomicInteger offset, ByteBuffer buffer, int length) {
         byte[] bytes = new byte[length];
-        buffer.get(bytes);
+        final int o = offset.getAndAdd(length);
+        // the best case when we has access to byte array
+        if (buffer.hasArray()) {
+            System.arraycopy(buffer.array(), o, bytes, 0, length);
+        // we hasn't got direct access
+        } else {
+            for (int i = 0; i < length; i++) {
+                bytes[i] = buffer.get(o + i);
+            }
+        }
         return bytes;
     }
 }

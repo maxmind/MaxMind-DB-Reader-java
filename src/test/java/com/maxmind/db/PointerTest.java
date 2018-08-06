@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.junit.Test;
 
@@ -16,8 +17,8 @@ public class PointerTest {
     @Test
     public void testWithPointers() throws IOException {
         File file = ReaderTest.getFile("maps-with-pointers.raw");
-        BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
-        Decoder decoder = new Decoder(NoCache.getInstance(), ptf.get(), 0);
+        ByteBuffer ptf = BufferHelper.open(file, FileMode.MEMORY);
+        Decoder decoder = new Decoder(NoCache.getInstance(), ptf, 0);
 
         ObjectMapper om = new ObjectMapper();
 
