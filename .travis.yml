@@ -23,7 +23,6 @@ before_install:
 install:
   - mvn install -DskipTests=true -Dgpg.skip=true
   - snyk test --org=maxmind
-script: mvn test -Djackson-databind.version=2.7.3
 after_success:
   - mvn clean cobertura:cobertura coveralls:report
   - snyk monitor --org=maxmind --project-name=maxmind/MaxMind-DB-Reader-java
