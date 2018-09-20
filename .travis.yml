@@ -25,7 +25,7 @@ install:
   - snyk test --org=maxmind
 after_success:
   - mvn clean cobertura:cobertura coveralls:report
-  - snyk monitor --org=maxmind --project-name=maxmind/MaxMind-DB-Reader-java
+  - "if [[ $TRAVIS_BRANCH == 'master' && $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_JDK_VERSION == 'oraclejdk8' ]]; then snyk monitor --org=maxmind --project-name=maxmind/MaxMind-DB-Reader-java; fi"
 notifications:
   email:
     on_failure: always
