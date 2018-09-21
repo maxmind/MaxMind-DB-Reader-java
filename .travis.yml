@@ -20,8 +20,8 @@ env:
     - secure: KXF3RVBZDxeASAnleYlTaqvxRRB9FSzSAdVV9h7Kw81+p4UO64b8CPJR1p4fLIVwAp8C4R8h0xZDN3pAv/iyeA4ndIeh9tQXNZBm737RE5x+6x6nf/shP/Em1w9T1s3KmretXoTFK5NJGv2yTesgaIAV/JV1OFvlG6ArswhrPFc=
     - secure: M5ftg9qwzSuGMZ+wfcpvA/11Dg0KWwmP6skFm3gpxBmIMcpvwZd77QhVjnPZoTf+NSg/rGgmS0wIW8ZmuM19ihs8BKUBHQa2oXcehI0YWdAFH6EUOSxEz2Al2w8zHNDmECsIFzivHL21DhoeBi8FZh3/cmg6fzyBNnPB1kwRGQY=
 before_install:
-  - sudo apt-get install -y nodejs
-  - npm install -g snyk
+  - "if [[ $RUN_SNYK ]]; then sudo apt-get install -y nodejs; fi"
+  - "if [[ $RUN_SNYK ]]; then npm install -g snyk; fi"
 install:
   - mvn install -DskipTests=true -Dgpg.skip=true
   - "if [[ $RUN_SNYK ]]; then snyk test --org=maxmind; fi"
