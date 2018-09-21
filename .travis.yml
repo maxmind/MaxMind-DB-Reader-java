@@ -10,22 +10,24 @@ addons:
     build_command: mvn -DskipTests=true compile
     branch_pattern: .*coverity.*
 language: java
-jdk:
-  - openjdk7
-  - oraclejdk8
+matrix:
+  include:
+    - jdk: openjdk7
+    - jdk: oraclejdk8
+      env: RUN_SNYK=true
 env:
   global:
     - secure: KXF3RVBZDxeASAnleYlTaqvxRRB9FSzSAdVV9h7Kw81+p4UO64b8CPJR1p4fLIVwAp8C4R8h0xZDN3pAv/iyeA4ndIeh9tQXNZBm737RE5x+6x6nf/shP/Em1w9T1s3KmretXoTFK5NJGv2yTesgaIAV/JV1OFvlG6ArswhrPFc=
     - secure: M5ftg9qwzSuGMZ+wfcpvA/11Dg0KWwmP6skFm3gpxBmIMcpvwZd77QhVjnPZoTf+NSg/rGgmS0wIW8ZmuM19ihs8BKUBHQa2oXcehI0YWdAFH6EUOSxEz2Al2w8zHNDmECsIFzivHL21DhoeBi8FZh3/cmg6fzyBNnPB1kwRGQY=
 before_install:
-  - sudo apt-get install -y nodejs
-  - npm install -g snyk
+  - "if [[ $RUN_SNYK ]]; then sudo apt-get install -y nodejs; fi"
+  - "if [[ $RUN_SNYK ]]; then npm install -g snyk; fi"
 install:
   - mvn install -DskipTests=true -Dgpg.skip=true
-  - snyk test --org=maxmind
+  - "if [[ $RUN_SNYK ]]; then snyk test --org=maxmind; fi"
 after_success:
   - mvn clean cobertura:cobertura coveralls:report
-  - snyk monitor --org=maxmind --project-name=maxmind/MaxMind-DB-Reader-java
+  - "if [[ $TRAVIS_BRANCH == 'master' && $TRAVIS_PULL_REQUEST == 'false' && $RUN_SNYK ]]; then snyk monitor --org=maxmind --project-name=maxmind/MaxMind-DB-Reader-java; fi"
 notifications:
   email:
     on_failure: always
