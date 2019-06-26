@@ -1,5 +1,5 @@
 # MaxMind DB Reader #
-[![Build Status](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java.png?branch=master)](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java) [![Known Vulnerabilities](https://snyk.io/test/github/maxmind/MaxMind-DB-Reader-java/badge.svg)](https://snyk.io/test/github/maxmind/MaxMind-DB-Reader-java)
+[![Build Status](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java.png?branch=master)](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java)
 
 ## Description ##
 
