@@ -164,19 +164,17 @@ public final class Reader implements Closeable {
 
         int bitLength = rawAddress.length * 8;
         int record = this.startNode(bitLength);
+        int nodeCount = this.metadata.getNodeCount();
 
-        for (int i = 0; i < bitLength; i++) {
-            if (record >= this.metadata.getNodeCount()) {
-                break;
-            }
+        for (int i = 0; i < bitLength && record < nodeCount; i++) {
             int b = 0xFF & rawAddress[i / 8];
             int bit = 1 & (b >> 7 - (i % 8));
             record = this.readNode(buffer, record, bit);
         }
-        if (record == this.metadata.getNodeCount()) {
+        if (record == nodeCount) {
             // record is empty
             return 0;
-        } else if (record > this.metadata.getNodeCount()) {
+        } else if (record > nodeCount) {
             // record is a data pointer
             return record;
         }
