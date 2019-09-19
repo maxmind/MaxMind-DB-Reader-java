@@ -66,11 +66,6 @@ final class BufferHolder {
         this.buffer = ByteBuffer.wrap(baos.toByteArray());
     }
 
-    // This is just to ease unit testing
-    BufferHolder(ByteBuffer buffer) {
-        this.buffer = buffer;
-    }
-
     /*
      * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
      * should not be shared between threads.

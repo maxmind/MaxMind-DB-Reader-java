@@ -117,7 +117,7 @@ public final class Reader implements Closeable {
     }
 
     private Reader(BufferHolder bufferHolder, String name, NodeCache cache) throws IOException {
-        this.bufferHolderReference = new AtomicReference<BufferHolder>(
+        this.bufferHolderReference = new AtomicReference<>(
                 bufferHolder);
 
         if (cache == null) {

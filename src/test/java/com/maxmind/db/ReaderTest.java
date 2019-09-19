@@ -42,16 +42,13 @@ public class ReaderTest {
         for (long recordSize : new long[]{24, 28, 32}) {
             for (int ipVersion : new int[]{4, 6}) {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
-                Reader reader = new Reader(file);
-                try {
+                try (Reader reader = new Reader(file)) {
                     this.testMetadata(reader, ipVersion, recordSize);
                     if (ipVersion == 4) {
                         this.testIpV4(reader, file);
                     } else {
                         this.testIpV6(reader, file);
                     }
-                } finally {
-                    reader.close();
                 }
             }
         }
@@ -92,7 +89,7 @@ public class ReaderTest {
     private void testDecodingTypes(Reader reader) throws IOException {
         JsonNode record = reader.get(InetAddress.getByName("::1.1.1.0"));
 
-        assertEquals(true, record.get("boolean").booleanValue());
+        assertTrue(record.get("boolean").booleanValue());
 
         assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, record
                 .get("bytes").binaryValue());
@@ -147,7 +144,7 @@ public class ReaderTest {
     private void testZeros(Reader reader) throws IOException {
         JsonNode record = reader.get(InetAddress.getByName("::"));
 
-        assertEquals(false, record.get("boolean").booleanValue());
+        assertFalse(record.get("boolean").booleanValue());
 
         assertArrayEquals(new byte[0], record.get("bytes").binaryValue());
 
@@ -169,7 +166,7 @@ public class ReaderTest {
     }
 
     @Rule
-    public ExpectedException thrown = ExpectedException.none();
+    public final ExpectedException thrown = ExpectedException.none();
 
     @Test
     public void testBrokenDatabaseFile() throws IOException {
@@ -273,11 +270,11 @@ public class ReaderTest {
         assertEquals(ipVersion, metadata.getIpVersion());
         assertEquals("Test", metadata.getDatabaseType());
 
-        List<String> languages = new ArrayList<String>(Arrays.asList("en", "zh"));
+        List<String> languages = new ArrayList<>(Arrays.asList("en", "zh"));
 
         assertEquals(languages, metadata.getLanguages());
 
-        Map<String, String> description = new HashMap<String, String>();
+        Map<String, String> description = new HashMap<>();
         description.put("en", "Test Database");
         description.put("zh", "Test Database Chinese");
 
@@ -301,7 +298,7 @@ public class ReaderTest {
                     + file, data, reader.get(InetAddress.getByName(address)));
         }
 
-        Map<String, String> pairs = new HashMap<String, String>();
+        Map<String, String> pairs = new HashMap<>();
         pairs.put("1.1.1.3", "1.1.1.2");
         pairs.put("1.1.1.5", "1.1.1.4");
         pairs.put("1.1.1.7", "1.1.1.4");
@@ -335,7 +332,7 @@ public class ReaderTest {
                     + file, data, reader.get(InetAddress.getByName(address)));
         }
 
-        Map<String, String> pairs = new HashMap<String, String>();
+        Map<String, String> pairs = new HashMap<>();
         pairs.put("::2:0:1", "::2:0:0");
         pairs.put("::2:0:33", "::2:0:0");
         pairs.put("::2:0:39", "::2:0:0");
