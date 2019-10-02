@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -53,6 +54,52 @@ public class ReaderTest {
             }
         }
     }
+
+    class GetRecordTest {
+        InetAddress ip;
+        File db;
+        String network;
+        boolean hasRecord;
+
+        GetRecordTest(String ip, String file, String network, boolean hasRecord) throws UnknownHostException {
+            this.ip = InetAddress.getByName(ip);
+            db = getFile(file);
+            this.network = network;
+            this.hasRecord = hasRecord;
+        }
+    }
+
+    @Test
+    public void testGetRecord() throws IOException {
+        GetRecordTest[] tests = {
+                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
+                new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
+                new GetRecordTest("::2:0:1", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:2:0:0/122", true),
+                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.1/32", true),
+                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.2/31", true),
+                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
+                new GetRecordTest("::ffff:1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
+                new GetRecordTest("::1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "0:0:0:0:0:0:101:100/120", true),
+                new GetRecordTest("200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0.0.0.0/0", true),
+                new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
+                new GetRecordTest("0:0:0:0:ffff:ffff:ffff:ffff", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
+                new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
+        };
+        for (GetRecordTest test : tests) {
+            try (Reader reader = new Reader(test.db)) {
+                Record record = reader.getRecord(test.ip);
+
+                assertEquals(test.network, record.getNetwork().toString());
+
+                if (test.hasRecord) {
+                    assertNotNull(record.getData());
+                } else {
+                    assertNull(record.getData());
+                }
+            }
+        }
+    }
+
 
     @Test
     public void testNoIpV4SearchTreeFile() throws IOException {
