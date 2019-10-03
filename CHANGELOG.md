@@ -6,6 +6,9 @@ CHANGELOG
 
 * IMPORTANT: Java 7 is now required. If you need Java 6 support, please
   continue using 1.2.2 or earlier.
+* The method `getRecord` was added to `com.maxmind.db.Reader`. This method
+  returns a `com.maxmind.db.Record` object that includes the data for the
+  record as well as the network associated with the record.
 
 1.2.2 (2017-02-22)
 ------------------
