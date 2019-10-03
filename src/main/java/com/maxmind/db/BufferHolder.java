@@ -16,10 +16,10 @@ final class BufferHolder {
     private final ByteBuffer buffer;
 
     BufferHolder(File database, FileMode mode) throws IOException {
-        final RandomAccessFile file = new RandomAccessFile(database, "r");
-        boolean threw = true;
-        try {
-            final FileChannel channel = file.getChannel();
+        try (
+                final RandomAccessFile file = new RandomAccessFile(database, "r");
+                final FileChannel channel = file.getChannel();
+        ) {
             if (mode == FileMode.MEMORY) {
                 this.buffer = ByteBuffer.wrap(new byte[(int) channel.size()]);
                 if (channel.read(this.buffer) != this.buffer.capacity()) {
@@ -29,19 +29,6 @@ final class BufferHolder {
                 }
             } else {
                 this.buffer = channel.map(MapMode.READ_ONLY, 0, channel.size());
-            }
-            threw = false;
-        } finally {
-            try {
-                // Also closes the underlying channel.
-                file.close();
-            } catch (final IOException e) {
-                // If an exception was underway when we entered the finally
-                // block, don't stomp over it due to an error closing the file
-                // and channel.
-                if (!threw) {
-                    throw e;
-                }
             }
         }
     }
@@ -64,11 +51,6 @@ final class BufferHolder {
             baos.write(bytes, 0, br);
         }
         this.buffer = ByteBuffer.wrap(baos.toByteArray());
-    }
-
-    // This is just to ease unit testing
-    BufferHolder(ByteBuffer buffer) {
-        this.buffer = buffer;
     }
 
     /*

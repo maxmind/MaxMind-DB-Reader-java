@@ -6,10 +6,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 public interface NodeCache {
 
-    public interface Loader {
+    interface Loader {
         JsonNode load(int key) throws IOException;
     }
 
-    public JsonNode get(int key, Loader loader) throws IOException;
+    JsonNode get(int key, Loader loader) throws IOException;
 
 }

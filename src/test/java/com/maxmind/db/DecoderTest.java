@@ -12,6 +12,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -28,7 +29,7 @@ public class DecoderTest {
 
     private static Map<Integer, byte[]> int32() {
         int max = (2 << 30) - 1;
-        HashMap<Integer, byte[]> int32 = new HashMap<Integer, byte[]>();
+        HashMap<Integer, byte[]> int32 = new HashMap<>();
 
         int32.put(0, new byte[]{0x0, 0x1});
         int32.put(-1, new byte[]{0x4, 0x1, (byte) 0xff, (byte) 0xff,
@@ -57,7 +58,7 @@ public class DecoderTest {
 
     private static Map<Long, byte[]> uint32() {
         long max = (((long) 1) << 32) - 1;
-        HashMap<Long, byte[]> uint32s = new HashMap<Long, byte[]>();
+        HashMap<Long, byte[]> uint32s = new HashMap<>();
 
         uint32s.put((long) 0, new byte[]{(byte) 0xc0});
         uint32s.put((long) ((1 << 8) - 1), new byte[]{(byte) 0xc1,
@@ -77,7 +78,7 @@ public class DecoderTest {
     private static Map<Integer, byte[]> uint16() {
         int max = (1 << 16) - 1;
 
-        Map<Integer, byte[]> uint16s = new HashMap<Integer, byte[]>();
+        Map<Integer, byte[]> uint16s = new HashMap<>();
 
         uint16s.put(0, new byte[]{(byte) 0xa0});
         uint16s.put((1 << 8) - 1, new byte[]{(byte) 0xa1, (byte) 0xff});
@@ -88,7 +89,7 @@ public class DecoderTest {
     }
 
     private static Map<BigInteger, byte[]> largeUint(int bits) {
-        Map<BigInteger, byte[]> uints = new HashMap<BigInteger, byte[]>();
+        Map<BigInteger, byte[]> uints = new HashMap<>();
 
         byte ctrlByte = (byte) (bits == 64 ? 0x2 : 0x3);
 
@@ -116,7 +117,7 @@ public class DecoderTest {
     }
 
     private static Map<Long, byte[]> pointers() {
-        Map<Long, byte[]> pointers = new HashMap<Long, byte[]>();
+        Map<Long, byte[]> pointers = new HashMap<>();
 
         pointers.put((long) 0, new byte[]{0x20, 0x0});
         pointers.put((long) 5, new byte[]{0x20, 0x5});
@@ -139,7 +140,7 @@ public class DecoderTest {
     }
 
     private static Map<String, byte[]> strings() {
-        Map<String, byte[]> strings = new HashMap<String, byte[]>();
+        Map<String, byte[]> strings = new HashMap<>();
 
         DecoderTest.addTestString(strings, (byte) 0x40, "");
         DecoderTest.addTestString(strings, (byte) 0x41, "1");
@@ -171,7 +172,7 @@ public class DecoderTest {
     }
 
     private static Map<byte[], byte[]> bytes() {
-        Map<byte[], byte[]> bytes = new HashMap<byte[], byte[]>();
+        Map<byte[], byte[]> bytes = new HashMap<>();
 
         Map<String, byte[]> strings = DecoderTest.strings();
 
@@ -179,7 +180,7 @@ public class DecoderTest {
             byte[] ba = strings.get(s);
             ba[0] ^= 0xc0;
 
-            bytes.put(s.getBytes(Charset.forName("UTF-8")), ba);
+            bytes.put(s.getBytes(StandardCharsets.UTF_8), ba);
         }
 
         return bytes;
@@ -198,10 +199,10 @@ public class DecoderTest {
         DecoderTest.addTestString(tests, new byte[]{ctrl}, str);
     }
 
-    private static void addTestString(Map<String, byte[]> tests, byte ctrl[],
+    private static void addTestString(Map<String, byte[]> tests, byte[] ctrl,
                                       String str) {
 
-        byte[] sb = str.getBytes(Charset.forName("UTF-8"));
+        byte[] sb = str.getBytes(StandardCharsets.UTF_8);
         byte[] bytes = new byte[ctrl.length + sb.length];
 
         System.arraycopy(ctrl, 0, bytes, 0, ctrl.length);
@@ -210,7 +211,7 @@ public class DecoderTest {
     }
 
     private static Map<Double, byte[]> doubles() {
-        Map<Double, byte[]> doubles = new HashMap<Double, byte[]>();
+        Map<Double, byte[]> doubles = new HashMap<>();
         doubles.put(0.0, new byte[]{0x68, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                 0x0});
         doubles.put(0.5, new byte[]{0x68, 0x3F, (byte) 0xE0, 0x0, 0x0, 0x0,
@@ -232,7 +233,7 @@ public class DecoderTest {
     }
 
     private static Map<Float, byte[]> floats() {
-        Map<Float, byte[]> floats = new HashMap<Float, byte[]>();
+        Map<Float, byte[]> floats = new HashMap<>();
         floats.put((float) 0.0, new byte[]{0x4, 0x8, 0x0, 0x0, 0x0, 0x0});
         floats.put((float) 1.0, new byte[]{0x4, 0x8, 0x3F, (byte) 0x80, 0x0,
                 0x0});
@@ -255,7 +256,7 @@ public class DecoderTest {
     }
 
     private static Map<Boolean, byte[]> booleans() {
-        Map<Boolean, byte[]> booleans = new HashMap<Boolean, byte[]>();
+        Map<Boolean, byte[]> booleans = new HashMap<>();
 
         booleans.put(Boolean.FALSE, new byte[]{0x0, 0x7});
         booleans.put(Boolean.TRUE, new byte[]{0x1, 0x7});
@@ -263,7 +264,7 @@ public class DecoderTest {
     }
 
     private static Map<ObjectNode, byte[]> maps() {
-        Map<ObjectNode, byte[]> maps = new HashMap<ObjectNode, byte[]>();
+        Map<ObjectNode, byte[]> maps = new HashMap<>();
 
         ObjectMapper om = new ObjectMapper();
 
@@ -319,7 +320,7 @@ public class DecoderTest {
     }
 
     private static Map<ArrayNode, byte[]> arrays() {
-        Map<ArrayNode, byte[]> arrays = new HashMap<ArrayNode, byte[]>();
+        Map<ArrayNode, byte[]> arrays = new HashMap<>();
         ObjectMapper om = new ObjectMapper();
 
         ArrayNode f1 = om.createArrayNode();

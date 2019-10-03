@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,7 +24,7 @@ import com.fasterxml.jackson.databind.node.*;
  */
 final class Decoder {
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -41,14 +42,14 @@ final class Decoder {
 
     private final ByteBuffer buffer;
 
-    static enum Type {
+    enum Type {
         EXTENDED, POINTER, UTF8_STRING, DOUBLE, BYTES, UINT16, UINT32, MAP, INT32, UINT64, UINT128, ARRAY, CONTAINER, END_MARKER, BOOLEAN, FLOAT;
 
         // Java clones the array when you call values(). Caching it increased
         // the speed by about 5000 requests per second on my machine.
         final static Type[] values = Type.values();
 
-        public static Type get(int i) {
+        static Type get(int i) {
             return Type.values[i];
         }
 
@@ -57,7 +58,7 @@ final class Decoder {
             return Type.get(b & 0xFF);
         }
 
-        public static Type fromControlByte(int b) {
+        static Type fromControlByte(int b) {
             // The type is encoded in the first 3 bits of the byte.
             return Type.get((byte) ((0xFF & b) >>> 5));
         }
@@ -87,7 +88,7 @@ final class Decoder {
         return decode();
     }
 
-    JsonNode decode() throws IOException {
+    private JsonNode decode() throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -171,7 +172,6 @@ final class Decoder {
             case INT32:
                 return this.decodeInt32(size);
             case UINT64:
-                return this.decodeBigInteger(size);
             case UINT128:
                 return this.decodeBigInteger(size);
             default:
@@ -263,7 +263,7 @@ final class Decoder {
 
     private JsonNode decodeArray(int size) throws IOException {
 
-        List<JsonNode> array = new ArrayList<JsonNode>(size);
+        List<JsonNode> array = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             JsonNode r = this.decode();
             array.add(r);
@@ -274,7 +274,7 @@ final class Decoder {
 
     private JsonNode decodeMap(int size) throws IOException {
         int capacity = (int) (size / 0.75F + 1.0F);
-        Map<String, JsonNode> map = new HashMap<String, JsonNode>(capacity);
+        Map<String, JsonNode> map = new HashMap<>(capacity);
 
         for (int i = 0; i < size; i++) {
             String key = this.decode().asText();
