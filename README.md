@@ -62,15 +62,22 @@ read in metadata for the file.
 
 ```java
 File database = new File("/path/to/database/GeoIP2-City.mmdb");
-Reader reader = new Reader(database);
+try (Reader reader = new Reader(database)) {
 
-InetAddress address = InetAddress.getByName("24.24.24.24");
+    InetAddress address = InetAddress.getByName("24.24.24.24");
 
-JsonNode response = reader.get(address);
+    // get() returns just the data for the associated record
+    JsonNode recordData = reader.get(address);
 
-System.out.println(response);
+    System.out.println(recordData);
 
-reader.close();
+    // getRecord() returns a Record class that contains both
+    // the data for the record and associated metadata.
+    Record record = reader.getRecord(address);
+
+    System.out.println(record.getData());
+    System.out.println(record.getNetwork());
+}
 ```
 
 ### Caching ###
