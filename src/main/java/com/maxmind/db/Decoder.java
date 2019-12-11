@@ -131,17 +131,15 @@ final class Decoder {
 
         int size = ctrlByte & 0x1f;
         if (size >= 29) {
-            int bytesToRead = size - 28;
-            int i = this.decodeInteger(bytesToRead);
             switch (size) {
             case 29:
-                size = 29 + i;
+                size = 29 + buffer.get();
                 break;
             case 30:
-                size = 285 + i;
+                size = 285 + decodeInteger(2);
                 break;
             default:
-                size = 65821 + i;
+                size = 65821 + decodeInteger(3);
             }
         }
 
