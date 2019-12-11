@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,9 +17,12 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public final class Reader implements Closeable {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
+    private static final int METADATA_MAX_SIZE = 128 * 1024; // 128KB
+
     private static final byte[] METADATA_START_MARKER = {(byte) 0xAB,
             (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
             'c', 'o', 'm'};
+
 
     private final int ipV4Start;
     private final Metadata metadata;
@@ -267,16 +271,15 @@ public final class Reader implements Closeable {
             throws InvalidDatabaseException {
         int fileSize = buffer.capacity();
 
-        FILE:
-        for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
-            for (int j = 0; j < METADATA_START_MARKER.length; j++) {
-                byte b = buffer.get(fileSize - i - j - 1);
-                if (b != METADATA_START_MARKER[METADATA_START_MARKER.length - j
-                        - 1]) {
-                    continue FILE;
-                }
+        byte[] value = new byte[METADATA_START_MARKER.length];
+        int stopIndex = fileSize - Math.min(METADATA_MAX_SIZE + 1, fileSize);
+
+        for (int i = fileSize - METADATA_START_MARKER.length - 1; i > stopIndex; i--) {
+            buffer.position(i);
+            buffer.get(value);
+            if (Arrays.equals(value, METADATA_START_MARKER)) {
+                return i + METADATA_START_MARKER.length;
             }
-            return fileSize - i;
         }
         throw new InvalidDatabaseException(
                 "Could not find a MaxMind DB metadata marker in this file ("
