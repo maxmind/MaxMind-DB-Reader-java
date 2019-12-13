@@ -273,19 +273,19 @@ public class DecoderTest {
         ObjectNode one = om.createObjectNode();
         one.put("en", "Foo");
         maps.put(one, new byte[]{(byte) 0xe1, /* en */0x42, 0x65, 0x6e,
-        /* Foo */0x43, 0x46, 0x6f, 0x6f});
+                /* Foo */0x43, 0x46, 0x6f, 0x6f});
 
         ObjectNode two = om.createObjectNode();
         two.put("en", "Foo");
         two.put("zh", "人");
         maps.put(two, new byte[]{(byte) 0xe2,
-        /* en */
+                /* en */
                 0x42, 0x65, 0x6e,
-        /* Foo */
+                /* Foo */
                 0x43, 0x46, 0x6f, 0x6f,
-        /* zh */
+                /* zh */
                 0x42, 0x7a, 0x68,
-        /* 人 */
+                /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
         ObjectNode nested = om.createObjectNode();
@@ -294,11 +294,11 @@ public class DecoderTest {
         maps.put(nested, new byte[]{(byte) 0xe1, /* name */
                 0x44, 0x6e, 0x61, 0x6d, 0x65, (byte) 0xe2,/* en */
                 0x42, 0x65, 0x6e,
-        /* Foo */
+                /* Foo */
                 0x43, 0x46, 0x6f, 0x6f,
-        /* zh */
+                /* zh */
                 0x42, 0x7a, 0x68,
-        /* 人 */
+                /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
         ObjectNode guess = om.createObjectNode();
@@ -308,11 +308,11 @@ public class DecoderTest {
         guess.set("languages", languages);
         maps.put(guess, new byte[]{(byte) 0xe1,/* languages */
                 0x49, 0x6c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x73,
-        /* array */
+                /* array */
                 0x2, 0x4,
-        /* en */
+                /* en */
                 0x42, 0x65, 0x6e,
-        /* zh */
+                /* zh */
                 0x42, 0x7a, 0x68});
 
         return maps;
@@ -325,16 +325,16 @@ public class DecoderTest {
         ArrayNode f1 = om.createArrayNode();
         f1.add("Foo");
         arrays.put(f1, new byte[]{0x1, 0x4,
-        /* Foo */
+                /* Foo */
                 0x43, 0x46, 0x6f, 0x6f});
 
         ArrayNode f2 = om.createArrayNode();
         f2.add("Foo");
         f2.add("人");
         arrays.put(f2, new byte[]{0x2, 0x4,
-        /* Foo */
+                /* Foo */
                 0x43, 0x46, 0x6f, 0x6f,
-        /* 人 */
+                /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
         ArrayNode empty = om.createArrayNode();
