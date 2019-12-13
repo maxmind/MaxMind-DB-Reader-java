@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-1.3.0
+1.3.0 (2019-12-13)
 ------------------
 
 * IMPORTANT: Java 7 is now required. If you need Java 6 support, please
