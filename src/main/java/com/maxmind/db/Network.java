@@ -14,8 +14,8 @@ public final class Network {
     /**
      * Construct a <code>Network</code>
      *
-     * @param ipAddress An IP address in the network. This does not have to be
-     *                 the first address in the network.
+     * @param ipAddress    An IP address in the network. This does not have to be
+     *                     the first address in the network.
      * @param prefixLength The prefix length for the network.
      */
     public Network(InetAddress ipAddress, int prefixLength) {

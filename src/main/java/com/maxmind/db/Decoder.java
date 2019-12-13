@@ -28,7 +28,7 @@ final class Decoder {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private static final int[] POINTER_VALUE_OFFSETS = { 0, 0, 1 << 11, (1 << 19) + ((1) << 11), 0 };
+    private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + ((1) << 11), 0};
 
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
@@ -132,14 +132,14 @@ final class Decoder {
         int size = ctrlByte & 0x1f;
         if (size >= 29) {
             switch (size) {
-            case 29:
-                size = 29 + buffer.get();
-                break;
-            case 30:
-                size = 285 + decodeInteger(2);
-                break;
-            default:
-                size = 65821 + decodeInteger(3);
+                case 29:
+                    size = 29 + buffer.get();
+                    break;
+                case 30:
+                    size = 285 + decodeInteger(2);
+                    break;
+                default:
+                    size = 65821 + decodeInteger(3);
             }
         }
 

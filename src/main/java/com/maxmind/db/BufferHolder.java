@@ -18,7 +18,7 @@ final class BufferHolder {
     BufferHolder(File database, FileMode mode) throws IOException {
         try (
                 final RandomAccessFile file = new RandomAccessFile(database, "r");
-                final FileChannel channel = file.getChannel();
+                final FileChannel channel = file.getChannel()
         ) {
             if (mode == FileMode.MEMORY) {
                 this.buffer = ByteBuffer.wrap(new byte[(int) channel.size()]);

@@ -1,5 +1,7 @@
 package com.maxmind.db;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -7,8 +9,6 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Instances of this class provide a reader for the MaxMind DB format. IP
@@ -59,7 +59,7 @@ public final class Reader implements Closeable {
      * GeoIP2 database file.
      *
      * @param database the MaxMind DB file to use.
-     * @param cache backing cache instance
+     * @param cache    backing cache instance
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database, NodeCache cache) throws IOException {
@@ -82,7 +82,7 @@ public final class Reader implements Closeable {
      * {@link FileMode#MEMORY}, without using a <code>File</code> instance.
      *
      * @param source the InputStream that contains the MaxMind DB file.
-     * @param cache backing cache instance
+     * @param cache  backing cache instance
      * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source, NodeCache cache) throws IOException {
@@ -109,7 +109,7 @@ public final class Reader implements Closeable {
      *
      * @param database the MaxMind DB file to use.
      * @param fileMode the mode to open the file with.
-     * @param cache backing cache instance
+     * @param cache    backing cache instance
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode, NodeCache cache) throws IOException {
@@ -144,6 +144,7 @@ public final class Reader implements Closeable {
     public JsonNode get(InetAddress ipAddress) throws IOException {
         return getRecord(ipAddress).getData();
     }
+
     /**
      * Looks up <code>ipAddress</code> in the MaxMind DB.
      *
@@ -291,7 +292,6 @@ public final class Reader implements Closeable {
     }
 
     /**
-     /**
      * <p>
      * Closes the database.
      * </p>
