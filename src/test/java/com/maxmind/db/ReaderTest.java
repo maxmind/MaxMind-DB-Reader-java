@@ -55,7 +55,7 @@ public class ReaderTest {
         }
     }
 
-    class GetRecordTest {
+    static class GetRecordTest {
         InetAddress ip;
         File db;
         String network;
