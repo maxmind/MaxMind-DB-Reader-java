@@ -2,10 +2,11 @@
 layout: default
 title: MaxMind DB Java API
 language: java
-version: v1.2.2
+version: v1.3.0
 ---
 
 # MaxMind DB Reader #
+[![Build Status](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java.png?branch=master)](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java)
 
 ## Description ##
 
@@ -23,7 +24,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>1.2.2</version>
+        <version>1.3.0</version>
     </dependency>
 ```
 
@@ -36,7 +37,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:1.2.2'
+    compile 'com.maxmind.db:maxmind-db:1.3.0'
 }
 ```
 
@@ -68,15 +69,22 @@ read in metadata for the file.
 
 ```java
 File database = new File("/path/to/database/GeoIP2-City.mmdb");
-Reader reader = new Reader(database);
+try (Reader reader = new Reader(database)) {
 
-InetAddress address = InetAddress.getByName("24.24.24.24");
+    InetAddress address = InetAddress.getByName("24.24.24.24");
 
-JsonNode response = reader.get(address);
+    // get() returns just the data for the associated record
+    JsonNode recordData = reader.get(address);
 
-System.out.println(response);
+    System.out.println(recordData);
 
-reader.close();
+    // getRecord() returns a Record class that contains both
+    // the data for the record and associated metadata.
+    Record record = reader.getRecord(address);
+
+    System.out.println(record.getData());
+    System.out.println(record.getNetwork());
+}
 ```
 
 ### Caching ###
@@ -112,6 +120,14 @@ garbage collected. Older JVM versions may also not release the lock on exit.
 To work around this problem, use the `MEMORY` mode or try upgrading your JVM
 version. You may also call `System.gc()` after dereferencing the
 `DatabaseReader` object to encourage the JVM to garbage collect sooner.
+
+### Packaging Database in a JAR ###
+
+If you are packaging the database file as a resource in a JAR file using
+Maven, you must
+[disable binary file filtering](http://maven.apache.org/plugins/maven-resources-plugin/examples/binaries-filtering.html).
+Failure to do so will result in `InvalidDatabaseException` exceptions being
+thrown when querying the database.
 
 ## Format ##
 
