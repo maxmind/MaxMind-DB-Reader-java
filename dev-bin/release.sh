@@ -101,6 +101,7 @@ mvn release:prepare -DreleaseVersion="$version" -Dtag="$tag"
 mvn release:perform
 rm -fr ".gh-pages/doc/$tag"
 cp -r target/apidocs ".gh-pages/doc/$tag"
+rm .gh-pages/doc/latest
 ln -fs "$tag" .gh-pages/doc/latest
 
 pushd .gh-pages
