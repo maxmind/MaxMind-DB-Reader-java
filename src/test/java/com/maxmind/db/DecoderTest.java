@@ -153,8 +153,12 @@ public class DecoderTest {
                 "1234567890123456789012345678");
         DecoderTest.addTestString(strings, new byte[]{0x5d, 0x0},
                 "12345678901234567890123456789");
-        DecoderTest.addTestString(strings, new byte[]{0x5d, 0x1},
-                "123456789012345678901234567890");
+        DecoderTest.addTestString(strings, new byte[]{0x5d, (byte) 128},
+                DecoderTest.xString(157));
+
+        DecoderTest
+                .addTestString(strings, new byte[]{0x5d, 0x0, (byte) 0xd7},
+                        DecoderTest.xString(500));
 
         DecoderTest
                 .addTestString(strings, new byte[]{0x5e, 0x0, (byte) 0xd7},
