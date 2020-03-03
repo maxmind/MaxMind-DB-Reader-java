@@ -8,6 +8,7 @@ CHANGELOG
   introduced a regression when decoding these due to using a signed `byte`
   as an unsigned value. Reported by Dongmin Yu. GitHub #181 in
   maxmind/GeoIP2-java.
+* Update `jackson-databind` dependency.
 
 1.3.0 (2019-12-13)
 ------------------
