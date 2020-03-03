@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+1.3.1 (2020-03-02)
+------------------
+
+* Correctly decode strings that are between 157 and 288 bytes long. 1.3.0
+  introduced a regression when decoding these due to using a signed `byte`
+  as an unsigned value. Reported by Dongmin Yu. GitHub #181 in
+  maxmind/GeoIP2-java.
+
 1.3.0 (2019-12-13)
 ------------------
 

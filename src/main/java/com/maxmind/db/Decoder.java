@@ -133,7 +133,7 @@ final class Decoder {
         if (size >= 29) {
             switch (size) {
                 case 29:
-                    size = 29 + buffer.get();
+                    size = 29 + (0xFF & buffer.get());
                     break;
                 case 30:
                     size = 285 + decodeInteger(2);
