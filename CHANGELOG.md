@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-1.3.1 (2020-03-02)
+1.3.1 (2020-03-03)
 ------------------
 
 * Correctly decode strings that are between 157 and 288 bytes long. 1.3.0
