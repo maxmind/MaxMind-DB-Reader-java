@@ -6,6 +6,10 @@ CHANGELOG
 
 * IMPORTANT: Java 8 is now required. If you need Java 7 support, please
   continue using 1.3.1 or earlier.
+* The decoder will now throw an `InvalidDatabaseException` on an invalid
+  control byte in the data section rather than an
+  `ArrayIndexOutOfBoundsException`. Reported by Edwin Delgado H. GitHub
+  #68.
 
 1.3.1 (2020-03-03)
 ------------------

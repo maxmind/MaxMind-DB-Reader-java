@@ -1,8 +1,5 @@
 package com.maxmind.db;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -22,6 +19,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.*;
 
 @SuppressWarnings({"boxing", "static-method"})
 public class DecoderTest {
@@ -413,6 +414,19 @@ public class DecoderTest {
     @Test
     public void testArrays() throws IOException {
         DecoderTest.testTypeDecoding(Decoder.Type.ARRAY, DecoderTest.arrays());
+    }
+
+    @Test
+    public void testInvalidControlByte() throws IOException {
+        try (FileChannel fc = DecoderTest.getFileChannel(new byte[]{0x0, 0xF})) {
+            MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
+
+            Decoder decoder = new Decoder(new CHMCache(), mmap, 0);
+            InvalidDatabaseException ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> decoder.decode(0));
+            assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
+        }
     }
 
     private static <T> void testTypeDecoding(Decoder.Type type, Map<T, byte[]> tests)
