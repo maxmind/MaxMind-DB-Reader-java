@@ -70,12 +70,7 @@ final class Decoder {
         this.buffer = buffer;
     }
 
-    private final NodeCache.Loader cacheLoader = new NodeCache.Loader() {
-        @Override
-        public JsonNode load(int key) throws IOException {
-            return decode(key);
-        }
-    };
+    private final NodeCache.Loader cacheLoader = this::decode;
 
     JsonNode decode(int offset) throws IOException {
         if (offset >= this.buffer.capacity()) {
