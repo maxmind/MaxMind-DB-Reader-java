@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+1.4.0
+------------------
+
+* IMPORTANT: Java 8 is now required. If you need Java 7 support, please
+  continue using 1.3.1 or earlier.
+
 1.3.1 (2020-03-03)
 ------------------
 

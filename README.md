@@ -154,7 +154,7 @@ specific to this reader, please [contact MaxMind support]
 
 ## Requirements  ##
 
-MaxMind has tested this API with Java 6 and above.
+This API requires Java 8 or greater.
 
 ## Contributing ##
 
