@@ -6,9 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,8 +16,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.containsString;
 
 public class ReaderTest {
     private final ObjectMapper om = new ObjectMapper();
@@ -212,9 +211,6 @@ public class ReaderTest {
         assertEquals(BigInteger.ZERO, record.get("uint128").bigIntegerValue());
     }
 
-    @Rule
-    public final ExpectedException thrown = ExpectedException.none();
-
     @Test
     public void testBrokenDatabaseFile() throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
@@ -227,13 +223,11 @@ public class ReaderTest {
         this.testBrokenDatabase(this.testReader);
     }
 
-    private void testBrokenDatabase(Reader reader) throws IOException {
-
-        this.thrown.expect(InvalidDatabaseException.class);
-        this.thrown
-                .expectMessage(containsString("The MaxMind DB file's data section contains bad data"));
-
-        reader.get(InetAddress.getByName("2001:220::"));
+    private void testBrokenDatabase(Reader reader) {
+        InvalidDatabaseException ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> reader.get(InetAddress.getByName("2001:220::")));
+        assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
     }
 
     @Test
@@ -248,14 +242,10 @@ public class ReaderTest {
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
-    private void testBrokenSearchTreePointer(Reader reader)
-            throws IOException {
-
-        this.thrown.expect(InvalidDatabaseException.class);
-        this.thrown
-                .expectMessage(containsString("The MaxMind DB file's search tree is corrupt"));
-
-        reader.get(InetAddress.getByName("1.1.1.32"));
+    private void testBrokenSearchTreePointer(Reader reader) {
+        InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
+                () -> reader.get(InetAddress.getByName("1.1.1.32")));
+        assertThat(ex.getMessage(), containsString("The MaxMind DB file's search tree is corrupt"));
     }
 
     @Test
@@ -270,13 +260,10 @@ public class ReaderTest {
         this.testBrokenDataPointer(this.testReader);
     }
 
-    private void testBrokenDataPointer(Reader reader) throws IOException {
-
-        this.thrown.expect(InvalidDatabaseException.class);
-        this.thrown
-                .expectMessage(containsString("The MaxMind DB file's data section contains bad data"));
-
-        reader.get(InetAddress.getByName("1.1.1.16"));
+    private void testBrokenDataPointer(Reader reader) {
+        InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
+                () -> reader.get(InetAddress.getByName("1.1.1.16")));
+        assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
     }
 
     @Test
@@ -284,8 +271,7 @@ public class ReaderTest {
         Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         ObjectNode record = (ObjectNode) reader.get(InetAddress.getByName("::1.1.1.0"));
 
-        thrown.expect(UnsupportedOperationException.class);
-        record.put("Test", "value");
+        assertThrows(UnsupportedOperationException.class, () -> record.put("Test", "value"));
     }
 
     @Test
@@ -293,19 +279,17 @@ public class ReaderTest {
         Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         ObjectNode record = (ObjectNode) reader.get(InetAddress.getByName("::1.1.1.0"));
 
-        thrown.expect(UnsupportedOperationException.class);
-        ((ArrayNode) record.get("array")).add(1);
+        assertThrows(UnsupportedOperationException.class, () -> ((ArrayNode) record.get("array")).add(1));
     }
 
     @Test
     public void testClosedReaderThrowsException() throws IOException {
         Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
 
-        this.thrown.expect(ClosedDatabaseException.class);
-        this.thrown.expectMessage("The MaxMind DB has been closed.");
-
         reader.close();
-        reader.get(InetAddress.getByName("1.1.1.16"));
+        ClosedDatabaseException ex = assertThrows(ClosedDatabaseException.class,
+                () -> reader.get(InetAddress.getByName("1.1.1.16")));
+        assertEquals("The MaxMind DB has been closed.", ex.getMessage());
     }
 
     private void testMetadata(Reader reader, int ipVersion, long recordSize) {

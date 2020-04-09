@@ -49,16 +49,19 @@ final class Decoder {
         // the speed by about 5000 requests per second on my machine.
         final static Type[] values = Type.values();
 
-        static Type get(int i) {
+        static Type get(int i) throws InvalidDatabaseException {
+            if (i >= Type.values.length) {
+                throw new InvalidDatabaseException("The MaxMind DB file's data section contains bad data");
+            }
             return Type.values[i];
         }
 
-        private static Type get(byte b) {
+        private static Type get(byte b) throws InvalidDatabaseException {
             // bytes are signed, but we want to treat them as unsigned here
             return Type.get(b & 0xFF);
         }
 
-        static Type fromControlByte(int b) {
+        static Type fromControlByte(int b) throws InvalidDatabaseException {
             // The type is encoded in the first 3 bits of the byte.
             return Type.get((byte) ((0xFF & b) >>> 5));
         }
@@ -70,12 +73,7 @@ final class Decoder {
         this.buffer = buffer;
     }
 
-    private final NodeCache.Loader cacheLoader = new NodeCache.Loader() {
-        @Override
-        public JsonNode load(int key) throws IOException {
-            return decode(key);
-        }
-    };
+    private final NodeCache.Loader cacheLoader = this::decode;
 
     JsonNode decode(int offset) throws IOException {
         if (offset >= this.buffer.capacity()) {

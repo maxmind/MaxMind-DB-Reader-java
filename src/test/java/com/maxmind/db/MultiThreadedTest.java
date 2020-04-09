@@ -21,12 +21,9 @@ public class MultiThreadedTest {
     @Test
     public void multipleMmapOpens() throws InterruptedException,
             ExecutionException {
-        Callable<JsonNode> task = new Callable<JsonNode>() {
-            @Override
-            public JsonNode call() throws IOException {
-                try (Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
-                    return reader.get(InetAddress.getByName("::1.1.1.0"));
-                }
+        Callable<JsonNode> task = () -> {
+            try (Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
+                return reader.get(InetAddress.getByName("::1.1.1.0"));
             }
         };
         MultiThreadedTest.runThreads(task);
@@ -50,12 +47,7 @@ public class MultiThreadedTest {
 
     private static void threadTest(final Reader reader)
             throws InterruptedException, ExecutionException {
-        Callable<JsonNode> task = new Callable<JsonNode>() {
-            @Override
-            public JsonNode call() throws IOException {
-                return reader.get(InetAddress.getByName("::1.1.1.0"));
-            }
-        };
+        Callable<JsonNode> task = () -> reader.get(InetAddress.getByName("::1.1.1.0"));
         MultiThreadedTest.runThreads(task);
     }
 

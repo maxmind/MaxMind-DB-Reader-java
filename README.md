@@ -61,22 +61,34 @@ read in metadata for the file.
 ## Example ##
 
 ```java
-File database = new File("/path/to/database/GeoIP2-City.mmdb");
-try (Reader reader = new Reader(database)) {
+import com.fasterxml.jackson.databind.JsonNode;
+import com.maxmind.db.Reader;
+import com.maxmind.db.Record;
 
-    InetAddress address = InetAddress.getByName("24.24.24.24");
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
 
-    // get() returns just the data for the associated record
-    JsonNode recordData = reader.get(address);
+public class Lookup {
+    public static void main(String[] args) throws IOException {
+        File database = new File("/path/to/database/GeoIP2-City.mmdb");
+        try (Reader reader = new Reader(database)) {
 
-    System.out.println(recordData);
+            InetAddress address = InetAddress.getByName("24.24.24.24");
 
-    // getRecord() returns a Record class that contains both
-    // the data for the record and associated metadata.
-    Record record = reader.getRecord(address);
+            // get() returns just the data for the associated record
+            JsonNode recordData = reader.get(address);
 
-    System.out.println(record.getData());
-    System.out.println(record.getNetwork());
+            System.out.println(recordData);
+
+            // getRecord() returns a Record class that contains both
+            // the data for the record and associated metadata.
+            Record record = reader.getRecord(address);
+
+            System.out.println(record.getData());
+            System.out.println(record.getNetwork());
+        }
+    }
 }
 ```
 
@@ -142,7 +154,7 @@ specific to this reader, please [contact MaxMind support]
 
 ## Requirements  ##
 
-MaxMind has tested this API with Java 6 and above.
+This API requires Java 8 or greater.
 
 ## Contributing ##
 
@@ -155,6 +167,6 @@ The MaxMind DB Reader API uses [Semantic Versioning](http://semver.org/).
 
 ## Copyright and License ##
 
-This software is Copyright (c) 2014 by MaxMind, Inc.
+This software is Copyright (c) 2014-2020 by MaxMind, Inc.
 
 This is free software, licensed under the Apache License, Version 2.0.
