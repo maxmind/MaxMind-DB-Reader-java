@@ -439,9 +439,8 @@ public class DecoderTest {
             byte[] input = entry.getValue();
 
             String desc = "decoded " + type.name() + " - " + expect;
-            FileChannel fc = DecoderTest.getFileChannel(input);
-            MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
-            try {
+            try (FileChannel fc = DecoderTest.getFileChannel(input)) {
+                MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
 
                 Decoder decoder = new Decoder(cache, mmap, 0);
                 decoder.POINTER_TEST_HACK = true;
@@ -471,8 +470,6 @@ public class DecoderTest {
                 } else {
                     assertEquals(desc, expect, decoder.decode(0));
                 }
-            } finally {
-                fc.close();
             }
         }
     }
