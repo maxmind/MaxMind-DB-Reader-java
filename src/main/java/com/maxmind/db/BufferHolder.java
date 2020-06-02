@@ -57,7 +57,7 @@ final class BufferHolder {
      * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
      * should not be shared between threads.
      */
-    synchronized ByteBuffer get() {
+    ByteBuffer get() {
         return this.buffer.duplicate();
     }
 }
