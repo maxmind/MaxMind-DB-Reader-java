@@ -21,14 +21,15 @@ final class BufferHolder {
                 final FileChannel channel = file.getChannel()
         ) {
             if (mode == FileMode.MEMORY) {
-                this.buffer = ByteBuffer.wrap(new byte[(int) channel.size()]);
-                if (channel.read(this.buffer) != this.buffer.capacity()) {
+                final ByteBuffer buf = ByteBuffer.wrap(new byte[(int) channel.size()]);
+                if (channel.read(buf) != buf.capacity()) {
                     throw new IOException("Unable to read "
                             + database.getName()
                             + " into memory. Unexpected end of stream.");
                 }
+                this.buffer = buf.asReadOnlyBuffer();
             } else {
-                this.buffer = channel.map(MapMode.READ_ONLY, 0, channel.size());
+                this.buffer = channel.map(MapMode.READ_ONLY, 0, channel.size()).asReadOnlyBuffer();
             }
         }
     }
@@ -50,7 +51,7 @@ final class BufferHolder {
         while (-1 != (br = stream.read(bytes))) {
             baos.write(bytes, 0, br);
         }
-        this.buffer = ByteBuffer.wrap(baos.toByteArray());
+        this.buffer = ByteBuffer.wrap(baos.toByteArray()).asReadOnlyBuffer();
     }
 
     /*
