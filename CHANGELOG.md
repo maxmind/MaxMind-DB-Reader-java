@@ -10,6 +10,8 @@ CHANGELOG
   control byte in the data section rather than an
   `ArrayIndexOutOfBoundsException`. Reported by Edwin Delgado H. GitHub
   #68.
+* In order to improve performance when lookups are done from multiple
+  threads, a use of `synchronized` has been removed. GitHub #65 & #69.
 
 1.3.1 (2020-03-03)
 ------------------
