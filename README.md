@@ -17,7 +17,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>1.3.1</version>
+        <version>1.4.0</version>
     </dependency>
 ```
 
@@ -30,7 +30,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:1.3.1'
+    compile 'com.maxmind.db:maxmind-db:1.4.0'
 }
 ```
 
