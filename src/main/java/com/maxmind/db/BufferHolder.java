@@ -58,7 +58,22 @@ final class BufferHolder {
      * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
      * should not be shared between threads.
      */
-    synchronized ByteBuffer get() {
+    ByteBuffer get() {
+        // The Java API docs for buffer state:
+        //
+        //     Buffers are not safe for use by multiple concurrent threads. If a buffer is to be used by more than
+        //     one thread then access to the buffer should be controlled by appropriate synchronization.
+        //
+        // As such, you may think that this should be synchronized. This used to be the case, but we had several
+        // complaints about the synchronization causing contention, e.g.:
+        //
+        // * https://github.com/maxmind/MaxMind-DB-Reader-java/issues/65
+        // * https://github.com/maxmind/MaxMind-DB-Reader-java/pull/69
+        //
+        // Given that we are not modifying the original ByteBuffer in any way and all currently known and most
+        // reasonably imaginable implementations of duplicate() only do read operations on the original buffer object,
+        // the risk of not synchronizing this call seems relatively low and worth taking for the performance benefit
+        // when lookups are being done from many threads.
         return this.buffer.duplicate();
     }
 }
