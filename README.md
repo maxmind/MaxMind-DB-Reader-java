@@ -10,7 +10,7 @@ format that stores data indexed by IP address subnets (IPv4 or IPv6).
 
 ### Maven ###
 
-We recommend installing this package with [Maven](http://maven.apache.org/).
+We recommend installing this package with [Maven](https://maven.apache.org/).
 To do this, add the dependency to your pom.xml:
 
 ```xml
@@ -37,7 +37,7 @@ dependencies {
 ## Usage ##
 
 *Note:* For accessing MaxMind GeoIP2 databases, we generally recommend using
-the [GeoIP2 Java API](http://maxmind.github.io/GeoIP2-java/) rather than using
+the [GeoIP2 Java API](https://maxmind.github.io/GeoIP2-java/) rather than using
 this package directly.
 
 To use the API, you must first create a `Reader` object. The constructor for
@@ -130,7 +130,7 @@ version. You may also call `System.gc()` after dereferencing the
 
 If you are packaging the database file as a resource in a JAR file using
 Maven, you must
-[disable binary file filtering](http://maven.apache.org/plugins/maven-resources-plugin/examples/binaries-filtering.html).
+[disable binary file filtering](https://maven.apache.org/plugins/maven-resources-plugin/examples/binaries-filtering.html).
 Failure to do so will result in `InvalidDatabaseException` exceptions being
 thrown when querying the database.
 
@@ -150,7 +150,7 @@ Please report all issues with this code using the [GitHub issue tracker]
 
 If you are having an issue with a MaxMind database or service that is not
 specific to this reader, please [contact MaxMind support]
-(http://www.maxmind.com/en/support).
+(https://www.maxmind.com/en/support).
 
 ## Requirements  ##
 
@@ -163,7 +163,7 @@ possible.
 
 ## Versioning ##
 
-The MaxMind DB Reader API uses [Semantic Versioning](http://semver.org/).
+The MaxMind DB Reader API uses [Semantic Versioning](https://semver.org/).
 
 ## Copyright and License ##
 
