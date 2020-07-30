@@ -139,7 +139,7 @@ thrown when querying the database.
 The MaxMind DB format is an open format for quickly mapping IP addresses to
 records. The
 [specification](https://github.com/maxmind/MaxMind-DB/blob/master/MaxMind-DB-spec.md)
-is available as part of our
+is available, as is our
 [Perl writer](https://github.com/maxmind/MaxMind-DB-Writer-perl) for the
 format.
 
