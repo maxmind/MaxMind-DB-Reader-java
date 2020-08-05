@@ -370,7 +370,7 @@ public class ReaderTest {
         languages[0] = "en";
         languages[1] = "zh";
 
-        assertEquals(languages, metadata.getLanguages());
+        assertArrayEquals(languages, metadata.getLanguages());
 
         Map<String, String> description = new HashMap<>();
         description.put("en", "Test Database");
