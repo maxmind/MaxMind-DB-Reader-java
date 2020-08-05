@@ -251,6 +251,21 @@ final class Decoder {
                    IllegalAccessException,
                    InvocationTargetException,
                    DeserializationException {
+        // If we're decoding into a map, the second level is an Object.class.
+        // See Object.class in decodeMapIntoMap().
+        if (cls.equals(Object.class)) {
+            Class elementClass = cls;
+
+            T[] array = (T[]) Array.newInstance(elementClass, size);
+
+            for (int i = 0; i < size; i++) {
+                T e = (T) this.decode(elementClass);
+                array[i] = e;
+            }
+
+            return array;
+        }
+
         if (!cls.isArray()) {
             throw new DeserializationException();
         }
@@ -272,7 +287,10 @@ final class Decoder {
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException {
-        if (cls.equals(Map.class)) {
+        // We look for Object.class because if we're decoding a nested map into
+        // a Map, the second level is an Object.class. See Object.class in
+        // decodeMapIntoMap().
+        if (cls.equals(Map.class) || cls.equals(Object.class)) {
             return this.decodeMapIntoMap(size, cls);
         }
 
