@@ -1,9 +1,5 @@
 package com.maxmind.db;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,6 +7,9 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.IllegalAccessException;
+import java.lang.InstantiationException;
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -21,8 +20,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.containsString;
 
 public class ReaderTest {
-    private final ObjectMapper om = new ObjectMapper();
-
     private Reader testReader;
 
     @Before
@@ -38,7 +35,11 @@ public class ReaderTest {
     }
 
     @Test
-    public void test() throws IOException {
+    public void test()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         for (long recordSize : new long[]{24, 28, 32}) {
             for (int ipVersion : new int[]{4, 6}) {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
@@ -69,7 +70,11 @@ public class ReaderTest {
     }
 
     @Test
-    public void testGetRecord() throws IOException {
+    public void testGetRecord()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         GetRecordTest[] tests = {
                 new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
                 new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
@@ -86,7 +91,7 @@ public class ReaderTest {
         };
         for (GetRecordTest test : tests) {
             try (Reader reader = new Reader(test.db)) {
-                Record record = reader.getRecord(test.ip);
+                Record record = reader.getRecord(test.ip, Map.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
 
@@ -101,124 +106,164 @@ public class ReaderTest {
 
 
     @Test
-    public void testNoIpV4SearchTreeFile() throws IOException {
+    public void testNoIpV4SearchTreeFile()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-no-ipv4-search-tree.mmdb"));
         this.testNoIpV4SearchTree(this.testReader);
     }
 
     @Test
-    public void testNoIpV4SearchTreeStream() throws IOException {
+    public void testNoIpV4SearchTreeStream()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"));
         this.testNoIpV4SearchTree(this.testReader);
     }
 
-    private void testNoIpV4SearchTree(Reader reader) throws IOException {
+    private void testNoIpV4SearchTree(Reader reader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
 
-        assertEquals("::0/64", reader.get(InetAddress.getByName("1.1.1.1"))
-                .textValue());
-        assertEquals("::0/64", reader.get(InetAddress.getByName("192.1.1.1"))
-                .textValue());
+        assertEquals("::0/64", reader.get(InetAddress.getByName("1.1.1.1"), String.class));
+        assertEquals("::0/64", reader.get(InetAddress.getByName("192.1.1.1"), String.class));
     }
 
     @Test
-    public void testDecodingTypesFile() throws IOException {
+    public void testDecodingTypesFile()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
     }
 
     @Test
-    public void testDecodingTypesStream() throws IOException {
+    public void testDecodingTypesStream()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
     }
 
-    private void testDecodingTypes(Reader reader) throws IOException {
-        JsonNode record = reader.get(InetAddress.getByName("::1.1.1.0"));
+    private void testDecodingTypes(Reader reader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        Map<String, Object> record = reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
 
-        assertTrue(record.get("boolean").booleanValue());
+        assertTrue((boolean) record.get("boolean"));
 
-        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, record
-                .get("bytes").binaryValue());
+        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, (byte[]) record
+                .get("bytes"));
 
-        assertEquals("unicode! ☯ - ♫", record.get("utf8_string").textValue());
+        assertEquals("unicode! ☯ - ♫", (String) record.get("utf8_string"));
 
-        assertTrue(record.get("array").isArray());
-        JsonNode array = record.get("array");
-        assertEquals(3, array.size());
-        assertEquals(3, array.size());
-        assertEquals(1, array.get(0).intValue());
-        assertEquals(2, array.get(1).intValue());
-        assertEquals(3, array.get(2).intValue());
+        Object[] array = (Object[]) record.get("array");
+        assertEquals(3, array.length);
+        assertEquals(1, (long) array[0]);
+        assertEquals(2, (long) array[1]);
+        assertEquals(3, (long) array[2]);
 
-        assertTrue(record.get("map").isObject());
-        assertEquals(1, record.get("map").size());
+        Map map = (Map) record.get("map");
+        assertEquals(1, map.size());
 
-        JsonNode mapX = record.get("map").get("mapX");
+        Map mapX = (Map) map.get("mapX");
         assertEquals(2, mapX.size());
 
-        JsonNode arrayX = mapX.get("arrayX");
-        assertEquals(3, arrayX.size());
-        assertEquals(7, arrayX.get(0).intValue());
-        assertEquals(8, arrayX.get(1).intValue());
-        assertEquals(9, arrayX.get(2).intValue());
+        Object[] arrayX = (Object[]) mapX.get("arrayX");
+        assertEquals(3, arrayX.length);
+        assertEquals(7, (long) arrayX[0]);
+        assertEquals(8, (long) arrayX[1]);
+        assertEquals(9, (long) arrayX[2]);
 
-        assertEquals("hello", mapX.get("utf8_stringX").textValue());
+        assertEquals("hello", (String) mapX.get("utf8_stringX"));
 
-        assertEquals(42.123456, record.get("double").doubleValue(), 0.000000001);
-        assertEquals(1.1, record.get("float").floatValue(), 0.000001);
-        assertEquals(-268435456, record.get("int32").intValue());
-        assertEquals(100, record.get("uint16").intValue());
-        assertEquals(268435456, record.get("uint32").intValue());
-        assertEquals(new BigInteger("1152921504606846976"), record
-                .get("uint64").bigIntegerValue());
+        assertEquals(42.123456, (double) record.get("double"), 0.000000001);
+        assertEquals(1.1, (float) record.get("float"), 0.000001);
+        assertEquals(-268435456, (int) record.get("int32"));
+        assertEquals(100, (int) record.get("uint16"));
+        assertEquals(268435456, (long) record.get("uint32"));
+        assertEquals(new BigInteger("1152921504606846976"), (BigInteger) record
+                .get("uint64"));
         assertEquals(new BigInteger("1329227995784915872903807060280344576"),
-                record.get("uint128").bigIntegerValue());
+                (BigInteger) record.get("uint128"));
     }
 
     @Test
-    public void testZerosFile() throws IOException {
+    public void testZerosFile()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testZeros(this.testReader);
     }
 
     @Test
-    public void testZerosStream() throws IOException {
+    public void testZerosStream()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testZeros(this.testReader);
     }
 
-    private void testZeros(Reader reader) throws IOException {
-        JsonNode record = reader.get(InetAddress.getByName("::"));
+    private void testZeros(Reader reader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        Map record = reader.get(InetAddress.getByName("::"), Map.class);
 
-        assertFalse(record.get("boolean").booleanValue());
+        assertFalse((boolean) record.get("boolean"));
 
-        assertArrayEquals(new byte[0], record.get("bytes").binaryValue());
+        assertArrayEquals(new byte[0], (byte[]) record.get("bytes"));
 
-        assertEquals("", record.get("utf8_string").textValue());
+        assertEquals("", (String) record.get("utf8_string"));
 
-        assertTrue(record.get("array").isArray());
-        assertEquals(0, record.get("array").size());
+        Object[] array = (Object[]) record.get("array");
+        assertEquals(0, array.length);
 
-        assertTrue(record.get("map").isObject());
-        assertEquals(0, record.get("map").size());
+        Map map = (Map) record.get("map");
+        assertEquals(0, map.size());
 
-        assertEquals(0, record.get("double").doubleValue(), 0.000000001);
-        assertEquals(0, record.get("float").floatValue(), 0.000001);
-        assertEquals(0, record.get("int32").intValue());
-        assertEquals(0, record.get("uint16").intValue());
-        assertEquals(0, record.get("uint32").intValue());
-        assertEquals(BigInteger.ZERO, record.get("uint64").bigIntegerValue());
-        assertEquals(BigInteger.ZERO, record.get("uint128").bigIntegerValue());
+        assertEquals(0, (double) record.get("double"), 0.000000001);
+        assertEquals(0, (float) record.get("float"), 0.000001);
+        assertEquals(0, (int) record.get("int32"));
+        assertEquals(0, (int) record.get("uint16"));
+        assertEquals(0, (long) record.get("uint32"));
+        assertEquals(BigInteger.ZERO, (BigInteger) record.get("uint64"));
+        assertEquals(BigInteger.ZERO, (BigInteger) record.get("uint128"));
     }
 
     @Test
-    public void testBrokenDatabaseFile() throws IOException {
+    public void testBrokenDatabaseFile()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
         this.testBrokenDatabase(this.testReader);
     }
 
     @Test
-    public void testBrokenDatabaseStream() throws IOException {
+    public void testBrokenDatabaseStream()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
         this.testBrokenDatabase(this.testReader);
     }
@@ -226,69 +271,73 @@ public class ReaderTest {
     private void testBrokenDatabase(Reader reader) {
         InvalidDatabaseException ex = assertThrows(
                 InvalidDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("2001:220::")));
+                () -> reader.get(InetAddress.getByName("2001:220::"), Map.class));
         assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
     }
 
     @Test
-    public void testBrokenSearchTreePointerFile() throws IOException {
+    public void testBrokenSearchTreePointerFile()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
     @Test
-    public void testBrokenSearchTreePointerStream() throws IOException {
+    public void testBrokenSearchTreePointerStream()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
     private void testBrokenSearchTreePointer(Reader reader) {
         InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("1.1.1.32")));
+                () -> reader.get(InetAddress.getByName("1.1.1.32"), Map.class));
         assertThat(ex.getMessage(), containsString("The MaxMind DB file's search tree is corrupt"));
     }
 
     @Test
-    public void testBrokenDataPointerFile() throws IOException {
+    public void testBrokenDataPointerFile()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenDataPointer(this.testReader);
     }
 
     @Test
-    public void testBrokenDataPointerStream() throws IOException {
+    public void testBrokenDataPointerStream()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenDataPointer(this.testReader);
     }
 
     private void testBrokenDataPointer(Reader reader) {
         InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("1.1.1.16")));
+                () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
         assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
     }
 
     @Test
-    public void testObjectNodeMutation() throws IOException {
-        Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
-        ObjectNode record = (ObjectNode) reader.get(InetAddress.getByName("::1.1.1.0"));
-
-        assertThrows(UnsupportedOperationException.class, () -> record.put("Test", "value"));
-    }
-
-    @Test
-    public void testArrayNodeMutation() throws IOException {
-        Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
-        ObjectNode record = (ObjectNode) reader.get(InetAddress.getByName("::1.1.1.0"));
-
-        assertThrows(UnsupportedOperationException.class, () -> ((ArrayNode) record.get("array")).add(1));
-    }
-
-    @Test
-    public void testClosedReaderThrowsException() throws IOException {
+    public void testClosedReaderThrowsException()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
 
         reader.close();
         ClosedDatabaseException ex = assertThrows(ClosedDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("1.1.1.16")));
+                () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
         assertEquals("The MaxMind DB has been closed.", ex.getMessage());
     }
 
@@ -301,7 +350,9 @@ public class ReaderTest {
         assertEquals(ipVersion, metadata.getIpVersion());
         assertEquals("Test", metadata.getDatabaseType());
 
-        List<String> languages = new ArrayList<>(Arrays.asList("en", "zh"));
+        String[] languages = new String[2];
+        languages[0] = "en";
+        languages[1] = "zh";
 
         assertEquals(languages, metadata.getLanguages());
 
@@ -318,15 +369,19 @@ public class ReaderTest {
         assertTrue(metadata.getBuildDate().compareTo(cal.getTime()) > 0);
     }
 
-    private void testIpV4(Reader reader, File file) throws IOException {
+    private void testIpV4(Reader reader, File file)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
 
         for (int i = 0; i <= 5; i++) {
             String address = "1.1.1." + (int) Math.pow(2, i);
-            ObjectNode data = this.om.createObjectNode();
+            Map<String, String> data = new HashMap<>();
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
         Map<String, String> pairs = new HashMap<>();
@@ -338,29 +393,33 @@ public class ReaderTest {
         pairs.put("1.1.1.17", "1.1.1.16");
         pairs.put("1.1.1.31", "1.1.1.16");
         for (String address : pairs.keySet()) {
-            ObjectNode data = this.om.createObjectNode();
+            Map<String, String> data = new HashMap<>();
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
         for (String ip : new String[]{"1.1.1.33", "255.254.253.123"}) {
-            assertNull(reader.get(InetAddress.getByName(ip)));
+            assertNull(reader.get(InetAddress.getByName(ip), Map.class));
         }
     }
 
     // XXX - logic could be combined with above
-    private void testIpV6(Reader reader, File file) throws IOException {
+    private void testIpV6(Reader reader, File file)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         String[] subnets = new String[]{"::1:ffff:ffff", "::2:0:0",
                 "::2:0:40", "::2:0:50", "::2:0:58"};
 
         for (String address : subnets) {
-            ObjectNode data = this.om.createObjectNode();
+            Map<String, String> data = new HashMap<>();
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
         Map<String, String> pairs = new HashMap<>();
@@ -374,15 +433,15 @@ public class ReaderTest {
         pairs.put("::2:0:59", "::2:0:58");
 
         for (String address : pairs.keySet()) {
-            ObjectNode data = this.om.createObjectNode();
+            Map<String, String> data = new HashMap<>();
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address)));
+                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
         for (String ip : new String[]{"1.1.1.33", "255.254.253.123", "89fa::"}) {
-            assertNull(reader.get(InetAddress.getByName(ip)));
+            assertNull(reader.get(InetAddress.getByName(ip), Map.class));
         }
     }
 
