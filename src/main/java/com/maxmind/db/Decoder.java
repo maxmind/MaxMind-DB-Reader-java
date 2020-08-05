@@ -60,7 +60,7 @@ final class Decoder {
         }
 
         this.buffer.position(offset);
-        return (T) decode(cls);
+        return cls.cast(decode(cls));
     }
 
     private <T> Object decode(Class<T> cls)

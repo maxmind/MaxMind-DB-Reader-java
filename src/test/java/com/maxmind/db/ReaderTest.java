@@ -75,7 +75,7 @@ public class ReaderTest {
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException {
-        GetRecordTest[] tests = {
+        GetRecordTest[] mapTests = {
                 new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
                 new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
                 new GetRecordTest("::2:0:1", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:2:0:0/122", true),
@@ -84,14 +84,30 @@ public class ReaderTest {
                 new GetRecordTest("1.1.1.3", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
                 new GetRecordTest("::ffff:1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
                 new GetRecordTest("::1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "0:0:0:0:0:0:101:100/120", true),
+        };
+        for (GetRecordTest test : mapTests) {
+            try (Reader reader = new Reader(test.db)) {
+                Record record = reader.getRecord(test.ip, Map.class);
+
+                assertEquals(test.network, record.getNetwork().toString());
+
+                if (test.hasRecord) {
+                    assertNotNull(record.getData());
+                } else {
+                    assertNull(record.getData());
+                }
+            }
+        }
+
+        GetRecordTest[] stringTests = {
                 new GetRecordTest("200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0.0.0.0/0", true),
                 new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
                 new GetRecordTest("0:0:0:0:ffff:ffff:ffff:ffff", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
                 new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
         };
-        for (GetRecordTest test : tests) {
+        for (GetRecordTest test : stringTests) {
             try (Reader reader = new Reader(test.db)) {
-                Record record = reader.getRecord(test.ip, Map.class);
+                Record record = reader.getRecord(test.ip, String.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
 
