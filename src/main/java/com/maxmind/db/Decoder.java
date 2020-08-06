@@ -251,7 +251,7 @@ final class Decoder {
                    IllegalAccessException,
                    InvocationTargetException,
                    DeserializationException {
-        // If we're decoding into a map, the second level is an Object.class.
+        // If we're decoding into a Map, the second level is an Object.class.
         // See Object.class in decodeMapIntoMap().
         if (cls.equals(Object.class)) {
             Class<T> elementClass = cls;
