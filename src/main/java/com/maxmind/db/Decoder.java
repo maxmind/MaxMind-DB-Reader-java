@@ -294,6 +294,34 @@ final class Decoder {
             return this.decodeMapIntoMap(size);
         }
 
+        return this.decodeMapIntoObject(size, cls);
+    }
+
+    private HashMap<String, Object> decodeMapIntoMap(int size)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        HashMap<String, Object> map = new HashMap<>();
+
+        for (int i = 0; i < size; i++) {
+            String key = (String) this.decode(String.class);
+
+            // Ideally we'd know the value's type to pass in, but I am having
+            // trouble retrieving it. I am not sure it is possible.
+            Object value = this.decode(Object.class);
+
+            map.put(key, value);
+        }
+
+        return map;
+    }
+
+    private <T> Object decodeMapIntoObject(int size, Class<T> cls)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         Constructor constructor = this.findConstructor(cls);
 
         Class<?>[] parameterTypes = constructor.getParameterTypes();
@@ -323,26 +351,6 @@ final class Decoder {
         }
 
         return constructor.newInstance(parameters);
-    }
-
-    private HashMap<String, Object> decodeMapIntoMap(int size)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException {
-        HashMap<String, Object> map = new HashMap<>();
-
-        for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class);
-
-            // Ideally we'd know the value's type to pass in, but I am having
-            // trouble retrieving it. I am not sure it is possible.
-            Object value = this.decode(Object.class);
-
-            map.put(key, value);
-        }
-
-        return map;
     }
 
     private static <T> Constructor findConstructor(Class<T> cls)
