@@ -159,6 +159,7 @@ public class ReaderTest {
                    InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
+        this.testDecodingTypesIntoModelObject(this.testReader);
     }
 
     @Test
@@ -169,6 +170,7 @@ public class ReaderTest {
                    InvocationTargetException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
+        this.testDecodingTypesIntoModelObject(this.testReader);
     }
 
     private void testDecodingTypes(Reader reader)
@@ -216,6 +218,126 @@ public class ReaderTest {
                 (BigInteger) record.get("uint128"));
     }
 
+    private void testDecodingTypesIntoModelObject(Reader reader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        TestModel model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModel.class);
+
+        assertTrue(model.booleanField);
+
+        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, model.bytesField);
+
+        assertEquals("unicode! ☯ - ♫", model.utf8StringField);
+
+        long[] array = model.arrayField;
+        assertEquals(3, array.length);
+        assertEquals(1, array[0]);
+        assertEquals(2, array[1]);
+        assertEquals(3, array[2]);
+
+        assertEquals(3, model.mapField.mapXField.arrayXField.length);
+        assertEquals(7, model.mapField.mapXField.arrayXField[0]);
+        assertEquals(8, model.mapField.mapXField.arrayXField[1]);
+        assertEquals(9, model.mapField.mapXField.arrayXField[2]);
+
+        assertEquals("hello", model.mapField.mapXField.utf8StringXField);
+
+        assertEquals(42.123456, model.doubleField, 0.000000001);
+        assertEquals(1.1, model.floatField, 0.000001);
+        assertEquals(-268435456, model.int32Field);
+        assertEquals(100, (int) model.uint16Field);
+        assertEquals(268435456, model.uint32Field);
+        assertEquals(new BigInteger("1152921504606846976"), model.uint64Field);
+        assertEquals(new BigInteger("1329227995784915872903807060280344576"),
+                model.uint128Field);
+    }
+
+    static class TestModel {
+        boolean booleanField;
+        byte[] bytesField;
+        String utf8StringField;
+        long[] arrayField;
+        MapModel mapField;
+        double doubleField;
+        float floatField;
+        int int32Field;
+        int uint16Field;
+        long uint32Field;
+        BigInteger uint64Field;
+        BigInteger uint128Field;
+
+        @MaxMindDbConstructor
+        public TestModel (
+            @MaxMindDbParameter(name="boolean")
+            boolean booleanField,
+            @MaxMindDbParameter(name="bytes")
+            byte[] bytesField,
+            @MaxMindDbParameter(name="utf8_string")
+            String utf8StringField,
+            @MaxMindDbParameter(name="array")
+            long[] arrayField,
+            @MaxMindDbParameter(name="map")
+            MapModel mapField,
+            @MaxMindDbParameter(name="double")
+            double doubleField,
+            @MaxMindDbParameter(name="float")
+            float floatField,
+            @MaxMindDbParameter(name="int32")
+            int int32Field,
+            @MaxMindDbParameter(name="uint16")
+            int uint16Field,
+            @MaxMindDbParameter(name="uint32")
+            long uint32Field,
+            @MaxMindDbParameter(name="uint64")
+            BigInteger uint64Field,
+            @MaxMindDbParameter(name="uint128")
+            BigInteger uint128Field
+        ) {
+            this.booleanField = booleanField;
+            this.bytesField = bytesField;
+            this.utf8StringField = utf8StringField;
+            this.arrayField = arrayField;
+            this.mapField = mapField;
+            this.doubleField = doubleField;
+            this.floatField = floatField;
+            this.int32Field = int32Field;
+            this.uint16Field = uint16Field;
+            this.uint32Field = uint32Field;
+            this.uint64Field = uint64Field;
+            this.uint128Field = uint128Field;
+        }
+    }
+
+    static class MapModel {
+        MapXModel mapXField;
+
+        @MaxMindDbConstructor
+        public MapModel (
+            @MaxMindDbParameter(name="mapX")
+            MapXModel mapXField
+        ) {
+            this.mapXField = mapXField;
+        }
+    }
+
+    static class MapXModel {
+        long[] arrayXField;
+        String utf8StringXField;
+
+        @MaxMindDbConstructor
+        public MapXModel (
+            @MaxMindDbParameter(name="arrayX")
+            long[] arrayXField,
+            @MaxMindDbParameter(name="utf8_stringX")
+            String utf8StringXField
+        ) {
+            this.arrayXField = arrayXField;
+            this.utf8StringXField = utf8StringXField;
+        }
+    }
+
     @Test
     public void testZerosFile()
             throws IOException,
@@ -224,6 +346,7 @@ public class ReaderTest {
                    InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testZeros(this.testReader);
+        this.testZerosModelObject(this.testReader);
     }
 
     @Test
@@ -234,6 +357,7 @@ public class ReaderTest {
                    InvocationTargetException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testZeros(this.testReader);
+        this.testZerosModelObject(this.testReader);
     }
 
     private void testZeros(Reader reader)
@@ -262,6 +386,32 @@ public class ReaderTest {
         assertEquals(0, (long) record.get("uint32"));
         assertEquals(BigInteger.ZERO, (BigInteger) record.get("uint64"));
         assertEquals(BigInteger.ZERO, (BigInteger) record.get("uint128"));
+    }
+
+    private void testZerosModelObject(Reader reader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        TestModel model = reader.get(InetAddress.getByName("::"), TestModel.class);
+
+        assertFalse(model.booleanField);
+
+        assertArrayEquals(new byte[0], model.bytesField);
+
+        assertEquals("", model.utf8StringField);
+
+        assertEquals(0, model.arrayField.length);
+
+        assertNull(model.mapField.mapXField);
+
+        assertEquals(0, model.doubleField, 0.000000001);
+        assertEquals(0, model.floatField, 0.000001);
+        assertEquals(0, model.int32Field);
+        assertEquals(0, (int) model.uint16Field);
+        assertEquals(0, model.uint32Field);
+        assertEquals(BigInteger.ZERO, model.uint64Field);
+        assertEquals(BigInteger.ZERO, model.uint128Field);
     }
 
     @Test

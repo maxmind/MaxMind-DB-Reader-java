@@ -245,7 +245,7 @@ final class Decoder {
         }
     }
 
-    private <T> Object[] decodeArray(int size, Class<T> cls)
+    private <T> Object decodeArray(int size, Class<T> cls)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
@@ -256,11 +256,11 @@ final class Decoder {
         if (cls.equals(Object.class)) {
             Class<T> elementClass = cls;
 
-            Object[] array = (Object[]) Array.newInstance(elementClass, size);
+            Object array = Array.newInstance(elementClass, size);
 
             for (int i = 0; i < size; i++) {
                 Object e = this.decode(elementClass);
-                array[i] = e;
+                Array.set(array, i, e);
             }
 
             return array;
@@ -272,11 +272,11 @@ final class Decoder {
 
         Class<?> elementClass = cls.getComponentType();
 
-        Object[] array = (Object[]) Array.newInstance(elementClass, size);
+        Object array = Array.newInstance(elementClass, size);
 
         for (int i = 0; i < size; i++) {
             Object e = this.decode(elementClass);
-            array[i] = e;
+            Array.set(array, i, e);
         }
 
         return array;
