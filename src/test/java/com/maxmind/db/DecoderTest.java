@@ -272,12 +272,12 @@ public class DecoderTest {
         Map empty = new HashMap();
         maps.put(empty, new byte[]{(byte) 0xe0});
 
-        Map one = new HashMap();
+        Map<String, String> one = new HashMap<>();
         one.put("en", "Foo");
         maps.put(one, new byte[]{(byte) 0xe1, /* en */0x42, 0x65, 0x6e,
                 /* Foo */0x43, 0x46, 0x6f, 0x6f});
 
-        Map two = new HashMap();
+        Map<String, String> two = new HashMap<>();
         two.put("en", "Foo");
         two.put("zh", "人");
         maps.put(two, new byte[]{(byte) 0xe2,
@@ -290,7 +290,7 @@ public class DecoderTest {
                 /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        Map nested = new HashMap();
+        Map<String, Map<String, String>> nested = new HashMap<>();
         nested.put("name", two);
 
         maps.put(nested, new byte[]{(byte) 0xe1, /* name */
@@ -303,7 +303,7 @@ public class DecoderTest {
                 /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        Map guess = new HashMap();
+        Map<String, Object[]> guess = new HashMap<>();
         Object[] languages = new Object[2];
         languages[0] = "en";
         languages[1] = "zh";

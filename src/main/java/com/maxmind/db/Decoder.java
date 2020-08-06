@@ -245,7 +245,7 @@ final class Decoder {
         }
     }
 
-    private <T> T[] decodeArray(int size, Class<T> cls)
+    private <T> Object[] decodeArray(int size, Class<T> cls)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
@@ -254,12 +254,12 @@ final class Decoder {
         // If we're decoding into a map, the second level is an Object.class.
         // See Object.class in decodeMapIntoMap().
         if (cls.equals(Object.class)) {
-            Class elementClass = cls;
+            Class<T> elementClass = cls;
 
-            T[] array = (T[]) Array.newInstance(elementClass, size);
+            Object[] array = (Object[]) Array.newInstance(elementClass, size);
 
             for (int i = 0; i < size; i++) {
-                T e = (T) this.decode(elementClass);
+                Object e = this.decode(elementClass);
                 array[i] = e;
             }
 
@@ -270,12 +270,12 @@ final class Decoder {
             throw new DeserializationException();
         }
 
-        Class elementClass = cls.getComponentType();
+        Class<?> elementClass = cls.getComponentType();
 
-        T[] array = (T[]) Array.newInstance(elementClass, size);
+        Object[] array = (Object[]) Array.newInstance(elementClass, size);
 
         for (int i = 0; i < size; i++) {
-            T e = (T) this.decode(elementClass);
+            Object e = this.decode(elementClass);
             array[i] = e;
         }
 
@@ -291,12 +291,12 @@ final class Decoder {
         // a Map, the second level is an Object.class. See Object.class in
         // decodeMapIntoMap().
         if (cls.equals(Map.class) || cls.equals(Object.class)) {
-            return this.decodeMapIntoMap(size, cls);
+            return this.decodeMapIntoMap(size);
         }
 
         Constructor constructor = this.findConstructor(cls);
 
-        Class[] parameterTypes = constructor.getParameterTypes();
+        Class<?>[] parameterTypes = constructor.getParameterTypes();
 
         Map<String, Integer> parameterIndexes = new HashMap<>();
         Annotation[][] annotations = constructor.getParameterAnnotations();
@@ -325,12 +325,12 @@ final class Decoder {
         return constructor.newInstance(parameters);
     }
 
-    private <T> T decodeMapIntoMap(int size, Class<T> cls)
+    private HashMap<String, Object> decodeMapIntoMap(int size)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException {
-        HashMap map = new HashMap();
+        HashMap<String, Object> map = new HashMap<>();
 
         for (int i = 0; i < size; i++) {
             String key = (String) this.decode(String.class);
@@ -342,13 +342,13 @@ final class Decoder {
             map.put(key, value);
         }
 
-        return (T) map;
+        return map;
     }
 
     private static <T> Constructor findConstructor(Class<T> cls)
         throws ConstructorNotFoundException {
-        Constructor[] constructors = cls.getConstructors();
-        for (Constructor constructor : constructors) {
+        Constructor<?>[] constructors = cls.getConstructors();
+        for (Constructor<?> constructor : constructors) {
             if (constructor.getAnnotation(MaxMindDbConstructor.class) == null) {
                 continue;
             }

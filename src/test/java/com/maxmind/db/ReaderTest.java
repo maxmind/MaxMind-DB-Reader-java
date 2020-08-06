@@ -176,7 +176,7 @@ public class ReaderTest {
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException {
-        Map<String, Object> record = reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
+        Map record = reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
 
         assertTrue((boolean) record.get("boolean"));
 
