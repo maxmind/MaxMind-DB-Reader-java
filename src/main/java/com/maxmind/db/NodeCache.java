@@ -1,15 +1,24 @@
 package com.maxmind.db;
 
 import java.io.IOException;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import java.lang.IllegalAccessException;
+import java.lang.InstantiationException;
+import java.lang.reflect.InvocationTargetException;
 
 public interface NodeCache {
 
     interface Loader {
-        JsonNode load(int key) throws IOException;
+        Object load(int key, Class<?> cls)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException;
     }
 
-    JsonNode get(int key, Loader loader) throws IOException;
+    Object get(int key, Class<?> cls, Loader loader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException;
 
 }

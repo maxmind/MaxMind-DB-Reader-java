@@ -45,8 +45,7 @@ final class Decoder {
         this.buffer = buffer;
     }
 
-    // TODO
-    //private final NodeCache.Loader cacheLoader = this::decode;
+    private final NodeCache.Loader cacheLoader = this::decode;
 
     public <T> T decode(int offset, Class<T> cls)
             throws IOException,
@@ -89,9 +88,7 @@ final class Decoder {
             int targetOffset = (int) pointer;
             int position = buffer.position();
 
-            // TODO
-            //JsonNode node = cache.get(targetOffset, cacheLoader);
-            T o = decode(targetOffset, cls);
+            T o = cls.cast(cache.get(targetOffset, cls, cacheLoader));
 
             buffer.position(position);
             return o;
