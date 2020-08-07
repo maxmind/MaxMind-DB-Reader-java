@@ -160,6 +160,7 @@ public class ReaderTest {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
         this.testDecodingTypesIntoModelObject(this.testReader);
+        this.testDecodingTypesIntoModelObjectBoxed(this.testReader);
     }
 
     @Test
@@ -171,6 +172,7 @@ public class ReaderTest {
         this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
         this.testDecodingTypesIntoModelObject(this.testReader);
+        this.testDecodingTypesIntoModelObjectBoxed(this.testReader);
     }
 
     private void testDecodingTypes(Reader reader)
@@ -330,6 +332,126 @@ public class ReaderTest {
         public MapXModel (
             @MaxMindDbParameter(name="arrayX")
             long[] arrayXField,
+            @MaxMindDbParameter(name="utf8_stringX")
+            String utf8StringXField
+        ) {
+            this.arrayXField = arrayXField;
+            this.utf8StringXField = utf8StringXField;
+        }
+    }
+
+    private void testDecodingTypesIntoModelObjectBoxed(Reader reader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        TestModelBoxed model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelBoxed.class);
+
+        assertTrue(model.booleanField);
+
+        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, model.bytesField);
+
+        assertEquals("unicode! ☯ - ♫", model.utf8StringField);
+
+        Long[] array = model.arrayField;
+        assertEquals(3, array.length);
+        assertEquals(Long.valueOf(1), array[0]);
+        assertEquals(Long.valueOf(2), array[1]);
+        assertEquals(Long.valueOf(3), array[2]);
+
+        assertEquals(3, model.mapField.mapXField.arrayXField.length);
+        assertEquals(Long.valueOf(7), model.mapField.mapXField.arrayXField[0]);
+        assertEquals(Long.valueOf(8), model.mapField.mapXField.arrayXField[1]);
+        assertEquals(Long.valueOf(9), model.mapField.mapXField.arrayXField[2]);
+
+        assertEquals("hello", model.mapField.mapXField.utf8StringXField);
+
+        assertEquals(Double.valueOf(42.123456), model.doubleField, 0.000000001);
+        assertEquals(Float.valueOf((float) 1.1), model.floatField, 0.000001);
+        assertEquals(Integer.valueOf(-268435456), model.int32Field);
+        assertEquals(Integer.valueOf(100), model.uint16Field);
+        assertEquals(Long.valueOf(268435456), model.uint32Field);
+        assertEquals(new BigInteger("1152921504606846976"), model.uint64Field);
+        assertEquals(new BigInteger("1329227995784915872903807060280344576"),
+                model.uint128Field);
+    }
+
+    static class TestModelBoxed {
+        Boolean booleanField;
+        byte[] bytesField;
+        String utf8StringField;
+        Long[] arrayField;
+        MapModelBoxed mapField;
+        Double doubleField;
+        Float floatField;
+        Integer int32Field;
+        Integer uint16Field;
+        Long uint32Field;
+        BigInteger uint64Field;
+        BigInteger uint128Field;
+
+        @MaxMindDbConstructor
+        public TestModelBoxed (
+            @MaxMindDbParameter(name="boolean")
+            Boolean booleanField,
+            @MaxMindDbParameter(name="bytes")
+            byte[] bytesField,
+            @MaxMindDbParameter(name="utf8_string")
+            String utf8StringField,
+            @MaxMindDbParameter(name="array")
+            Long[] arrayField,
+            @MaxMindDbParameter(name="map")
+            MapModelBoxed mapField,
+            @MaxMindDbParameter(name="double")
+            Double doubleField,
+            @MaxMindDbParameter(name="float")
+            Float floatField,
+            @MaxMindDbParameter(name="int32")
+            Integer int32Field,
+            @MaxMindDbParameter(name="uint16")
+            Integer uint16Field,
+            @MaxMindDbParameter(name="uint32")
+            Long uint32Field,
+            @MaxMindDbParameter(name="uint64")
+            BigInteger uint64Field,
+            @MaxMindDbParameter(name="uint128")
+            BigInteger uint128Field
+        ) {
+            this.booleanField = booleanField;
+            this.bytesField = bytesField;
+            this.utf8StringField = utf8StringField;
+            this.arrayField = arrayField;
+            this.mapField = mapField;
+            this.doubleField = doubleField;
+            this.floatField = floatField;
+            this.int32Field = int32Field;
+            this.uint16Field = uint16Field;
+            this.uint32Field = uint32Field;
+            this.uint64Field = uint64Field;
+            this.uint128Field = uint128Field;
+        }
+    }
+
+    static class MapModelBoxed {
+        MapXModelBoxed mapXField;
+
+        @MaxMindDbConstructor
+        public MapModelBoxed (
+            @MaxMindDbParameter(name="mapX")
+            MapXModelBoxed mapXField
+        ) {
+            this.mapXField = mapXField;
+        }
+    }
+
+    static class MapXModelBoxed {
+        Long[] arrayXField;
+        String utf8StringXField;
+
+        @MaxMindDbConstructor
+        public MapXModelBoxed (
+            @MaxMindDbParameter(name="arrayX")
+            Long[] arrayXField,
             @MaxMindDbParameter(name="utf8_stringX")
             String utf8StringXField
         ) {
