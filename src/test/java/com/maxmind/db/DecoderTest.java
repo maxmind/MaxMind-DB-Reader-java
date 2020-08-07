@@ -13,7 +13,9 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -303,10 +305,10 @@ public class DecoderTest {
                 /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        Map<String, Object[]> guess = new HashMap<>();
-        Object[] languages = new Object[2];
-        languages[0] = "en";
-        languages[1] = "zh";
+        Map<String, List<Object>> guess = new HashMap<>();
+        List<Object> languages = new ArrayList<>();
+        languages.add("en");
+        languages.add("zh");
         guess.put("languages", languages);
         maps.put(guess, new byte[]{(byte) 0xe1,/* languages */
                 0x49, 0x6c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x73,

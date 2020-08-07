@@ -13,7 +13,9 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /*
@@ -250,14 +252,12 @@ final class Decoder {
                    DeserializationException {
         // If we're decoding into a Map, the second level is an Object.class.
         // See Object.class in decodeMapIntoMap().
-        if (cls.equals(Object.class)) {
-            Class<T> elementClass = cls;
-
-            Object array = Array.newInstance(elementClass, size);
+        if (cls.equals(List.class) || cls.equals(Object.class)) {
+            ArrayList<Object> array = new ArrayList<>(size);
 
             for (int i = 0; i < size; i++) {
-                Object e = this.decode(elementClass);
-                Array.set(array, i, e);
+                Object e = this.decode(Object.class);
+                array.add(e);
             }
 
             return array;

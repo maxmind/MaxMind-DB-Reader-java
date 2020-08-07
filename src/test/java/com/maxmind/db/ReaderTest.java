@@ -161,6 +161,7 @@ public class ReaderTest {
         this.testDecodingTypes(this.testReader);
         this.testDecodingTypesIntoModelObject(this.testReader);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader);
+        this.testDecodingTypesIntoModelWithList(this.testReader);
     }
 
     @Test
@@ -173,6 +174,7 @@ public class ReaderTest {
         this.testDecodingTypes(this.testReader);
         this.testDecodingTypesIntoModelObject(this.testReader);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader);
+        this.testDecodingTypesIntoModelWithList(this.testReader);
     }
 
     private void testDecodingTypes(Reader reader)
@@ -189,11 +191,12 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", (String) record.get("utf8_string"));
 
-        Object[] array = (Object[]) record.get("array");
-        assertEquals(3, array.length);
-        assertEquals(1, (long) array[0]);
-        assertEquals(2, (long) array[1]);
-        assertEquals(3, (long) array[2]);
+        @SuppressWarnings("unchecked")
+        List<Object> array = (List<Object>) record.get("array");
+        assertEquals(3, array.size());
+        assertEquals(1, (long) array.get(0));
+        assertEquals(2, (long) array.get(1));
+        assertEquals(3, (long) array.get(2));
 
         Map map = (Map) record.get("map");
         assertEquals(1, map.size());
@@ -201,11 +204,12 @@ public class ReaderTest {
         Map mapX = (Map) map.get("mapX");
         assertEquals(2, mapX.size());
 
-        Object[] arrayX = (Object[]) mapX.get("arrayX");
-        assertEquals(3, arrayX.length);
-        assertEquals(7, (long) arrayX[0]);
-        assertEquals(8, (long) arrayX[1]);
-        assertEquals(9, (long) arrayX[2]);
+        @SuppressWarnings("unchecked")
+        List<Object> arrayX = (List<Object>) mapX.get("arrayX");
+        assertEquals(3, arrayX.size());
+        assertEquals(7, (long) arrayX.get(0));
+        assertEquals(8, (long) arrayX.get(1));
+        assertEquals(9, (long) arrayX.get(2));
 
         assertEquals("hello", (String) mapX.get("utf8_stringX"));
 
@@ -460,6 +464,27 @@ public class ReaderTest {
         }
     }
 
+    private void testDecodingTypesIntoModelWithList(Reader reader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        TestModelList model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelList.class);
+
+        assertEquals(Arrays.asList(new Long[]{(long) 1, (long) 2, (long) 3}), model.arrayField);
+    }
+
+    static class TestModelList {
+        List<Long> arrayField;
+
+        @MaxMindDbConstructor
+        public TestModelList (
+            @MaxMindDbParameter(name="array") List<Long> arrayField
+        ) {
+            this.arrayField = arrayField;
+        }
+    }
+
     @Test
     public void testZerosFile()
             throws IOException,
@@ -495,8 +520,9 @@ public class ReaderTest {
 
         assertEquals("", (String) record.get("utf8_string"));
 
-        Object[] array = (Object[]) record.get("array");
-        assertEquals(0, array.length);
+        @SuppressWarnings("unchecked")
+        List<Object> array = (List<Object>) record.get("array");
+        assertEquals(0, array.size());
 
         Map map = (Map) record.get("map");
         assertEquals(0, map.size());
