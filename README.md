@@ -128,7 +128,7 @@ public class Lookup {
 }
 ```
 
-### Caching ###
+## Caching ##
 
 The database API supports pluggable caching (by default, no caching is
 performed). A simple implementation is provided by `com.maxmind.db.CHMCache`.
@@ -140,6 +140,10 @@ Usage:
 ```java
 Reader reader = new Reader(database, new CHMCache());
 ```
+
+Please note that the cache will hold references to the objects created
+during the lookup. If you mutate the objects, the mutated objects will be
+returned from the cache on subsequent lookups.
 
 ## Multi-Threaded Use ##
 
