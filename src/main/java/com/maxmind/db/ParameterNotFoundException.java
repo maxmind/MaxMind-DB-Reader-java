@@ -9,7 +9,7 @@ import java.io.IOException;
 public class ParameterNotFoundException extends IOException {
     private static final long serialVersionUID = 1L;
 
-    ParameterNotFoundException() {
-        super("Parameter is not annotated with MaxMindDbParameter.");
+    ParameterNotFoundException(String message) {
+        super(message);
     }
 }

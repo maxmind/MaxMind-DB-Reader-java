@@ -9,7 +9,7 @@ import java.io.IOException;
 public class ConstructorNotFoundException extends IOException {
     private static final long serialVersionUID = 1L;
 
-    ConstructorNotFoundException() {
-        super("No constructor with the MaxMindDbConstructor annotation was found.");
+    ConstructorNotFoundException(String message) {
+        super(message);
     }
 }

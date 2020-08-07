@@ -326,7 +326,7 @@ final class Decoder {
         Map<String, Integer> parameterIndexes = new HashMap<>();
         Annotation[][] annotations = constructor.getParameterAnnotations();
         for (int i = 0; i < constructor.getParameterCount(); i++) {
-            String parameterName = this.getParameterName(annotations[i]);
+            String parameterName = this.getParameterName(cls, i, annotations[i]);
             parameterIndexes.put(parameterName, i);
         }
 
@@ -360,11 +360,14 @@ final class Decoder {
             return constructor;
         }
 
-        throw new ConstructorNotFoundException();
+        throw new ConstructorNotFoundException("No constructor on class " + cls.getName() + " with the MaxMindDbConstructor annotation was found.");
     }
 
-    private static String getParameterName(Annotation[] annotations)
-        throws ParameterNotFoundException {
+    private static <T> String getParameterName(
+            Class<T> cls,
+            int index,
+            Annotation[] annotations
+    ) throws ParameterNotFoundException {
         for (Annotation annotation : annotations) {
             if (!annotation.annotationType().equals(MaxMindDbParameter.class)) {
                 continue;
@@ -372,7 +375,7 @@ final class Decoder {
             MaxMindDbParameter paramAnnotation = (MaxMindDbParameter) annotation;
             return paramAnnotation.name();
         }
-        throw new ParameterNotFoundException();
+        throw new ParameterNotFoundException("Constructor parameter " + index + " on class " + cls.getName() + " is not annotated with MaxMindDbParameter.");
     }
 
     private int nextValueOffset(int offset, int numberToSkip)
