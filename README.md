@@ -48,11 +48,9 @@ memory. This often provides performance comparable to loading the file into
 real memory with `MEMORY`.
 
 To look up an IP address, pass the address as an `InetAddress` to the `get`
-method on `Reader`. This method will return the result as a
-`com.fasterxml.jackson.databind.JsonNode` object. `JsonNode` objects are used
-as they provide a convenient representation of multi-type data structures and
-the databind package of Jackson 2 supplies many tools for interacting with the
-data in this format.
+method on `Reader`, along with the class of the object you want to
+deserialize into. This method will create an instance of the class and
+populate it. See examples below.
 
 We recommend reusing the `Reader` object rather than creating a new one for
 each lookup. The creation of this object is relatively expensive as it must
@@ -61,32 +59,70 @@ read in metadata for the file.
 ## Example ##
 
 ```java
-import com.fasterxml.jackson.databind.JsonNode;
+import com.maxmind.db.MaxMindDbConstructor;
+import com.maxmind.db.MaxMindDbParameter;
 import com.maxmind.db.Reader;
 import com.maxmind.db.Record;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.IllegalAccessException;
+import java.lang.InstantiationException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 
 public class Lookup {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
         File database = new File("/path/to/database/GeoIP2-City.mmdb");
         try (Reader reader = new Reader(database)) {
-
             InetAddress address = InetAddress.getByName("24.24.24.24");
 
             // get() returns just the data for the associated record
-            JsonNode recordData = reader.get(address);
+            LookupResult result = reader.get(address, LookupResult.class);
 
-            System.out.println(recordData);
+            System.out.println(result.getCountry().getIsoCode());
 
             // getRecord() returns a Record class that contains both
             // the data for the record and associated metadata.
-            Record record = reader.getRecord(address);
+            Record<LookupResult> record
+                = reader.getRecord(address, LookupResult.class);
 
-            System.out.println(record.getData());
+            System.out.println(record.getData().getCountry().getIsoCode());
             System.out.println(record.getNetwork());
+        }
+    }
+
+    public static class LookupResult {
+        private final Country country;
+
+        @MaxMindDbConstructor
+        public LookupResult (
+            @MaxMindDbParameter(name="country") Country country
+        ) {
+            this.country = country;
+        }
+
+        public Country getCountry() {
+            return this.country;
+        }
+    }
+
+    public static class Country {
+        private final String isoCode;
+
+        @MaxMindDbConstructor
+        public Country (
+            @MaxMindDbParameter(name="iso_code") String isoCode
+        ) {
+            this.isoCode = isoCode;
+        }
+
+        public String getIsoCode() {
+            return this.isoCode;
         }
     }
 }
