@@ -2,6 +2,7 @@ package com.maxmind.db;
 
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 public final class Metadata {
@@ -16,7 +17,7 @@ public final class Metadata {
 
     private final int ipVersion;
 
-    private final String[] languages;
+    private final List<String> languages;
 
     private final int nodeByteSize;
 
@@ -37,7 +38,7 @@ public final class Metadata {
             @MaxMindDbParameter(name="database_type")
             String databaseType,
             @MaxMindDbParameter(name="languages")
-            String[] languages,
+            List<String> languages,
             @MaxMindDbParameter(name="description")
             Map<String, String> description,
             @MaxMindDbParameter(name="ip_version")
@@ -109,7 +110,7 @@ public final class Metadata {
     /**
      * @return list of languages supported by the database.
      */
-    public String[] getLanguages() {
+    public List<String> getLanguages() {
         return this.languages;
     }
 

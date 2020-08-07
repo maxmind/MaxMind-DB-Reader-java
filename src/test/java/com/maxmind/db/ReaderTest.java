@@ -664,11 +664,9 @@ public class ReaderTest {
         assertEquals(ipVersion, metadata.getIpVersion());
         assertEquals("Test", metadata.getDatabaseType());
 
-        String[] languages = new String[2];
-        languages[0] = "en";
-        languages[1] = "zh";
+        List<String> languages = new ArrayList<>(Arrays.asList("en", "zh"));
 
-        assertArrayEquals(languages, metadata.getLanguages());
+        assertEquals(languages, metadata.getLanguages());
 
         Map<String, String> description = new HashMap<>();
         description.put("en", "Test Database");
