@@ -247,7 +247,7 @@ public class ReaderTest {
         assertEquals(42.123456, model.doubleField, 0.000000001);
         assertEquals(1.1, model.floatField, 0.000001);
         assertEquals(-268435456, model.int32Field);
-        assertEquals(100, (int) model.uint16Field);
+        assertEquals(100, model.uint16Field);
         assertEquals(268435456, model.uint32Field);
         assertEquals(new BigInteger("1152921504606846976"), model.uint64Field);
         assertEquals(new BigInteger("1329227995784915872903807060280344576"),
@@ -408,7 +408,7 @@ public class ReaderTest {
         assertEquals(0, model.doubleField, 0.000000001);
         assertEquals(0, model.floatField, 0.000001);
         assertEquals(0, model.int32Field);
-        assertEquals(0, (int) model.uint16Field);
+        assertEquals(0, model.uint16Field);
         assertEquals(0, model.uint32Field);
         assertEquals(BigInteger.ZERO, model.uint64Field);
         assertEquals(BigInteger.ZERO, model.uint128Field);
