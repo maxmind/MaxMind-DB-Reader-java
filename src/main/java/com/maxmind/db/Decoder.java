@@ -350,14 +350,16 @@ final class Decoder {
         return constructor.newInstance(parameters);
     }
 
-    private static <T> Constructor findConstructor(Class<T> cls)
+    private static <T> Constructor<T> findConstructor(Class<T> cls)
         throws ConstructorNotFoundException {
         Constructor<?>[] constructors = cls.getConstructors();
         for (Constructor<?> constructor : constructors) {
             if (constructor.getAnnotation(MaxMindDbConstructor.class) == null) {
                 continue;
             }
-            return constructor;
+            @SuppressWarnings("unchecked")
+            Constructor<T> constructor2 = (Constructor<T>) constructor;
+            return constructor2;
         }
 
         throw new ConstructorNotFoundException("No constructor on class " + cls.getName() + " with the MaxMindDbConstructor annotation was found.");
