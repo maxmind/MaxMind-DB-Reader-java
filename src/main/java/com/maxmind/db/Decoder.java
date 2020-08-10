@@ -319,7 +319,7 @@ final class Decoder {
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException {
-        Constructor constructor = this.findConstructor(cls);
+        Constructor<T> constructor = this.findConstructor(cls);
 
         Class<?>[] parameterTypes = constructor.getParameterTypes();
 
