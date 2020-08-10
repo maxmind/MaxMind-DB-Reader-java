@@ -287,7 +287,7 @@ final class Decoder {
         // We look for Object.class because if we're decoding a nested map into
         // a Map, the second level is an Object.class. See Object.class in
         // decodeMapIntoMap().
-        if (cls.equals(Map.class) || cls.equals(Object.class)) {
+        if (cls.isAssignableFrom(Map.class) || cls.equals(Object.class)) {
             return this.decodeMapIntoMap(size);
         }
 
