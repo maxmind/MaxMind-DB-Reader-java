@@ -341,10 +341,8 @@ final class Decoder {
                 continue;
             }
 
-            int parameterIndexInt = parameterIndex.intValue();
-
-            parameters[parameterIndexInt] = this.decode(
-                    parameterTypes[parameterIndexInt]);
+            parameters[parameterIndex]
+                = this.decode(parameterTypes[parameterIndex]);
         }
 
         return constructor.newInstance(parameters);
