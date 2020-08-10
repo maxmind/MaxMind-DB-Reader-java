@@ -471,7 +471,7 @@ public class ReaderTest {
                    InvocationTargetException {
         TestModelList model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelList.class);
 
-        assertEquals(Arrays.asList(new Long[]{(long) 1, (long) 2, (long) 3}), model.arrayField);
+        assertEquals(Arrays.asList((long) 1, (long) 2, (long) 3), model.arrayField);
     }
 
     static class TestModelList {
