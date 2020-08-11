@@ -563,6 +563,48 @@ public class ReaderTest {
     }
 
     @Test
+    public void testDecodeSubdivisions()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+
+        TestModelSubdivisions model = this.testReader.get(
+            InetAddress.getByName("2.125.160.216"),
+            TestModelSubdivisions.class
+        );
+
+        assertEquals(2, model.subdivisions.size());
+        assertEquals("ENG", model.subdivisions.get(0).isoCode);
+        assertEquals("WBK", model.subdivisions.get(1).isoCode);
+    }
+
+    static class TestModelSubdivisions {
+        List<TestModelSubdivision> subdivisions;
+
+        @MaxMindDbConstructor
+        public TestModelSubdivisions (
+            @MaxMindDbParameter(name="subdivisions")
+            List<TestModelSubdivision> subdivisions
+        ) {
+            this.subdivisions = subdivisions;
+        }
+    }
+
+    static class TestModelSubdivision {
+        String isoCode;
+
+        @MaxMindDbConstructor
+        public TestModelSubdivision(
+            @MaxMindDbParameter(name="iso_code")
+            String isoCode
+        ) {
+            this.isoCode = isoCode;
+        }
+    }
+
+    @Test
     public void testBrokenDatabaseFile()
             throws IOException,
                    InstantiationException,

@@ -7,6 +7,7 @@ import java.lang.InstantiationException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -61,10 +62,10 @@ final class Decoder {
         }
 
         this.buffer.position(offset);
-        return cls.cast(decode(cls));
+        return cls.cast(decode(cls, null));
     }
 
-    private <T> Object decode(Class<T> cls)
+    private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
@@ -125,19 +126,23 @@ final class Decoder {
             }
         }
 
-        return this.decodeByType(type, size, cls);
+        return this.decodeByType(type, size, cls, genericType);
     }
 
-    private <T> Object decodeByType(Type type, int size, Class<T> cls)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException {
+    private <T> Object decodeByType(
+            Type type,
+            int size,
+            Class<T> cls,
+            java.lang.reflect.Type genericType
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException {
         switch (type) {
             case MAP:
-                return this.decodeMap(size, cls);
+                return this.decodeMap(size, cls, genericType);
             case ARRAY:
-                return this.decodeArray(size, cls);
+                return this.decodeArray(size, cls, genericType);
             case BOOLEAN:
                 return Decoder.decodeBoolean(size);
             case UTF8_STRING:
@@ -244,19 +249,30 @@ final class Decoder {
         }
     }
 
-    private <T> Object decodeArray(int size, Class<T> cls)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   DeserializationException {
-        // If we're decoding into a Map, the second level is an Object.class.
-        // See Object.class in decodeMapIntoMap().
-        if (cls.equals(List.class) || cls.equals(Object.class)) {
+    private <T> Object decodeArray(
+            int size,
+            Class<T> cls,
+            java.lang.reflect.Type genericType
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException,
+             DeserializationException {
+        if (cls.isAssignableFrom(List.class)) {
             ArrayList<Object> array = new ArrayList<>(size);
 
+            Class<?> elementClass = Object.class;
+            if (genericType instanceof ParameterizedType) {
+                ParameterizedType pType = (ParameterizedType) genericType;
+                java.lang.reflect.Type[] actualTypes
+                    = pType.getActualTypeArguments();
+                if (actualTypes.length == 1) {
+                    elementClass = (Class<?>) actualTypes[0];
+                }
+            }
+
             for (int i = 0; i < size; i++) {
-                Object e = this.decode(Object.class);
+                Object e = this.decode(elementClass, null);
                 array.add(e);
             }
 
@@ -272,42 +288,50 @@ final class Decoder {
         Object array = Array.newInstance(elementClass, size);
 
         for (int i = 0; i < size; i++) {
-            Object e = this.decode(elementClass);
+            Object e = this.decode(elementClass, null);
             Array.set(array, i, e);
         }
 
         return array;
     }
 
-    private <T> Object decodeMap(int size, Class<T> cls)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException {
-        // We look for Object.class because if we're decoding a nested map into
-        // a Map, the second level is an Object.class. See Object.class in
-        // decodeMapIntoMap().
-        if (cls.isAssignableFrom(Map.class) || cls.equals(Object.class)) {
-            return this.decodeMapIntoMap(size);
+    private <T> Object decodeMap(
+            int size,
+            Class<T> cls,
+            java.lang.reflect.Type genericType
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException {
+        if (cls.isAssignableFrom(Map.class)) {
+            return this.decodeMapIntoMap(size, genericType);
         }
 
         return this.decodeMapIntoObject(size, cls);
     }
 
-    private HashMap<String, Object> decodeMapIntoMap(int size)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException {
+    private HashMap<String, Object> decodeMapIntoMap(
+            int size,
+            java.lang.reflect.Type genericType
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException {
         HashMap<String, Object> map = new HashMap<>();
 
+        Class<?> valueClass = Object.class;
+        if (genericType instanceof ParameterizedType) {
+            ParameterizedType pType = (ParameterizedType) genericType;
+            java.lang.reflect.Type[] actualTypes
+                = pType.getActualTypeArguments();
+            if (actualTypes.length == 2) {
+                valueClass = (Class<?>) actualTypes[1];
+            }
+        }
+
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class);
-
-            // Ideally we'd know the value's type to pass in, but I am having
-            // trouble retrieving it. I am not sure it is possible.
-            Object value = this.decode(Object.class);
-
+            String key = (String) this.decode(String.class, null);
+            Object value = this.decode(valueClass, null);
             map.put(key, value);
         }
 
@@ -323,6 +347,9 @@ final class Decoder {
 
         Class<?>[] parameterTypes = constructor.getParameterTypes();
 
+        java.lang.reflect.Type[] parameterGenericTypes
+            = constructor.getGenericParameterTypes();
+
         Map<String, Integer> parameterIndexes = new HashMap<>();
         Annotation[][] annotations = constructor.getParameterAnnotations();
         for (int i = 0; i < constructor.getParameterCount(); i++) {
@@ -332,7 +359,7 @@ final class Decoder {
 
         Object[] parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class);
+            String key = (String) this.decode(String.class, null);
 
             Integer parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
@@ -341,8 +368,10 @@ final class Decoder {
                 continue;
             }
 
-            parameters[parameterIndex]
-                = this.decode(parameterTypes[parameterIndex]);
+            parameters[parameterIndex] = this.decode(
+                parameterTypes[parameterIndex],
+                parameterGenericTypes[parameterIndex]
+            );
         }
 
         return constructor.newInstance(parameters);
