@@ -36,7 +36,8 @@ public class MultiThreadedTest {
             ExecutionException,
             InstantiationException,
             IllegalAccessException,
-            InvocationTargetException {
+            InvocationTargetException,
+            NoSuchMethodException {
         try (Reader reader = new Reader(ReaderTest.getStream("MaxMind-DB-test-decoder.mmdb"))) {
             MultiThreadedTest.threadTest(reader);
         }
@@ -47,7 +48,8 @@ public class MultiThreadedTest {
             ExecutionException,
             InstantiationException,
             IllegalAccessException,
-            InvocationTargetException {
+            InvocationTargetException,
+            NoSuchMethodException {
         try (Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
             MultiThreadedTest.threadTest(reader);
         }

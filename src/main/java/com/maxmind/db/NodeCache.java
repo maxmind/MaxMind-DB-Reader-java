@@ -12,13 +12,15 @@ public interface NodeCache {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException;
+                   InvocationTargetException,
+                   NoSuchMethodException ;
     }
 
     Object get(int key, Class<?> cls, Loader loader)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException;
+                   InvocationTargetException,
+                   NoSuchMethodException;
 
 }

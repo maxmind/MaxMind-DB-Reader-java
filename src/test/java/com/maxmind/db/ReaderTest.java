@@ -14,6 +14,7 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -39,7 +40,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         for (long recordSize : new long[]{24, 28, 32}) {
             for (int ipVersion : new int[]{4, 6}) {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
@@ -74,7 +76,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         GetRecordTest[] mapTests = {
                 new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
                 new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
@@ -126,7 +129,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("MaxMind-DB-no-ipv4-search-tree.mmdb"));
         this.testNoIpV4SearchTree(this.testReader);
     }
@@ -136,7 +140,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"));
         this.testNoIpV4SearchTree(this.testReader);
     }
@@ -145,7 +150,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
 
         assertEquals("::0/64", reader.get(InetAddress.getByName("1.1.1.1"), String.class));
         assertEquals("::0/64", reader.get(InetAddress.getByName("192.1.1.1"), String.class));
@@ -156,7 +162,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
         this.testDecodingTypesIntoModelObject(this.testReader);
@@ -169,7 +176,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"));
         this.testDecodingTypes(this.testReader);
         this.testDecodingTypesIntoModelObject(this.testReader);
@@ -181,7 +189,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         Map record = reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
 
         assertTrue((boolean) record.get("boolean"));
@@ -228,7 +237,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         TestModel model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModel.class);
 
         assertTrue(model.booleanField);
@@ -347,7 +357,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         TestModelBoxed model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelBoxed.class);
 
         assertTrue(model.booleanField);
@@ -466,7 +477,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         TestModelList model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelList.class);
 
         assertEquals(Arrays.asList((long) 1, (long) 2, (long) 3), model.arrayField);
@@ -488,7 +500,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testZeros(this.testReader);
         this.testZerosModelObject(this.testReader);
@@ -499,7 +512,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
         this.testZeros(this.testReader);
         this.testZerosModelObject(this.testReader);
@@ -509,7 +523,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         Map record = reader.get(InetAddress.getByName("::"), Map.class);
 
         assertFalse((boolean) record.get("boolean"));
@@ -538,7 +553,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         TestModel model = reader.get(InetAddress.getByName("::"), TestModel.class);
 
         assertFalse(model.booleanField);
@@ -566,7 +582,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
 
         TestModelSubdivisions model = this.testReader.get(
@@ -604,11 +621,36 @@ public class ReaderTest {
     }
 
     @Test
+    public void testDecodeConcurrentHashMap()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+
+        @SuppressWarnings("unchecked")
+        ConcurrentHashMap<String, Object> m = this.testReader.get(
+            InetAddress.getByName("2.125.160.216"),
+            ConcurrentHashMap.class
+        );
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> subdivisions = (List) m.get("subdivisions");
+
+        Map<String, Object> eng = subdivisions.get(0);
+
+        String isoCode = (String) eng.get("iso_code");
+        assertEquals("ENG", isoCode);
+    }
+
+    @Test
     public void testBrokenDatabaseFile()
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
         this.testBrokenDatabase(this.testReader);
     }
@@ -618,7 +660,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
         this.testBrokenDatabase(this.testReader);
     }
@@ -635,7 +678,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenSearchTreePointer(this.testReader);
     }
@@ -645,7 +689,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenSearchTreePointer(this.testReader);
     }
@@ -661,7 +706,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenDataPointer(this.testReader);
     }
@@ -671,7 +717,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
         this.testBrokenDataPointer(this.testReader);
     }
@@ -687,7 +734,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
 
         reader.close();
@@ -726,7 +774,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
 
         for (int i = 0; i <= 5; i++) {
             String address = "1.1.1." + (int) Math.pow(2, i);
@@ -763,7 +812,8 @@ public class ReaderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         String[] subnets = new String[]{"::1:ffff:ffff", "::2:0:0",
                 "::2:0:40", "::2:0:50", "::2:0:58"};
 

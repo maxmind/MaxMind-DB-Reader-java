@@ -20,7 +20,8 @@ public class NoCache implements NodeCache {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         return loader.load(key, cls);
     }
 

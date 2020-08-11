@@ -21,7 +21,8 @@ public class PointerTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         File file = ReaderTest.getFile("maps-with-pointers.raw");
         BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
         Decoder decoder = new Decoder(NoCache.getInstance(), ptf.get(), 0);

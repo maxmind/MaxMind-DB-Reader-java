@@ -55,7 +55,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this(database, NoCache.getInstance());
     }
 
@@ -72,7 +73,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this(database, FileMode.MEMORY_MAPPED, cache);
     }
 
@@ -87,7 +89,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this(source, NoCache.getInstance());
     }
 
@@ -103,7 +106,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this(new BufferHolder(source), "<InputStream>", cache);
     }
 
@@ -120,7 +124,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this(database, fileMode, NoCache.getInstance());
     }
 
@@ -138,7 +143,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this(new BufferHolder(database, fileMode), database.getName(), cache);
     }
 
@@ -146,7 +152,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         this.bufferHolderReference = new AtomicReference<>(
                 bufferHolder);
 
@@ -177,7 +184,8 @@ public final class Reader implements Closeable {
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException,
-                   ConstructorNotFoundException {
+                   ConstructorNotFoundException,
+                   NoSuchMethodException {
         return getRecord(ipAddress, cls).getData();
     }
 
@@ -193,7 +201,8 @@ public final class Reader implements Closeable {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         ByteBuffer buffer = this.getBufferHolder().get();
 
         byte[] rawAddress = ipAddress.getAddress();
@@ -284,7 +293,8 @@ public final class Reader implements Closeable {
     ) throws IOException,
              InstantiationException,
              IllegalAccessException,
-             InvocationTargetException {
+             InvocationTargetException,
+             NoSuchMethodException {
         int resolved = (pointer - this.metadata.getNodeCount())
                 + this.metadata.getSearchTreeSize();
 

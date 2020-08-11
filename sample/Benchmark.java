@@ -25,7 +25,8 @@ public class Benchmark {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         File file = new File(args.length > 0 ? args[0] : "GeoLite2-City.mmdb");
         System.out.println("No caching");
         loop("Warming up", file, WARMUPS, NoCache.getInstance());
@@ -40,7 +41,8 @@ public class Benchmark {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         System.out.println(msg);
         for (int i = 0; i < loops; i++) {
             Reader r = new Reader(file, FileMode.MEMORY_MAPPED, cache);
@@ -53,7 +55,8 @@ public class Benchmark {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         Random random = new Random(seed);
         long startTime = System.nanoTime();
         byte[] address = new byte[4];

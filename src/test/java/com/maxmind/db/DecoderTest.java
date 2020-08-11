@@ -351,7 +351,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.UINT16, uint16());
     }
 
@@ -360,7 +361,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.UINT32, uint32());
     }
 
@@ -369,7 +371,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.INT32, int32());
     }
 
@@ -378,7 +381,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.UINT64, largeUint(64));
     }
 
@@ -387,7 +391,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.UINT128, largeUint(128));
     }
 
@@ -396,7 +401,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest
                 .testTypeDecoding(Type.DOUBLE, DecoderTest.doubles());
     }
@@ -406,7 +412,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.FLOAT, DecoderTest.floats());
     }
 
@@ -415,7 +422,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.POINTER, pointers());
     }
 
@@ -424,7 +432,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.UTF8_STRING,
                 DecoderTest.strings());
     }
@@ -434,7 +443,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.BOOLEAN,
                 DecoderTest.booleans());
     }
@@ -444,7 +454,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.BYTES, DecoderTest.bytes());
     }
 
@@ -453,7 +464,8 @@ public class DecoderTest {
           throws IOException,
                  InstantiationException,
                  IllegalAccessException,
-                 InvocationTargetException {
+                 InvocationTargetException,
+                 NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.MAP, DecoderTest.maps());
     }
 
@@ -462,7 +474,8 @@ public class DecoderTest {
           throws IOException,
                  InstantiationException,
                  IllegalAccessException,
-                 InvocationTargetException {
+                 InvocationTargetException,
+                 NoSuchMethodException {
         DecoderTest.testTypeDecoding(Type.ARRAY, DecoderTest.arrays());
     }
 
@@ -471,7 +484,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         try (FileChannel fc = DecoderTest.getFileChannel(new byte[]{0x0, 0xF})) {
             MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
 
@@ -487,8 +501,8 @@ public class DecoderTest {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
-
+                   InvocationTargetException,
+                   NoSuchMethodException {
         NodeCache cache = new CHMCache();
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {

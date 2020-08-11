@@ -54,7 +54,8 @@ final class Decoder {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
@@ -69,7 +70,8 @@ final class Decoder {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         int ctrlByte = 0xFF & this.buffer.get();
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -137,7 +139,8 @@ final class Decoder {
     ) throws IOException,
              InstantiationException,
              IllegalAccessException,
-             InvocationTargetException {
+             InvocationTargetException,
+             NoSuchMethodException {
         switch (type) {
             case MAP:
                 return this.decodeMap(size, cls, genericType);
@@ -266,7 +269,8 @@ final class Decoder {
              InstantiationException,
              IllegalAccessException,
              InvocationTargetException,
-             DeserializationException {
+             DeserializationException,
+             NoSuchMethodException {
         if (!cls.isAssignableFrom(List.class)) {
             throw new DeserializationException();
         }
@@ -288,8 +292,9 @@ final class Decoder {
     ) throws IOException,
              InstantiationException,
              IllegalAccessException,
-             InvocationTargetException {
-        if (cls.isAssignableFrom(Map.class)) {
+             InvocationTargetException,
+             NoSuchMethodException {
+        if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
             Class<?> valueClass = Object.class;
             if (genericType instanceof ParameterizedType) {
                 ParameterizedType pType = (ParameterizedType) genericType;
@@ -299,20 +304,31 @@ final class Decoder {
                     valueClass = (Class<?>) actualTypes[1];
                 }
             }
-            return this.decodeMapIntoMap(size, valueClass);
+            return this.decodeMapIntoMap(cls, size, valueClass);
         }
 
         return this.decodeMapIntoObject(size, cls);
     }
 
-    private <V> HashMap<String, V> decodeMapIntoMap(
+    private <T, V> Map<String, V> decodeMapIntoMap(
+            Class<T> cls,
             int size,
             Class<V> valueClass
     ) throws IOException,
              InstantiationException,
              IllegalAccessException,
-             InvocationTargetException {
-        HashMap<String, V> map = new HashMap<>(size);
+             InvocationTargetException,
+             NoSuchMethodException {
+        Map<String, V> map;
+        if (cls.equals(Map.class) || cls.equals(Object.class)) {
+            map = new HashMap<>(size);
+        } else {
+            Constructor<T> constructor = cls.getConstructor(Integer.TYPE);
+            Object[] parameters = {size};
+            @SuppressWarnings("unchecked")
+            Map<String, V> map2 = (Map<String, V>) constructor.newInstance(parameters);
+            map = map2;
+        }
 
         for (int i = 0; i < size; i++) {
             String key = (String) this.decode(String.class, null);
@@ -327,7 +343,8 @@ final class Decoder {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         Constructor<T> constructor = this.findConstructor(cls);
 
         Class<?>[] parameterTypes = constructor.getParameterTypes();

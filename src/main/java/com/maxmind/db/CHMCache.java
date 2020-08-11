@@ -33,7 +33,8 @@ public class CHMCache implements NodeCache {
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
-                   InvocationTargetException {
+                   InvocationTargetException,
+                   NoSuchMethodException {
         Integer k = key;
         Object value = cache.get(k);
         if (value == null) {
