@@ -275,7 +275,16 @@ final class Decoder {
             throw new DeserializationException();
         }
 
-        ArrayList<V> array = new ArrayList<>(size);
+        List<V> array;
+        if (cls.equals(List.class) || cls.equals(Object.class)) {
+            array = new ArrayList<>(size);
+        } else {
+            Constructor<T> constructor = cls.getConstructor(Integer.TYPE);
+            Object[] parameters = {size};
+            @SuppressWarnings("unchecked")
+            List<V> array2 = (List<V>) constructor.newInstance(parameters);
+            array = array2;
+        }
 
         for (int i = 0; i < size; i++) {
             Object e = this.decode(elementClass, null);

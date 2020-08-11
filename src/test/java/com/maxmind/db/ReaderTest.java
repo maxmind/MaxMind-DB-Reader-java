@@ -645,6 +645,38 @@ public class ReaderTest {
     }
 
     @Test
+    public void testDecodeVector()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+
+        TestModelVector model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelVector.class
+        );
+
+        assertEquals(3, model.arrayField.size());
+        assertEquals(1, (long) model.arrayField.get(0));
+        assertEquals(2, (long) model.arrayField.get(1));
+        assertEquals(3, (long) model.arrayField.get(2));
+    }
+
+    static class TestModelVector {
+        Vector<Long> arrayField;
+
+        @MaxMindDbConstructor
+        public TestModelVector(
+            @MaxMindDbParameter(name="array")
+            Vector<Long> arrayField
+        ) {
+            this.arrayField = arrayField;
+        }
+    }
+
+    @Test
     public void testBrokenDatabaseFile()
             throws IOException,
                    InstantiationException,
