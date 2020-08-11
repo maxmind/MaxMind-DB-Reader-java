@@ -304,35 +304,34 @@ final class Decoder {
              IllegalAccessException,
              InvocationTargetException {
         if (cls.isAssignableFrom(Map.class)) {
-            return this.decodeMapIntoMap(size, genericType);
+            Class<?> valueClass = Object.class;
+            if (genericType instanceof ParameterizedType) {
+                ParameterizedType pType = (ParameterizedType) genericType;
+                java.lang.reflect.Type[] actualTypes
+                    = pType.getActualTypeArguments();
+                if (actualTypes.length == 2) {
+                    valueClass = (Class<?>) actualTypes[1];
+                }
+            }
+            return this.decodeMapIntoMap(size, valueClass);
         }
 
         return this.decodeMapIntoObject(size, cls);
     }
 
-    private HashMap<String, Object> decodeMapIntoMap(
+    private <V> HashMap<String, V> decodeMapIntoMap(
             int size,
-            java.lang.reflect.Type genericType
+            Class<V> valueClass
     ) throws IOException,
              InstantiationException,
              IllegalAccessException,
              InvocationTargetException {
-        HashMap<String, Object> map = new HashMap<>();
-
-        Class<?> valueClass = Object.class;
-        if (genericType instanceof ParameterizedType) {
-            ParameterizedType pType = (ParameterizedType) genericType;
-            java.lang.reflect.Type[] actualTypes
-                = pType.getActualTypeArguments();
-            if (actualTypes.length == 2) {
-                valueClass = (Class<?>) actualTypes[1];
-            }
-        }
+        HashMap<String, V> map = new HashMap<>(size);
 
         for (int i = 0; i < size; i++) {
             String key = (String) this.decode(String.class, null);
             Object value = this.decode(valueClass, null);
-            map.put(key, value);
+            map.put(key, valueClass.cast(value));
         }
 
         return map;
