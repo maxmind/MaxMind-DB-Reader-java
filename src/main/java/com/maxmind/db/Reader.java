@@ -215,7 +215,7 @@ public final class Reader implements Closeable {
             dataRecord = this.resolveDataPointer(buffer, record, cls);
         }
 
-        return new Record<T>(dataRecord, ipAddress, pl);
+        return new Record<>(dataRecord, ipAddress, pl);
     }
 
     private BufferHolder getBufferHolder() throws ClosedDatabaseException {
