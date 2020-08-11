@@ -271,7 +271,7 @@ final class Decoder {
              InvocationTargetException,
              DeserializationException,
              NoSuchMethodException {
-        if (!cls.isAssignableFrom(List.class)) {
+        if (!List.class.isAssignableFrom(cls) && !cls.equals(Object.class)) {
             throw new DeserializationException();
         }
 
