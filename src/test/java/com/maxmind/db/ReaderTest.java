@@ -237,16 +237,15 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
-        long[] array = model.arrayField;
-        assertEquals(3, array.length);
-        assertEquals(1, array[0]);
-        assertEquals(2, array[1]);
-        assertEquals(3, array[2]);
+        List<Long> expectedArray = new ArrayList<>(Arrays.asList(
+            (long) 1, (long) 2, (long) 3
+        ));
+        assertEquals(expectedArray, model.arrayField);
 
-        assertEquals(3, model.mapField.mapXField.arrayXField.length);
-        assertEquals(7, model.mapField.mapXField.arrayXField[0]);
-        assertEquals(8, model.mapField.mapXField.arrayXField[1]);
-        assertEquals(9, model.mapField.mapXField.arrayXField[2]);
+        List<Long> expectedArray2 = new ArrayList<>(Arrays.asList(
+            (long) 7, (long) 8, (long) 9
+        ));
+        assertEquals(expectedArray2, model.mapField.mapXField.arrayXField);
 
         assertEquals("hello", model.mapField.mapXField.utf8StringXField);
 
@@ -264,7 +263,7 @@ public class ReaderTest {
         boolean booleanField;
         byte[] bytesField;
         String utf8StringField;
-        long[] arrayField;
+        List<Long> arrayField;
         MapModel mapField;
         double doubleField;
         float floatField;
@@ -283,7 +282,7 @@ public class ReaderTest {
             @MaxMindDbParameter(name="utf8_string")
             String utf8StringField,
             @MaxMindDbParameter(name="array")
-            long[] arrayField,
+            List<Long> arrayField,
             @MaxMindDbParameter(name="map")
             MapModel mapField,
             @MaxMindDbParameter(name="double")
@@ -329,13 +328,13 @@ public class ReaderTest {
     }
 
     static class MapXModel {
-        long[] arrayXField;
+        List<Long> arrayXField;
         String utf8StringXField;
 
         @MaxMindDbConstructor
         public MapXModel (
             @MaxMindDbParameter(name="arrayX")
-            long[] arrayXField,
+            List<Long> arrayXField,
             @MaxMindDbParameter(name="utf8_stringX")
             String utf8StringXField
         ) {
@@ -357,16 +356,15 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
-        Long[] array = model.arrayField;
-        assertEquals(3, array.length);
-        assertEquals(Long.valueOf(1), array[0]);
-        assertEquals(Long.valueOf(2), array[1]);
-        assertEquals(Long.valueOf(3), array[2]);
+        List<Long> expectedArray = new ArrayList<>(Arrays.asList(
+            (long) 1, (long) 2, (long) 3
+        ));
+        assertEquals(expectedArray, model.arrayField);
 
-        assertEquals(3, model.mapField.mapXField.arrayXField.length);
-        assertEquals(Long.valueOf(7), model.mapField.mapXField.arrayXField[0]);
-        assertEquals(Long.valueOf(8), model.mapField.mapXField.arrayXField[1]);
-        assertEquals(Long.valueOf(9), model.mapField.mapXField.arrayXField[2]);
+        List<Long> expectedArray2 = new ArrayList<>(Arrays.asList(
+            (long) 7, (long) 8, (long) 9
+        ));
+        assertEquals(expectedArray2, model.mapField.mapXField.arrayXField);
 
         assertEquals("hello", model.mapField.mapXField.utf8StringXField);
 
@@ -384,7 +382,7 @@ public class ReaderTest {
         Boolean booleanField;
         byte[] bytesField;
         String utf8StringField;
-        Long[] arrayField;
+        List<Long> arrayField;
         MapModelBoxed mapField;
         Double doubleField;
         Float floatField;
@@ -403,7 +401,7 @@ public class ReaderTest {
             @MaxMindDbParameter(name="utf8_string")
             String utf8StringField,
             @MaxMindDbParameter(name="array")
-            Long[] arrayField,
+            List<Long> arrayField,
             @MaxMindDbParameter(name="map")
             MapModelBoxed mapField,
             @MaxMindDbParameter(name="double")
@@ -449,13 +447,13 @@ public class ReaderTest {
     }
 
     static class MapXModelBoxed {
-        Long[] arrayXField;
+        List<Long> arrayXField;
         String utf8StringXField;
 
         @MaxMindDbConstructor
         public MapXModelBoxed (
             @MaxMindDbParameter(name="arrayX")
-            Long[] arrayXField,
+            List<Long> arrayXField,
             @MaxMindDbParameter(name="utf8_stringX")
             String utf8StringXField
         ) {
@@ -549,7 +547,8 @@ public class ReaderTest {
 
         assertEquals("", model.utf8StringField);
 
-        assertEquals(0, model.arrayField.length);
+        List<Long> expectedArray = new ArrayList<>();
+        assertEquals(expectedArray, model.arrayField);
 
         assertNull(model.mapField.mapXField);
 

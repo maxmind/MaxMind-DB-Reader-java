@@ -322,25 +322,25 @@ public class DecoderTest {
         return maps;
     }
 
-    private static Map<String[], byte[]> arrays() {
-        Map<String[], byte[]> arrays = new HashMap<>();
+    private static Map<List<String>, byte[]> arrays() {
+        Map<List<String>, byte[]> arrays = new HashMap<>();
 
-        String[] f1 = new String[1];
-        f1[0] = "Foo";
+        ArrayList<String> f1 = new ArrayList<>();
+        f1.add("Foo");
         arrays.put(f1, new byte[]{0x1, 0x4,
                 /* Foo */
                 0x43, 0x46, 0x6f, 0x6f});
 
-        String[] f2 = new String[2];
-        f2[0] = "Foo";
-        f2[1] = "人";
+        ArrayList<String> f2 = new ArrayList<>();
+        f2.add("Foo");
+        f2.add("人");
         arrays.put(f2, new byte[]{0x2, 0x4,
                 /* Foo */
                 0x43, 0x46, 0x6f, 0x6f,
                 /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        String[] empty = new String[0];
+        ArrayList<String> empty = new ArrayList<>();
         arrays.put(empty, new byte[]{0x0, 0x4});
 
         return arrays;
@@ -506,7 +506,7 @@ public class DecoderTest {
                 if (type.equals(Type.BYTES)) {
                     assertArrayEquals(desc, (byte[]) expect, decoder.decode(0, byte[].class));
                 } else if (type.equals(Type.ARRAY)) {
-                    assertArrayEquals(desc, (String[]) expect, decoder.decode(0, String[].class));
+                    assertEquals(desc, (List<String>) expect, decoder.decode(0, List.class));
                 } else if (type.equals(Type.UINT16)
                         || type.equals(Type.INT32)) {
                     assertEquals(desc, expect, decoder.decode(0, Integer.class));

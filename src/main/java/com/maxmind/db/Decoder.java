@@ -249,7 +249,7 @@ final class Decoder {
         }
     }
 
-    private <T> Object decodeArray(
+    private <T> List<Object> decodeArray(
             int size,
             Class<T> cls,
             java.lang.reflect.Type genericType
@@ -258,38 +258,25 @@ final class Decoder {
              IllegalAccessException,
              InvocationTargetException,
              DeserializationException {
-        if (cls.isAssignableFrom(List.class)) {
-            ArrayList<Object> array = new ArrayList<>(size);
-
-            Class<?> elementClass = Object.class;
-            if (genericType instanceof ParameterizedType) {
-                ParameterizedType pType = (ParameterizedType) genericType;
-                java.lang.reflect.Type[] actualTypes
-                    = pType.getActualTypeArguments();
-                if (actualTypes.length == 1) {
-                    elementClass = (Class<?>) actualTypes[0];
-                }
-            }
-
-            for (int i = 0; i < size; i++) {
-                Object e = this.decode(elementClass, null);
-                array.add(e);
-            }
-
-            return array;
-        }
-
-        if (!cls.isArray()) {
+        if (!cls.isAssignableFrom(List.class)) {
             throw new DeserializationException();
         }
 
-        Class<?> elementClass = cls.getComponentType();
+        ArrayList<Object> array = new ArrayList<>(size);
 
-        Object array = Array.newInstance(elementClass, size);
+        Class<?> elementClass = Object.class;
+        if (genericType instanceof ParameterizedType) {
+            ParameterizedType pType = (ParameterizedType) genericType;
+            java.lang.reflect.Type[] actualTypes
+                = pType.getActualTypeArguments();
+            if (actualTypes.length == 1) {
+                elementClass = (Class<?>) actualTypes[0];
+            }
+        }
 
         for (int i = 0; i < size; i++) {
             Object e = this.decode(elementClass, null);
-            Array.set(array, i, e);
+            array.add(e);
         }
 
         return array;
