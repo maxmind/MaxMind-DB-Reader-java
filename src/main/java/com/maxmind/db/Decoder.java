@@ -142,7 +142,16 @@ final class Decoder {
             case MAP:
                 return this.decodeMap(size, cls, genericType);
             case ARRAY:
-                return this.decodeArray(size, cls, genericType);
+                Class<?> elementClass = Object.class;
+                if (genericType instanceof ParameterizedType) {
+                    ParameterizedType pType = (ParameterizedType) genericType;
+                    java.lang.reflect.Type[] actualTypes
+                        = pType.getActualTypeArguments();
+                    if (actualTypes.length == 1) {
+                        elementClass = (Class<?>) actualTypes[0];
+                    }
+                }
+                return this.decodeArray(size, cls, elementClass);
             case BOOLEAN:
                 return Decoder.decodeBoolean(size);
             case UTF8_STRING:
@@ -249,10 +258,10 @@ final class Decoder {
         }
     }
 
-    private <T> List<Object> decodeArray(
+    private <T, V> List<V> decodeArray(
             int size,
             Class<T> cls,
-            java.lang.reflect.Type genericType
+            Class<V> elementClass
     ) throws IOException,
              InstantiationException,
              IllegalAccessException,
@@ -262,21 +271,11 @@ final class Decoder {
             throw new DeserializationException();
         }
 
-        ArrayList<Object> array = new ArrayList<>(size);
-
-        Class<?> elementClass = Object.class;
-        if (genericType instanceof ParameterizedType) {
-            ParameterizedType pType = (ParameterizedType) genericType;
-            java.lang.reflect.Type[] actualTypes
-                = pType.getActualTypeArguments();
-            if (actualTypes.length == 1) {
-                elementClass = (Class<?>) actualTypes[0];
-            }
-        }
+        ArrayList<V> array = new ArrayList<>(size);
 
         for (int i = 0; i < size; i++) {
             Object e = this.decode(elementClass, null);
-            array.add(e);
+            array.add(elementClass.cast(e));
         }
 
         return array;
