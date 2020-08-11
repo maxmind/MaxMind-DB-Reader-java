@@ -1,6 +1,6 @@
 package com.maxmind.db;
 
-public enum Type {
+enum Type {
     EXTENDED, POINTER, UTF8_STRING, DOUBLE, BYTES, UINT16, UINT32, MAP, INT32, UINT64, UINT128, ARRAY, CONTAINER, END_MARKER, BOOLEAN, FLOAT;
 
     // Java clones the array when you call values(). Caching it increased
