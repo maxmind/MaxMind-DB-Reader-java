@@ -744,6 +744,37 @@ public class ReaderTest {
         assertEquals("The MaxMind DB has been closed.", ex.getMessage());
     }
 
+    @Test
+    public void voidTestMapKeyIsString()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+
+        DeserializationException ex = assertThrows(
+            DeserializationException.class,
+            () -> this.testReader.get(
+                InetAddress.getByName("2.125.160.216"),
+                TestModelInvalidMap.class
+            )
+        );
+        assertEquals("Map keys must be strings.", ex.getMessage());
+    }
+
+    static class TestModelInvalidMap {
+        Map<Integer, String> postal;
+
+        @MaxMindDbConstructor
+        public TestModelInvalidMap (
+            @MaxMindDbParameter(name="postal")
+            Map<Integer, String> postal
+        ) {
+            this.postal = postal;
+        }
+    }
+
     private void testMetadata(Reader reader, int ipVersion, long recordSize) {
 
         Metadata metadata = reader.getMetadata();

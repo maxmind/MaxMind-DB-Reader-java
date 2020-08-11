@@ -11,4 +11,8 @@ public class DeserializationException extends IOException {
     DeserializationException() {
         super("Database value cannot be deserialized into the type.");
     }
+
+    DeserializationException(String message) {
+        super(message);
+    }
 }

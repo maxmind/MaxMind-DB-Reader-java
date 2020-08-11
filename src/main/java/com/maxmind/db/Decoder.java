@@ -301,6 +301,11 @@ final class Decoder {
                 java.lang.reflect.Type[] actualTypes
                     = pType.getActualTypeArguments();
                 if (actualTypes.length == 2) {
+                    Class<?> keyClass = (Class<?>) actualTypes[0];
+                    if (!keyClass.equals(String.class)) {
+                        throw new DeserializationException("Map keys must be strings.");
+                    }
+
                     valueClass = (Class<?>) actualTypes[1];
                 }
             }
