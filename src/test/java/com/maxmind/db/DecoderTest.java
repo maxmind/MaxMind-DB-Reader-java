@@ -506,7 +506,7 @@ public class DecoderTest {
                 if (type.equals(Type.BYTES)) {
                     assertArrayEquals(desc, (byte[]) expect, decoder.decode(0, byte[].class));
                 } else if (type.equals(Type.ARRAY)) {
-                    assertEquals(desc, (List<String>) expect, decoder.decode(0, List.class));
+                    assertEquals(desc, expect, decoder.decode(0, List.class));
                 } else if (type.equals(Type.UINT16)
                         || type.equals(Type.INT32)) {
                     assertEquals(desc, expect, decoder.decode(0, Integer.class));
