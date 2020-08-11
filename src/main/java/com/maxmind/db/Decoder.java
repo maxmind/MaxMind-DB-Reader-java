@@ -1,6 +1,13 @@
 package com.maxmind.db;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.IllegalAccessException;
+import java.lang.InstantiationException;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -8,14 +15,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.*;
 
 /*
  * Decoder for MaxMind DB data.
@@ -25,8 +27,6 @@ import com.fasterxml.jackson.databind.node.*;
 final class Decoder {
 
     private static final Charset UTF_8 = StandardCharsets.UTF_8;
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + ((1) << 11), 0};
 
@@ -42,31 +42,6 @@ final class Decoder {
 
     private final ByteBuffer buffer;
 
-    enum Type {
-        EXTENDED, POINTER, UTF8_STRING, DOUBLE, BYTES, UINT16, UINT32, MAP, INT32, UINT64, UINT128, ARRAY, CONTAINER, END_MARKER, BOOLEAN, FLOAT;
-
-        // Java clones the array when you call values(). Caching it increased
-        // the speed by about 5000 requests per second on my machine.
-        final static Type[] values = Type.values();
-
-        static Type get(int i) throws InvalidDatabaseException {
-            if (i >= Type.values.length) {
-                throw new InvalidDatabaseException("The MaxMind DB file's data section contains bad data");
-            }
-            return Type.values[i];
-        }
-
-        private static Type get(byte b) throws InvalidDatabaseException {
-            // bytes are signed, but we want to treat them as unsigned here
-            return Type.get(b & 0xFF);
-        }
-
-        static Type fromControlByte(int b) throws InvalidDatabaseException {
-            // The type is encoded in the first 3 bits of the byte.
-            return Type.get((byte) ((0xFF & b) >>> 5));
-        }
-    }
-
     Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
         this.cache = cache;
         this.pointerBase = pointerBase;
@@ -75,7 +50,12 @@ final class Decoder {
 
     private final NodeCache.Loader cacheLoader = this::decode;
 
-    JsonNode decode(int offset) throws IOException {
+    public <T> T decode(int offset, Class<T> cls)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
@@ -83,10 +63,15 @@ final class Decoder {
         }
 
         this.buffer.position(offset);
-        return decode();
+        return cls.cast(decode(cls, null));
     }
 
-    private JsonNode decode() throws IOException {
+    private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
         int ctrlByte = 0xFF & this.buffer.get();
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -102,14 +87,16 @@ final class Decoder {
 
             // for unit testing
             if (this.POINTER_TEST_HACK) {
-                return new LongNode(pointer);
+                return pointer;
             }
 
             int targetOffset = (int) pointer;
             int position = buffer.position();
-            JsonNode node = cache.get(targetOffset, cacheLoader);
+
+            T o = cls.cast(cache.get(targetOffset, cls, cacheLoader));
+
             buffer.position(position);
-            return node;
+            return o;
         }
 
         if (type.equals(Type.EXTENDED)) {
@@ -141,26 +128,43 @@ final class Decoder {
             }
         }
 
-        return this.decodeByType(type, size);
+        return this.decodeByType(type, size, cls, genericType);
     }
 
-    private JsonNode decodeByType(Type type, int size)
-            throws IOException {
+    private <T> Object decodeByType(
+            Type type,
+            int size,
+            Class<T> cls,
+            java.lang.reflect.Type genericType
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException,
+             NoSuchMethodException {
         switch (type) {
             case MAP:
-                return this.decodeMap(size);
+                return this.decodeMap(size, cls, genericType);
             case ARRAY:
-                return this.decodeArray(size);
+                Class<?> elementClass = Object.class;
+                if (genericType instanceof ParameterizedType) {
+                    ParameterizedType pType = (ParameterizedType) genericType;
+                    java.lang.reflect.Type[] actualTypes
+                        = pType.getActualTypeArguments();
+                    if (actualTypes.length == 1) {
+                        elementClass = (Class<?>) actualTypes[0];
+                    }
+                }
+                return this.decodeArray(size, cls, elementClass);
             case BOOLEAN:
                 return Decoder.decodeBoolean(size);
             case UTF8_STRING:
-                return new TextNode(this.decodeString(size));
+                return this.decodeString(size);
             case DOUBLE:
                 return this.decodeDouble(size);
             case FLOAT:
                 return this.decodeFloat(size);
             case BYTES:
-                return new BinaryNode(this.getByteArray(size));
+                return this.getByteArray(size);
             case UINT16:
                 return this.decodeUint16(size);
             case UINT32:
@@ -184,12 +188,12 @@ final class Decoder {
         return s;
     }
 
-    private IntNode decodeUint16(int size) {
-        return new IntNode(this.decodeInteger(size));
+    private int decodeUint16(int size) {
+        return this.decodeInteger(size);
     }
 
-    private IntNode decodeInt32(int size) {
-        return new IntNode(this.decodeInteger(size));
+    private int decodeInt32(int size) {
+        return this.decodeInteger(size);
     }
 
     private long decodeLong(int size) {
@@ -200,8 +204,8 @@ final class Decoder {
         return integer;
     }
 
-    private LongNode decodeUint32(int size) {
-        return new LongNode(this.decodeLong(size));
+    private long decodeUint32(int size) {
+        return this.decodeLong(size);
     }
 
     private int decodeInteger(int size) {
@@ -220,36 +224,36 @@ final class Decoder {
         return integer;
     }
 
-    private BigIntegerNode decodeBigInteger(int size) {
+    private BigInteger decodeBigInteger(int size) {
         byte[] bytes = this.getByteArray(size);
-        return new BigIntegerNode(new BigInteger(1, bytes));
+        return new BigInteger(1, bytes);
     }
 
-    private DoubleNode decodeDouble(int size) throws InvalidDatabaseException {
+    private double decodeDouble(int size) throws InvalidDatabaseException {
         if (size != 8) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
                             + "invalid size of double.");
         }
-        return new DoubleNode(this.buffer.getDouble());
+        return this.buffer.getDouble();
     }
 
-    private FloatNode decodeFloat(int size) throws InvalidDatabaseException {
+    private float decodeFloat(int size) throws InvalidDatabaseException {
         if (size != 4) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
                             + "invalid size of float.");
         }
-        return new FloatNode(this.buffer.getFloat());
+        return this.buffer.getFloat();
     }
 
-    private static BooleanNode decodeBoolean(int size)
+    private static boolean decodeBoolean(int size)
             throws InvalidDatabaseException {
         switch (size) {
             case 0:
-                return BooleanNode.FALSE;
+                return false;
             case 1:
-                return BooleanNode.TRUE;
+                return true;
             default:
                 throw new InvalidDatabaseException(
                         "The MaxMind DB file's data section contains bad data: "
@@ -257,28 +261,248 @@ final class Decoder {
         }
     }
 
-    private JsonNode decodeArray(int size) throws IOException {
-
-        List<JsonNode> array = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-            JsonNode r = this.decode();
-            array.add(r);
+    private <T, V> List<V> decodeArray(
+            int size,
+            Class<T> cls,
+            Class<V> elementClass
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException,
+             DeserializationException,
+             NoSuchMethodException {
+        if (!List.class.isAssignableFrom(cls) && !cls.equals(Object.class)) {
+            throw new DeserializationException();
         }
 
-        return new ArrayNode(OBJECT_MAPPER.getNodeFactory(), Collections.unmodifiableList(array));
+        List<V> array;
+        if (cls.equals(List.class) || cls.equals(Object.class)) {
+            array = new ArrayList<>(size);
+        } else {
+            Constructor<T> constructor = cls.getConstructor(Integer.TYPE);
+            Object[] parameters = {size};
+            @SuppressWarnings("unchecked")
+            List<V> array2 = (List<V>) constructor.newInstance(parameters);
+            array = array2;
+        }
+
+        for (int i = 0; i < size; i++) {
+            Object e = this.decode(elementClass, null);
+            array.add(elementClass.cast(e));
+        }
+
+        return array;
     }
 
-    private JsonNode decodeMap(int size) throws IOException {
-        int capacity = (int) (size / 0.75F + 1.0F);
-        Map<String, JsonNode> map = new HashMap<>(capacity);
+    private <T> Object decodeMap(
+            int size,
+            Class<T> cls,
+            java.lang.reflect.Type genericType
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException,
+             NoSuchMethodException {
+        if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
+            Class<?> valueClass = Object.class;
+            if (genericType instanceof ParameterizedType) {
+                ParameterizedType pType = (ParameterizedType) genericType;
+                java.lang.reflect.Type[] actualTypes
+                    = pType.getActualTypeArguments();
+                if (actualTypes.length == 2) {
+                    Class<?> keyClass = (Class<?>) actualTypes[0];
+                    if (!keyClass.equals(String.class)) {
+                        throw new DeserializationException("Map keys must be strings.");
+                    }
 
-        for (int i = 0; i < size; i++) {
-            String key = this.decode().asText();
-            JsonNode value = this.decode();
-            map.put(key, value);
+                    valueClass = (Class<?>) actualTypes[1];
+                }
+            }
+            return this.decodeMapIntoMap(cls, size, valueClass);
         }
 
-        return new ObjectNode(OBJECT_MAPPER.getNodeFactory(), Collections.unmodifiableMap(map));
+        return this.decodeMapIntoObject(size, cls);
+    }
+
+    private <T, V> Map<String, V> decodeMapIntoMap(
+            Class<T> cls,
+            int size,
+            Class<V> valueClass
+    ) throws IOException,
+             InstantiationException,
+             IllegalAccessException,
+             InvocationTargetException,
+             NoSuchMethodException {
+        Map<String, V> map;
+        if (cls.equals(Map.class) || cls.equals(Object.class)) {
+            map = new HashMap<>(size);
+        } else {
+            Constructor<T> constructor = cls.getConstructor(Integer.TYPE);
+            Object[] parameters = {size};
+            @SuppressWarnings("unchecked")
+            Map<String, V> map2 = (Map<String, V>) constructor.newInstance(parameters);
+            map = map2;
+        }
+
+        for (int i = 0; i < size; i++) {
+            String key = (String) this.decode(String.class, null);
+            Object value = this.decode(valueClass, null);
+            map.put(key, valueClass.cast(value));
+        }
+
+        return map;
+    }
+
+    private <T> Object decodeMapIntoObject(int size, Class<T> cls)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
+        Constructor<T> constructor = this.findConstructor(cls);
+
+        Class<?>[] parameterTypes = constructor.getParameterTypes();
+
+        java.lang.reflect.Type[] parameterGenericTypes
+            = constructor.getGenericParameterTypes();
+
+        Map<String, Integer> parameterIndexes = new HashMap<>();
+        Annotation[][] annotations = constructor.getParameterAnnotations();
+        for (int i = 0; i < constructor.getParameterCount(); i++) {
+            String parameterName = this.getParameterName(cls, i, annotations[i]);
+            parameterIndexes.put(parameterName, i);
+        }
+
+        Object[] parameters = new Object[parameterTypes.length];
+        for (int i = 0; i < size; i++) {
+            String key = (String) this.decode(String.class, null);
+
+            Integer parameterIndex = parameterIndexes.get(key);
+            if (parameterIndex == null) {
+                int offset = this.nextValueOffset(this.buffer.position(), 1);
+                this.buffer.position(offset);
+                continue;
+            }
+
+            parameters[parameterIndex] = this.decode(
+                parameterTypes[parameterIndex],
+                parameterGenericTypes[parameterIndex]
+            );
+        }
+
+        return constructor.newInstance(parameters);
+    }
+
+    private static <T> Constructor<T> findConstructor(Class<T> cls)
+        throws ConstructorNotFoundException {
+        Constructor<?>[] constructors = cls.getConstructors();
+        for (Constructor<?> constructor : constructors) {
+            if (constructor.getAnnotation(MaxMindDbConstructor.class) == null) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Constructor<T> constructor2 = (Constructor<T>) constructor;
+            return constructor2;
+        }
+
+        throw new ConstructorNotFoundException("No constructor on class " + cls.getName() + " with the MaxMindDbConstructor annotation was found.");
+    }
+
+    private static <T> String getParameterName(
+            Class<T> cls,
+            int index,
+            Annotation[] annotations
+    ) throws ParameterNotFoundException {
+        for (Annotation annotation : annotations) {
+            if (!annotation.annotationType().equals(MaxMindDbParameter.class)) {
+                continue;
+            }
+            MaxMindDbParameter paramAnnotation = (MaxMindDbParameter) annotation;
+            return paramAnnotation.name();
+        }
+        throw new ParameterNotFoundException("Constructor parameter " + index + " on class " + cls.getName() + " is not annotated with MaxMindDbParameter.");
+    }
+
+    private int nextValueOffset(int offset, int numberToSkip)
+        throws InvalidDatabaseException {
+        if (numberToSkip == 0) {
+            return offset;
+        }
+
+        CtrlData ctrlData = this.getCtrlData(offset);
+        int ctrlByte = ctrlData.getCtrlByte();
+        int size = ctrlData.getSize();
+        offset = ctrlData.getOffset();
+
+        Type type = ctrlData.getType();
+        switch (type) {
+        case POINTER:
+            int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+            offset += pointerSize;
+            break;
+        case MAP:
+            numberToSkip += 2 * size;
+            break;
+        case ARRAY:
+            numberToSkip += size;
+            break;
+        case BOOLEAN:
+            break;
+        default:
+            offset += size;
+            break;
+        }
+
+        return nextValueOffset(offset, numberToSkip - 1);
+    }
+
+    private CtrlData getCtrlData(int offset)
+        throws InvalidDatabaseException {
+        if (offset >= this.buffer.capacity()) {
+            throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains bad data: "
+                            + "pointer larger than the database.");
+        }
+
+        this.buffer.position(offset);
+        int ctrlByte = 0xFF & this.buffer.get();
+        offset++;
+
+        Type type = Type.fromControlByte(ctrlByte);
+
+        if (type.equals(Type.EXTENDED)) {
+            int nextByte = this.buffer.get();
+
+            int typeNum = nextByte + 7;
+
+            if (typeNum < 8) {
+                throw new InvalidDatabaseException(
+                        "Something went horribly wrong in the decoder. An extended type "
+                                + "resolved to a type number < 8 (" + typeNum
+                                + ")");
+            }
+
+            type = Type.get(typeNum);
+            offset++;
+        }
+
+        int size = ctrlByte & 0x1f;
+        if (size >= 29) {
+            int bytesToRead = size - 28;
+            offset += bytesToRead;
+            switch (size) {
+                case 29:
+                    size = 29 + (0xFF & buffer.get());
+                    break;
+                case 30:
+                    size = 285 + decodeInteger(2);
+                    break;
+                default:
+                    size = 65821 + decodeInteger(3);
+            }
+        }
+
+        return new CtrlData(type, ctrlByte, offset, size);
     }
 
     private byte[] getByteArray(int length) {

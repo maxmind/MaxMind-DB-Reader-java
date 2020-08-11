@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+2.0.0
+------------------
+* Significant API changes. The `get()` and `getRecord()` methods now take a
+  class parameter specifying the type of object to deserialize into. You
+  can either deserialize into a `Map` or to model classes that use the
+  `MaxMindDbConstructor` and `MaxMindDbParameter` annotations to identify
+  the constructors and parameters to deserialize into.
+* `jackson-databind` is no longer a dependency.
+
 1.4.0 (2020-06-12)
 ------------------
 

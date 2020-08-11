@@ -2,8 +2,9 @@ package com.maxmind.db;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import java.lang.IllegalAccessException;
+import java.lang.InstantiationException;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * A simplistic cache using a {@link ConcurrentHashMap}. There's no eviction
@@ -15,7 +16,7 @@ public class CHMCache implements NodeCache {
     private static final int DEFAULT_CAPACITY = 4096;
 
     private final int capacity;
-    private final ConcurrentHashMap<Integer, JsonNode> cache;
+    private final ConcurrentHashMap<Integer, Object> cache;
     private boolean cacheFull = false;
 
     public CHMCache() {
@@ -28,11 +29,16 @@ public class CHMCache implements NodeCache {
     }
 
     @Override
-    public JsonNode get(int key, Loader loader) throws IOException {
+    public Object get(int key, Class<?> cls, Loader loader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
         Integer k = key;
-        JsonNode value = cache.get(k);
+        Object value = cache.get(k);
         if (value == null) {
-            value = loader.load(key);
+            value = loader.load(key, cls);
             if (!cacheFull) {
                 if (cache.size() < capacity) {
                     cache.put(k, value);

@@ -1,8 +1,9 @@
 package com.maxmind.db;
 
 import java.io.IOException;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import java.lang.IllegalAccessException;
+import java.lang.InstantiationException;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * A no-op cache singleton.
@@ -15,8 +16,13 @@ public class NoCache implements NodeCache {
     }
 
     @Override
-    public JsonNode get(int key, Loader loader) throws IOException {
-        return loader.load(key);
+    public Object get(int key, Class<?> cls, Loader loader)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
+        return loader.load(key, cls);
     }
 
     public static NoCache getInstance() {
