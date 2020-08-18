@@ -16,13 +16,13 @@ public class NoCache implements NodeCache {
     }
 
     @Override
-    public Object get(int key, Class<?> cls, Loader loader)
+    public Object get(CacheKey key, Loader loader)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException,
                    NoSuchMethodException {
-        return loader.load(key, cls);
+        return loader.load(key);
     }
 
     public static NoCache getInstance() {

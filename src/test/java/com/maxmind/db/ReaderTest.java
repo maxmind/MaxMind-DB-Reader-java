@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.IllegalAccessException;
 import java.lang.InstantiationException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -673,6 +674,97 @@ public class ReaderTest {
             Vector<Long> arrayField
         ) {
             this.arrayField = arrayField;
+        }
+    }
+
+    // Test that we cache differently depending on more than the offset.
+    @Test
+    public void testCacheWithDifferentModels()
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
+        NodeCache cache = new CHMCache();
+
+        this.testReader = new Reader(
+                getFile("MaxMind-DB-test-decoder.mmdb"),
+                cache
+        );
+
+        TestModelA modelA = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelA.class
+        );
+        assertEquals("unicode! ☯ - ♫", modelA.utf8StringFieldA);
+
+        TestModelB modelB = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelB.class
+        );
+        assertEquals("unicode! ☯ - ♫", modelB.utf8StringFieldB);
+    }
+
+    static class TestModelA {
+        String utf8StringFieldA;
+
+        @MaxMindDbConstructor
+        public TestModelA (
+            @MaxMindDbParameter(name="utf8_string") String utf8StringFieldA
+        ) {
+            this.utf8StringFieldA = utf8StringFieldA;
+        }
+    }
+
+    static class TestModelB {
+        String utf8StringFieldB;
+
+        @MaxMindDbConstructor
+        public TestModelB (
+            @MaxMindDbParameter(name="utf8_string") String utf8StringFieldB
+        ) {
+            this.utf8StringFieldB = utf8StringFieldB;
+        }
+    }
+
+    @Test
+    public void testCacheKey() {
+        Class<TestModelCacheKey> cls = TestModelCacheKey.class;
+
+        CacheKey a = new CacheKey(1, cls, getType(cls, 0));
+        CacheKey b = new CacheKey(1, cls, getType(cls, 0));
+        assertTrue(a.equals(b));
+
+        CacheKey c = new CacheKey(2, cls, getType(cls, 0));
+        assertFalse(a.equals(c));
+
+        CacheKey d = new CacheKey(1, String.class, getType(cls, 0));
+        assertFalse(a.equals(d));
+
+        CacheKey e = new CacheKey(1, cls, getType(cls, 1));
+        assertFalse(a.equals(e));
+    }
+
+    private <T> java.lang.reflect.Type getType(Class<T> cls, int i) {
+        Constructor<?>[] constructors = cls.getConstructors();
+        Constructor<TestModelCacheKey> constructor = null;
+        for (Constructor<?> constructor2 : constructors) {
+            constructor = (Constructor<TestModelCacheKey>) constructor2;
+            break;
+        }
+        assertNotNull(constructor);
+
+        java.lang.reflect.Type[] types = constructor.getGenericParameterTypes();
+        return types[i];
+    }
+
+    static class TestModelCacheKey {
+        private List<Long> a;
+        private List<Integer> b;
+
+        public TestModelCacheKey (List<Long> a, List<Integer> b) {
+            this.a = a;
+            this.b = b;
         }
     }
 

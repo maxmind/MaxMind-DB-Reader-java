@@ -16,7 +16,7 @@ public class CHMCache implements NodeCache {
     private static final int DEFAULT_CAPACITY = 4096;
 
     private final int capacity;
-    private final ConcurrentHashMap<Integer, Object> cache;
+    private final ConcurrentHashMap<CacheKey, Object> cache;
     private boolean cacheFull = false;
 
     public CHMCache() {
@@ -29,19 +29,18 @@ public class CHMCache implements NodeCache {
     }
 
     @Override
-    public Object get(int key, Class<?> cls, Loader loader)
+    public Object get(CacheKey key, Loader loader)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException,
                    NoSuchMethodException {
-        Integer k = key;
-        Object value = cache.get(k);
+        Object value = cache.get(key);
         if (value == null) {
-            value = loader.load(key, cls);
+            value = loader.load(key);
             if (!cacheFull) {
                 if (cache.size() < capacity) {
-                    cache.put(k, value);
+                    cache.put(key, value);
                 } else {
                     cacheFull = true;
                 }

@@ -8,15 +8,15 @@ import java.lang.reflect.InvocationTargetException;
 public interface NodeCache {
 
     interface Loader {
-        Object load(int key, Class<?> cls)
+        Object load(CacheKey key)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,
                    InvocationTargetException,
-                   NoSuchMethodException ;
+                   NoSuchMethodException;
     }
 
-    Object get(int key, Class<?> cls, Loader loader)
+    Object get(CacheKey key, Loader loader)
             throws IOException,
                    InstantiationException,
                    IllegalAccessException,

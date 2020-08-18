@@ -66,6 +66,24 @@ final class Decoder {
         return cls.cast(decode(cls, null));
     }
 
+    private <T> T decode(CacheKey<T> key)
+            throws IOException,
+                   InstantiationException,
+                   IllegalAccessException,
+                   InvocationTargetException,
+                   NoSuchMethodException {
+        int offset = key.getOffset();
+        if (offset >= this.buffer.capacity()) {
+            throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains bad data: "
+                            + "pointer larger than the database.");
+        }
+
+        this.buffer.position(offset);
+        Class<T> cls = key.getCls();
+        return cls.cast(decode(cls, key.getType()));
+    }
+
     private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
             throws IOException,
                    InstantiationException,
@@ -93,7 +111,8 @@ final class Decoder {
             int targetOffset = (int) pointer;
             int position = buffer.position();
 
-            T o = cls.cast(cache.get(targetOffset, cls, cacheLoader));
+            CacheKey key = new CacheKey(targetOffset, cls, genericType);
+            T o = cls.cast(cache.get(key, cacheLoader));
 
             buffer.position(position);
             return o;
