@@ -5,21 +5,21 @@ public final class CacheKey<T> {
     private final Class<T> cls;
     private final java.lang.reflect.Type type;
 
-    public CacheKey(int offset, Class<T> cls, java.lang.reflect.Type type) {
+    CacheKey(int offset, Class<T> cls, java.lang.reflect.Type type) {
         this.offset = offset;
         this.cls = cls;
         this.type = type;
     }
 
-    public int getOffset() {
+    int getOffset() {
         return this.offset;
     }
 
-    public Class<T> getCls() {
+    Class<T> getCls() {
         return this.cls;
     }
 
-    public java.lang.reflect.Type getType() {
+    java.lang.reflect.Type getType() {
         return this.type;
     }
 
