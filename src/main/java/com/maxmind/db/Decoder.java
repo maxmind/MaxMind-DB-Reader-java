@@ -15,6 +15,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,10 +43,27 @@ final class Decoder {
 
     private final ByteBuffer buffer;
 
+    private final ConcurrentHashMap<Class, CachedConstructor> constructors;
+
     Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
+        this(
+                cache,
+                buffer,
+                pointerBase,
+                new ConcurrentHashMap<>()
+        );
+    }
+
+    Decoder(
+            NodeCache cache,
+            ByteBuffer buffer,
+            long pointerBase,
+            ConcurrentHashMap<Class, CachedConstructor> constructors
+    ) {
         this.cache = cache;
         this.pointerBase = pointerBase;
         this.buffer = buffer;
+        this.constructors = constructors;
     }
 
     private final NodeCache.Loader cacheLoader = this::decode;
@@ -378,18 +396,39 @@ final class Decoder {
                    IllegalAccessException,
                    InvocationTargetException,
                    NoSuchMethodException {
-        Constructor<T> constructor = this.findConstructor(cls);
+        CachedConstructor<T> cachedConstructor = this.constructors.get(cls);
+        Constructor<T> constructor;
+        Class<?>[] parameterTypes;
+        java.lang.reflect.Type[] parameterGenericTypes;
+        Map<String, Integer> parameterIndexes;
+        if (cachedConstructor == null) {
+            constructor = this.findConstructor(cls);
 
-        Class<?>[] parameterTypes = constructor.getParameterTypes();
+            parameterTypes = constructor.getParameterTypes();
 
-        java.lang.reflect.Type[] parameterGenericTypes
-            = constructor.getGenericParameterTypes();
+            parameterGenericTypes = constructor.getGenericParameterTypes();
 
-        Map<String, Integer> parameterIndexes = new HashMap<>();
-        Annotation[][] annotations = constructor.getParameterAnnotations();
-        for (int i = 0; i < constructor.getParameterCount(); i++) {
-            String parameterName = this.getParameterName(cls, i, annotations[i]);
-            parameterIndexes.put(parameterName, i);
+            parameterIndexes = new HashMap<>();
+            Annotation[][] annotations = constructor.getParameterAnnotations();
+            for (int i = 0; i < constructor.getParameterCount(); i++) {
+                String parameterName = this.getParameterName(cls, i, annotations[i]);
+                parameterIndexes.put(parameterName, i);
+            }
+
+            this.constructors.put(
+                    cls,
+                    new CachedConstructor(
+                        constructor,
+                        parameterTypes,
+                        parameterGenericTypes,
+                        parameterIndexes
+                    )
+            );
+        } else {
+            constructor = cachedConstructor.getConstructor();
+            parameterTypes = cachedConstructor.getParameterTypes();
+            parameterGenericTypes = cachedConstructor.getParameterGenericTypes();
+            parameterIndexes = cachedConstructor.getParameterIndexes();
         }
 
         Object[] parameters = new Object[parameterTypes.length];

@@ -11,6 +11,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Instances of this class provide a reader for the MaxMind DB format. IP
@@ -26,6 +27,7 @@ public final class Reader implements Closeable {
     private final Metadata metadata;
     private final AtomicReference<BufferHolder> bufferHolderReference;
     private final NodeCache cache;
+    private final ConcurrentHashMap<Class, CachedConstructor> constructors;
 
     /**
      * The file mode to use when opening a MaxMind DB.
@@ -169,6 +171,8 @@ public final class Reader implements Closeable {
         this.metadata = metadataDecoder.decode(start, Metadata.class);
 
         this.ipV4Start = this.findIpV4StartNode(buffer);
+
+        this.constructors = new ConcurrentHashMap<>();
     }
 
     /**
@@ -306,8 +310,12 @@ public final class Reader implements Closeable {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        Decoder decoder = new Decoder(this.cache, buffer,
-                this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE);
+        Decoder decoder = new Decoder(
+                this.cache,
+                buffer,
+                this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE,
+                this.constructors
+        );
         return decoder.decode(resolved, cls);
     }
 
