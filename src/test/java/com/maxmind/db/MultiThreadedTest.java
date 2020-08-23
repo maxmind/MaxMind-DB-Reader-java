@@ -3,9 +3,6 @@ package com.maxmind.db;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
@@ -33,11 +30,7 @@ public class MultiThreadedTest {
 
     @Test
     public void streamThreadTest() throws IOException, InterruptedException,
-            ExecutionException,
-            InstantiationException,
-            IllegalAccessException,
-            InvocationTargetException,
-            NoSuchMethodException {
+            ExecutionException {
         try (Reader reader = new Reader(ReaderTest.getStream("MaxMind-DB-test-decoder.mmdb"))) {
             MultiThreadedTest.threadTest(reader);
         }
@@ -45,11 +38,7 @@ public class MultiThreadedTest {
 
     @Test
     public void mmapThreadTest() throws IOException, InterruptedException,
-            ExecutionException,
-            InstantiationException,
-            IllegalAccessException,
-            InvocationTargetException,
-            NoSuchMethodException {
+            ExecutionException {
         try (Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
             MultiThreadedTest.threadTest(reader);
         }

@@ -66,17 +66,10 @@ import com.maxmind.db.Record;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 
 public class Lookup {
-    public static void main(String[] args)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException {
+    public static void main(String[] args) throws IOException {
         File database = new File("/path/to/database/GeoIP2-City.mmdb");
         try (Reader reader = new Reader(database)) {
             InetAddress address = InetAddress.getByName("24.24.24.24");

@@ -1,9 +1,6 @@
 package com.maxmind.db;
 
 import java.io.IOException;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * A no-op cache singleton.
@@ -16,12 +13,7 @@ public class NoCache implements NodeCache {
     }
 
     @Override
-    public Object get(CacheKey key, Loader loader)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Object get(CacheKey key, Loader loader) throws IOException {
         return loader.load(key);
     }
 
