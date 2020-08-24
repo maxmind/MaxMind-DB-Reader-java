@@ -157,7 +157,7 @@ public final class Reader implements Closeable {
      * address, the non-null {@link Record} will still be returned.
      * @throws IOException if a file I/O error occurs.
      */
-    public <T> Record<T> getRecord(InetAddress ipAddress, Class<T> cls)
+    public <T> DatabaseRecord<T> getRecord(InetAddress ipAddress, Class<T> cls)
             throws IOException {
         ByteBuffer buffer = this.getBufferHolder().get();
 
@@ -180,7 +180,7 @@ public final class Reader implements Closeable {
             dataRecord = this.resolveDataPointer(buffer, record, cls);
         }
 
-        return new Record<>(dataRecord, ipAddress, pl);
+        return new DatabaseRecord<>(dataRecord, ipAddress, pl);
     }
 
     private BufferHolder getBufferHolder() throws ClosedDatabaseException {

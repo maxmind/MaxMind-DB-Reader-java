@@ -78,7 +78,7 @@ public class ReaderTest {
         };
         for (GetRecordTest test : mapTests) {
             try (Reader reader = new Reader(test.db)) {
-                Record record = reader.getRecord(test.ip, Map.class);
+                DatabaseRecord record = reader.getRecord(test.ip, Map.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
 
@@ -98,7 +98,7 @@ public class ReaderTest {
         };
         for (GetRecordTest test : stringTests) {
             try (Reader reader = new Reader(test.db)) {
-                Record record = reader.getRecord(test.ip, String.class);
+                DatabaseRecord record = reader.getRecord(test.ip, String.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
 

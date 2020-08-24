@@ -3,9 +3,10 @@ package com.maxmind.db;
 import java.net.InetAddress;
 
 /**
- * Record represents the data and metadata associated with a database lookup.
+ * DatabaseRecord represents the data and metadata associated with a database
+ * lookup.
  */
-public final class Record<T> {
+public final class DatabaseRecord<T> {
     private final T data;
     private final Network network;
 
@@ -16,7 +17,7 @@ public final class Record<T> {
      * @param ipAddress    the IP address used in the lookup.
      * @param prefixLength the network prefix length associated with the record in the database.
      */
-    public Record(T data, InetAddress ipAddress, int prefixLength) {
+    public DatabaseRecord(T data, InetAddress ipAddress, int prefixLength) {
         this.data = data;
         this.network = new Network(ipAddress, prefixLength);
     }
