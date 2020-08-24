@@ -9,6 +9,8 @@ CHANGELOG
   `MaxMindDbConstructor` and `MaxMindDbParameter` annotations to identify
   the constructors and parameters to deserialize into.
 * `jackson-databind` is no longer a dependency.
+* The `Record` class is now named `DatabaseRecord`. This is to avoid a
+  conflict with `java.lang.Record` in Java 14.
 
 1.4.0 (2020-06-12)
 ------------------
