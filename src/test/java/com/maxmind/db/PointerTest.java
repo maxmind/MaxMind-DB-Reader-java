@@ -4,9 +4,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,12 +14,7 @@ import com.maxmind.db.Reader.FileMode;
 public class PointerTest {
     @SuppressWarnings("static-method")
     @Test
-    public void testWithPointers()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testWithPointers() throws IOException {
         File file = ReaderTest.getFile("maps-with-pointers.raw");
         BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
         Decoder decoder = new Decoder(NoCache.getInstance(), ptf.get(), 0);

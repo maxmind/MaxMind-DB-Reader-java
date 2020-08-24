@@ -1,8 +1,5 @@
 import java.io.File;
 import java.io.IOException;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.util.Map;
 import java.util.Random;
@@ -21,12 +18,7 @@ public class Benchmark {
     private final static int BENCHMARKS = 5;
     private final static boolean TRACE = false;
 
-    public static void main(String[] args)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public static void main(String[] args) throws IOException, InvalidDatabaseException {
         File file = new File(args.length > 0 ? args[0] : "GeoLite2-City.mmdb");
         System.out.println("No caching");
         loop("Warming up", file, WARMUPS, NoCache.getInstance());
@@ -37,12 +29,7 @@ public class Benchmark {
         loop("Benchmarking", file, BENCHMARKS, new CHMCache());
     }
 
-    private static void loop(String msg, File file, int loops, NodeCache cache)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    private static void loop(String msg, File file, int loops, NodeCache cache) throws IOException {
         System.out.println(msg);
         for (int i = 0; i < loops; i++) {
             Reader r = new Reader(file, FileMode.MEMORY_MAPPED, cache);
@@ -51,12 +38,7 @@ public class Benchmark {
         System.out.println();
     }
 
-    private static void bench(Reader r, int count, int seed)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    private static void bench(Reader r, int count, int seed) throws IOException {
         Random random = new Random(seed);
         long startTime = System.nanoTime();
         byte[] address = new byte[4];

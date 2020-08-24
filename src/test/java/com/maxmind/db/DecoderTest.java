@@ -3,10 +3,7 @@ package com.maxmind.db;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -347,145 +344,75 @@ public class DecoderTest {
     }
 
     @Test
-    public void testUint16()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testUint16() throws IOException {
         DecoderTest.testTypeDecoding(Type.UINT16, uint16());
     }
 
     @Test
-    public void testUint32()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testUint32() throws IOException {
         DecoderTest.testTypeDecoding(Type.UINT32, uint32());
     }
 
     @Test
-    public void testInt32()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testInt32() throws IOException {
         DecoderTest.testTypeDecoding(Type.INT32, int32());
     }
 
     @Test
-    public void testUint64()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testUint64() throws IOException {
         DecoderTest.testTypeDecoding(Type.UINT64, largeUint(64));
     }
 
     @Test
-    public void testUint128()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testUint128() throws IOException {
         DecoderTest.testTypeDecoding(Type.UINT128, largeUint(128));
     }
 
     @Test
-    public void testDoubles()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testDoubles() throws IOException {
         DecoderTest
                 .testTypeDecoding(Type.DOUBLE, DecoderTest.doubles());
     }
 
     @Test
-    public void testFloats()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testFloats() throws IOException {
         DecoderTest.testTypeDecoding(Type.FLOAT, DecoderTest.floats());
     }
 
     @Test
-    public void testPointers()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testPointers() throws IOException {
         DecoderTest.testTypeDecoding(Type.POINTER, pointers());
     }
 
     @Test
-    public void testStrings()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testStrings() throws IOException {
         DecoderTest.testTypeDecoding(Type.UTF8_STRING,
                 DecoderTest.strings());
     }
 
     @Test
-    public void testBooleans()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testBooleans() throws IOException {
         DecoderTest.testTypeDecoding(Type.BOOLEAN,
                 DecoderTest.booleans());
     }
 
     @Test
-    public void testBytes()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testBytes() throws IOException {
         DecoderTest.testTypeDecoding(Type.BYTES, DecoderTest.bytes());
     }
 
     @Test
-    public void testMaps()
-          throws IOException,
-                 InstantiationException,
-                 IllegalAccessException,
-                 InvocationTargetException,
-                 NoSuchMethodException {
+    public void testMaps() throws IOException {
         DecoderTest.testTypeDecoding(Type.MAP, DecoderTest.maps());
     }
 
     @Test
-    public void testArrays()
-          throws IOException,
-                 InstantiationException,
-                 IllegalAccessException,
-                 InvocationTargetException,
-                 NoSuchMethodException {
+    public void testArrays() throws IOException {
         DecoderTest.testTypeDecoding(Type.ARRAY, DecoderTest.arrays());
     }
 
     @Test
-    public void testInvalidControlByte()
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public void testInvalidControlByte() throws IOException {
         try (FileChannel fc = DecoderTest.getFileChannel(new byte[]{0x0, 0xF})) {
             MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
 
@@ -498,11 +425,7 @@ public class DecoderTest {
     }
 
     private static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+            throws IOException {
         NodeCache cache = new CHMCache();
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {

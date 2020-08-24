@@ -2,9 +2,6 @@ package com.maxmind.db;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * A simplistic cache using a {@link ConcurrentHashMap}. There's no eviction
@@ -29,12 +26,7 @@ public class CHMCache implements NodeCache {
     }
 
     @Override
-    public Object get(CacheKey key, Loader loader)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Object get(CacheKey key, Loader loader) throws IOException {
         Object value = cache.get(key);
         if (value == null) {
             value = loader.load(key);

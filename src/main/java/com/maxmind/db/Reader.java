@@ -5,9 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Class;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,12 +50,7 @@ public final class Reader implements Closeable {
      * @param database the MaxMind DB file to use.
      * @throws IOException if there is an error opening or reading from the file.
      */
-    public Reader(File database)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Reader(File database) throws IOException {
         this(database, NoCache.getInstance());
     }
 
@@ -71,12 +63,7 @@ public final class Reader implements Closeable {
      * @param cache    backing cache instance
      * @throws IOException if there is an error opening or reading from the file.
      */
-    public Reader(File database, NodeCache cache)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Reader(File database, NodeCache cache) throws IOException {
         this(database, FileMode.MEMORY_MAPPED, cache);
     }
 
@@ -87,12 +74,7 @@ public final class Reader implements Closeable {
      * @param source the InputStream that contains the MaxMind DB file.
      * @throws IOException if there is an error reading from the Stream.
      */
-    public Reader(InputStream source)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Reader(InputStream source) throws IOException {
         this(source, NoCache.getInstance());
     }
 
@@ -104,12 +86,7 @@ public final class Reader implements Closeable {
      * @param cache  backing cache instance
      * @throws IOException if there is an error reading from the Stream.
      */
-    public Reader(InputStream source, NodeCache cache)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Reader(InputStream source, NodeCache cache) throws IOException {
         this(new BufferHolder(source), "<InputStream>", cache);
     }
 
@@ -122,12 +99,7 @@ public final class Reader implements Closeable {
      * @param fileMode the mode to open the file with.
      * @throws IOException if there is an error opening or reading from the file.
      */
-    public Reader(File database, FileMode fileMode)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Reader(File database, FileMode fileMode) throws IOException {
         this(database, fileMode, NoCache.getInstance());
     }
 
@@ -141,21 +113,11 @@ public final class Reader implements Closeable {
      * @param cache    backing cache instance
      * @throws IOException if there is an error opening or reading from the file.
      */
-    public Reader(File database, FileMode fileMode, NodeCache cache)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public Reader(File database, FileMode fileMode, NodeCache cache) throws IOException {
         this(new BufferHolder(database, fileMode), database.getName(), cache);
     }
 
-    private Reader(BufferHolder bufferHolder, String name, NodeCache cache)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    private Reader(BufferHolder bufferHolder, String name, NodeCache cache) throws IOException {
         this.bufferHolderReference = new AtomicReference<>(
                 bufferHolder);
 
@@ -183,13 +145,7 @@ public final class Reader implements Closeable {
      * @return the object.
      * @throws IOException if a file I/O error occurs.
      */
-    public <T> T get(InetAddress ipAddress, Class<T> cls)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   ConstructorNotFoundException,
-                   NoSuchMethodException {
+    public <T> T get(InetAddress ipAddress, Class<T> cls) throws IOException {
         return getRecord(ipAddress, cls).getData();
     }
 
@@ -201,12 +157,8 @@ public final class Reader implements Closeable {
      * address, the non-null {@link Record} will still be returned.
      * @throws IOException if a file I/O error occurs.
      */
-    public <T> Record<T> getRecord(InetAddress ipAddress, Class<T> cls)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public <T> DatabaseRecord<T> getRecord(InetAddress ipAddress, Class<T> cls)
+            throws IOException {
         ByteBuffer buffer = this.getBufferHolder().get();
 
         byte[] rawAddress = ipAddress.getAddress();
@@ -228,7 +180,7 @@ public final class Reader implements Closeable {
             dataRecord = this.resolveDataPointer(buffer, record, cls);
         }
 
-        return new Record<>(dataRecord, ipAddress, pl);
+        return new DatabaseRecord<>(dataRecord, ipAddress, pl);
     }
 
     private BufferHolder getBufferHolder() throws ClosedDatabaseException {
@@ -294,11 +246,7 @@ public final class Reader implements Closeable {
             ByteBuffer buffer,
             int pointer,
             Class<T> cls
-    ) throws IOException,
-             InstantiationException,
-             IllegalAccessException,
-             InvocationTargetException,
-             NoSuchMethodException {
+    ) throws IOException {
         int resolved = (pointer - this.metadata.getNodeCount())
                 + this.metadata.getSearchTreeSize();
 

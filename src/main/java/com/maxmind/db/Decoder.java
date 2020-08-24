@@ -2,8 +2,6 @@ package com.maxmind.db;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.IllegalAccessException;
-import java.lang.InstantiationException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -68,12 +66,7 @@ final class Decoder {
 
     private final NodeCache.Loader cacheLoader = this::decode;
 
-    public <T> T decode(int offset, Class<T> cls)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    public <T> T decode(int offset, Class<T> cls) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
@@ -84,12 +77,7 @@ final class Decoder {
         return cls.cast(decode(cls, null));
     }
 
-    private <T> T decode(CacheKey<T> key)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+    private <T> T decode(CacheKey<T> key) throws IOException {
         int offset = key.getOffset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -103,11 +91,7 @@ final class Decoder {
     }
 
     private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+            throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -173,11 +157,7 @@ final class Decoder {
             int size,
             Class<T> cls,
             java.lang.reflect.Type genericType
-    ) throws IOException,
-             InstantiationException,
-             IllegalAccessException,
-             InvocationTargetException,
-             NoSuchMethodException {
+    ) throws IOException {
         switch (type) {
             case MAP:
                 return this.decodeMap(size, cls, genericType);
@@ -302,12 +282,7 @@ final class Decoder {
             int size,
             Class<T> cls,
             Class<V> elementClass
-    ) throws IOException,
-             InstantiationException,
-             IllegalAccessException,
-             InvocationTargetException,
-             DeserializationException,
-             NoSuchMethodException {
+    ) throws IOException {
         if (!List.class.isAssignableFrom(cls) && !cls.equals(Object.class)) {
             throw new DeserializationException();
         }
@@ -316,11 +291,22 @@ final class Decoder {
         if (cls.equals(List.class) || cls.equals(Object.class)) {
             array = new ArrayList<>(size);
         } else {
-            Constructor<T> constructor = cls.getConstructor(Integer.TYPE);
+            Constructor<T> constructor;
+            try {
+                constructor = cls.getConstructor(Integer.TYPE);
+            } catch (NoSuchMethodException e) {
+                throw new DeserializationException("No constructor found for the List: " + e);
+            }
             Object[] parameters = {size};
-            @SuppressWarnings("unchecked")
-            List<V> array2 = (List<V>) constructor.newInstance(parameters);
-            array = array2;
+            try {
+                @SuppressWarnings("unchecked")
+                List<V> array2 = (List<V>) constructor.newInstance(parameters);
+                array = array2;
+            } catch (InstantiationException |
+                    IllegalAccessException |
+                    InvocationTargetException e) {
+                throw new DeserializationException("Error creating list: " + e);
+            }
         }
 
         for (int i = 0; i < size; i++) {
@@ -335,11 +321,7 @@ final class Decoder {
             int size,
             Class<T> cls,
             java.lang.reflect.Type genericType
-    ) throws IOException,
-             InstantiationException,
-             IllegalAccessException,
-             InvocationTargetException,
-             NoSuchMethodException {
+    ) throws IOException {
         if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
             Class<?> valueClass = Object.class;
             if (genericType instanceof ParameterizedType) {
@@ -365,20 +347,27 @@ final class Decoder {
             Class<T> cls,
             int size,
             Class<V> valueClass
-    ) throws IOException,
-             InstantiationException,
-             IllegalAccessException,
-             InvocationTargetException,
-             NoSuchMethodException {
+    ) throws IOException {
         Map<String, V> map;
         if (cls.equals(Map.class) || cls.equals(Object.class)) {
             map = new HashMap<>(size);
         } else {
-            Constructor<T> constructor = cls.getConstructor(Integer.TYPE);
+            Constructor<T> constructor;
+            try {
+                constructor = cls.getConstructor(Integer.TYPE);
+            } catch (NoSuchMethodException e) {
+                throw new DeserializationException("No constructor found for the Map: " + e);
+            }
             Object[] parameters = {size};
-            @SuppressWarnings("unchecked")
-            Map<String, V> map2 = (Map<String, V>) constructor.newInstance(parameters);
-            map = map2;
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, V> map2 = (Map<String, V>) constructor.newInstance(parameters);
+                map = map2;
+            } catch (InstantiationException |
+                    IllegalAccessException |
+                    InvocationTargetException e) {
+                throw new DeserializationException("Error creating map: " + e);
+            }
         }
 
         for (int i = 0; i < size; i++) {
@@ -391,11 +380,7 @@ final class Decoder {
     }
 
     private <T> Object decodeMapIntoObject(int size, Class<T> cls)
-            throws IOException,
-                   InstantiationException,
-                   IllegalAccessException,
-                   InvocationTargetException,
-                   NoSuchMethodException {
+            throws IOException {
         CachedConstructor<T> cachedConstructor = this.constructors.get(cls);
         Constructor<T> constructor;
         Class<?>[] parameterTypes;
@@ -448,11 +433,17 @@ final class Decoder {
             );
         }
 
-        return constructor.newInstance(parameters);
+        try {
+            return constructor.newInstance(parameters);
+        } catch (InstantiationException |
+                IllegalAccessException |
+                InvocationTargetException e) {
+            throw new DeserializationException("Error creating object: " + e);
+        }
     }
 
     private static <T> Constructor<T> findConstructor(Class<T> cls)
-        throws ConstructorNotFoundException {
+            throws ConstructorNotFoundException {
         Constructor<?>[] constructors = cls.getConstructors();
         for (Constructor<?> constructor : constructors) {
             if (constructor.getAnnotation(MaxMindDbConstructor.class) == null) {
