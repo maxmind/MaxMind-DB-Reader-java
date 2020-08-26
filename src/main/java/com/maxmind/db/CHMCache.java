@@ -1,6 +1,7 @@
 package com.maxmind.db;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -13,7 +14,7 @@ public class CHMCache implements NodeCache {
     private static final int DEFAULT_CAPACITY = 4096;
 
     private final int capacity;
-    private final ConcurrentHashMap<CacheKey, Object> cache;
+    private final HashMap<CacheKey, Object> cache;
     private boolean cacheFull = false;
 
     public CHMCache() {
@@ -22,7 +23,7 @@ public class CHMCache implements NodeCache {
 
     public CHMCache(int capacity) {
         this.capacity = capacity;
-        this.cache = new ConcurrentHashMap<>(capacity);
+        this.cache = new HashMap<>(capacity);
     }
 
     @Override

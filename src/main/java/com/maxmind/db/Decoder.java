@@ -64,7 +64,7 @@ final class Decoder {
         this.constructors = constructors;
     }
 
-    private final NodeCache.Loader cacheLoader = this::decode;
+    private final NodeCache.Loader cacheLoader = this::decodeUncached;
 
     public <T> T decode(int offset, Class<T> cls, java.lang.reflect.Type genericType) throws IOException {
         if (offset >= this.buffer.capacity()) {
@@ -77,7 +77,7 @@ final class Decoder {
         return cls.cast(decode(cls, null));
     }
 
-    private <T> Object decode(CacheKey<T> key) throws IOException {
+    private <T> Object decodeUncached(CacheKey<T> key) throws IOException {
         int offset = key.getOffset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -95,17 +95,15 @@ final class Decoder {
 
         CacheKey key = new CacheKey(position, cls, genericType);
 
-        System.out.println(cls);
         T o = cls.cast(cache.get(key, cacheLoader));
 
-        if (position == buffer.position()) {
+        if (key.finalOffset == -1) {
+            key.finalOffset = buffer.position();
+        } else {
+
             // The value came out of the cache
             buffer.position(key.finalOffset);
-        } else {
-            // We didn't use the cache. Store the final offset. XXX - concurrency?
-            key.finalOffset = buffer.position();
         }
-
         return o;
     }
     private <T> Object decodeUncached(Class<T> cls, java.lang.reflect.Type genericType)

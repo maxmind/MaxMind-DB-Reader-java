@@ -9,7 +9,7 @@ public class NoCache implements NodeCache {
 
     private static final NoCache INSTANCE = new NoCache();
 
-    private NoCache() {
+    public NoCache() {
     }
 
     @Override

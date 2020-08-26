@@ -6,7 +6,7 @@ public final class CacheKey<T> {
     private final java.lang.reflect.Type type;
 
     // This is metadata and isn't used for hashCode/equals
-    int finalOffset;
+    int finalOffset = -1;
 
     CacheKey(int offset, Class<T> cls, java.lang.reflect.Type type) {
         this.offset = offset;

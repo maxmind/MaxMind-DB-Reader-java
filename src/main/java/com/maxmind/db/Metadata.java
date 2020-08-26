@@ -30,9 +30,9 @@ public final class Metadata {
     @MaxMindDbConstructor
     public Metadata(
             @MaxMindDbParameter(name="binary_format_major_version")
-            int binaryFormatMajorVersion,
+            Integer binaryFormatMajorVersion,
             @MaxMindDbParameter(name="binary_format_minor_version")
-            int binaryFormatMinorVersion,
+                    Integer binaryFormatMinorVersion,
             @MaxMindDbParameter(name="build_epoch")
             BigInteger buildEpoch,
             @MaxMindDbParameter(name="database_type")
@@ -42,11 +42,11 @@ public final class Metadata {
             @MaxMindDbParameter(name="description")
             Map<String, String> description,
             @MaxMindDbParameter(name="ip_version")
-            int ipVersion,
+                    Integer ipVersion,
             @MaxMindDbParameter(name="node_count")
-            long nodeCount,
+            Long nodeCount,
             @MaxMindDbParameter(name="record_size")
-            int recordSize
+            Integer recordSize
     ) {
         this.binaryFormatMajorVersion = binaryFormatMajorVersion;
         this.binaryFormatMinorVersion = binaryFormatMinorVersion;
@@ -55,7 +55,7 @@ public final class Metadata {
         this.languages = languages;
         this.description = description;
         this.ipVersion = ipVersion;
-        this.nodeCount = (int) nodeCount;
+        this.nodeCount = nodeCount.intValue();
         this.recordSize = recordSize;
 
         this.nodeByteSize = this.recordSize / 4;
