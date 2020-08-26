@@ -66,7 +66,7 @@ final class Decoder {
 
     private final NodeCache.Loader cacheLoader = this::decode;
 
-    public <T> T decode(int offset, Class<T> cls) throws IOException {
+    public <T> T decode(int offset, Class<T> cls, java.lang.reflect.Type genericType) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
@@ -87,10 +87,28 @@ final class Decoder {
 
         this.buffer.position(offset);
         Class<T> cls = key.getCls();
-        return decode(cls, key.getType());
+        return decodeUncached(cls, key.getType());
     }
 
-    private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
+    public <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType) throws IOException {
+        int position = buffer.position();
+
+        CacheKey key = new CacheKey(position, cls, genericType);
+
+        System.out.println(cls);
+        T o = cls.cast(cache.get(key, cacheLoader));
+
+        if (position == buffer.position()) {
+            // The value came out of the cache
+            buffer.position(key.finalOffset);
+        } else {
+            // We didn't use the cache. Store the final offset. XXX - concurrency?
+            key.finalOffset = buffer.position();
+        }
+
+        return o;
+    }
+    private <T> Object decodeUncached(Class<T> cls, java.lang.reflect.Type genericType)
             throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
 
@@ -113,8 +131,7 @@ final class Decoder {
             int targetOffset = (int) pointer;
             int position = buffer.position();
 
-            CacheKey key = new CacheKey(targetOffset, cls, genericType);
-            Object o = decode(key);
+            T o = decode(targetOffset, cls, genericType);
 
             buffer.position(position);
             return o;
@@ -205,15 +222,15 @@ final class Decoder {
         return s;
     }
 
-    private int decodeUint16(int size) {
+    private Integer decodeUint16(int size) {
         return this.decodeInteger(size);
     }
 
-    private int decodeInt32(int size) {
+    private Integer decodeInt32(int size) {
         return this.decodeInteger(size);
     }
 
-    private long decodeLong(int size) {
+    private Long decodeLong(int size) {
         long integer = 0;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (this.buffer.get() & 0xFF);
@@ -221,19 +238,19 @@ final class Decoder {
         return integer;
     }
 
-    private long decodeUint32(int size) {
+    private Long decodeUint32(int size) {
         return this.decodeLong(size);
     }
 
-    private int decodeInteger(int size) {
+    private Integer decodeInteger(int size) {
         return this.decodeInteger(0, size);
     }
 
-    private int decodeInteger(int base, int size) {
+    private Integer decodeInteger(int base, int size) {
         return Decoder.decodeInteger(this.buffer, base, size);
     }
 
-    static int decodeInteger(ByteBuffer buffer, int base, int size) {
+    static Integer decodeInteger(ByteBuffer buffer, int base, int size) {
         int integer = base;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (buffer.get() & 0xFF);
@@ -246,7 +263,7 @@ final class Decoder {
         return new BigInteger(1, bytes);
     }
 
-    private double decodeDouble(int size) throws InvalidDatabaseException {
+    private Double decodeDouble(int size) throws InvalidDatabaseException {
         if (size != 8) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
@@ -264,7 +281,7 @@ final class Decoder {
         return this.buffer.getFloat();
     }
 
-    private static boolean decodeBoolean(int size)
+    private static Boolean decodeBoolean(int size)
             throws InvalidDatabaseException {
         switch (size) {
             case 0:

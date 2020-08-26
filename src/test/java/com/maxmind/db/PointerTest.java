@@ -21,26 +21,26 @@ public class PointerTest {
 
         Map<String, String> map = new HashMap<>();
         map.put("long_key", "long_value1");
-        assertEquals(map, decoder.decode(0, Map.class));
+        assertEquals(map, decoder.decode(0, Map.class, null));
 
         map = new HashMap<>();
         map.put("long_key", "long_value2");
-        assertEquals(map, decoder.decode(22, Map.class));
+        assertEquals(map, decoder.decode(22, Map.class, null));
 
         map = new HashMap<>();
         map.put("long_key2", "long_value1");
-        assertEquals(map, decoder.decode(37, Map.class));
+        assertEquals(map, decoder.decode(37, Map.class, null));
 
         map = new HashMap<>();
         map.put("long_key2", "long_value2");
-        assertEquals(map, decoder.decode(50, Map.class));
+        assertEquals(map, decoder.decode(50, Map.class, null));
 
         map = new HashMap<>();
         map.put("long_key", "long_value1");
-        assertEquals(map, decoder.decode(55, Map.class));
+        assertEquals(map, decoder.decode(55, Map.class, null));
 
         map = new HashMap<>();
         map.put("long_key2", "long_value2");
-        assertEquals(map, decoder.decode(57, Map.class));
+        assertEquals(map, decoder.decode(57, Map.class, null));
     }
 }

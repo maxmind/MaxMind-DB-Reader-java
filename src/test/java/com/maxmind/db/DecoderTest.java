@@ -419,7 +419,7 @@ public class DecoderTest {
             Decoder decoder = new Decoder(new CHMCache(), mmap, 0);
             InvalidDatabaseException ex = assertThrows(
                     InvalidDatabaseException.class,
-                    () -> decoder.decode(0, String.class));
+                    () -> decoder.decode(0, String.class, null));
             assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
         }
     }
@@ -441,30 +441,30 @@ public class DecoderTest {
 
                 // XXX - this could be streamlined
                 if (type.equals(Type.BYTES)) {
-                    assertArrayEquals(desc, (byte[]) expect, decoder.decode(0, byte[].class));
+                    assertArrayEquals(desc, (byte[]) expect, decoder.decode(0, byte[].class, null));
                 } else if (type.equals(Type.ARRAY)) {
-                    assertEquals(desc, expect, decoder.decode(0, List.class));
+                    assertEquals(desc, expect, decoder.decode(0, List.class, null));
                 } else if (type.equals(Type.UINT16)
                         || type.equals(Type.INT32)) {
-                    assertEquals(desc, expect, decoder.decode(0, Integer.class));
+                    assertEquals(desc, expect, decoder.decode(0, Integer.class, null));
                 } else if (type.equals(Type.UINT32)
                         || type.equals(Type.POINTER)) {
-                    assertEquals(desc, expect, decoder.decode(0, Long.class));
+                    assertEquals(desc, expect, decoder.decode(0, Long.class, null));
                 } else if (type.equals(Type.UINT64)
                         || type.equals(Type.UINT128)) {
-                    assertEquals(desc, expect, decoder.decode(0, BigInteger.class));
+                    assertEquals(desc, expect, decoder.decode(0, BigInteger.class, null));
                 } else if (type.equals(Type.DOUBLE)) {
-                    assertEquals(desc, expect, decoder.decode(0, Double.class));
+                    assertEquals(desc, expect, decoder.decode(0, Double.class, null));
                 } else if (type.equals(Type.FLOAT)) {
-                    assertEquals(desc, (Float) expect, decoder.decode(0, Float.class));
+                    assertEquals(desc, (Float) expect, decoder.decode(0, Float.class, null));
                 } else if (type.equals(Type.UTF8_STRING)) {
-                    assertEquals(desc, expect, decoder.decode(0, String.class));
+                    assertEquals(desc, expect, decoder.decode(0, String.class, null));
                 } else if (type.equals(Type.BOOLEAN)) {
-                    assertEquals(desc, expect, decoder.decode(0, Boolean.class));
+                    assertEquals(desc, expect, decoder.decode(0, Boolean.class, null));
                 } else {
                     // We hit this for Type.MAP.
 
-                    Map got = decoder.decode(0, Map.class);
+                    Map got = decoder.decode(0, Map.class, null);
                     Map expectMap = (Map) expect;
 
                     assertEquals(desc, expectMap.size(), got.size());
