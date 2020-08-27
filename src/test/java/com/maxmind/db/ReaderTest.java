@@ -659,16 +659,16 @@ public class ReaderTest {
 
         CacheKey a = new CacheKey(1, cls, getType(cls, 0));
         CacheKey b = new CacheKey(1, cls, getType(cls, 0));
-        assertTrue(a.equals(b));
+        assertEquals(a, b);
 
         CacheKey c = new CacheKey(2, cls, getType(cls, 0));
-        assertFalse(a.equals(c));
+        assertNotEquals(a, c);
 
         CacheKey d = new CacheKey(1, String.class, getType(cls, 0));
-        assertFalse(a.equals(d));
+        assertNotEquals(a, d);
 
         CacheKey e = new CacheKey(1, cls, getType(cls, 1));
-        assertFalse(a.equals(e));
+        assertNotEquals(a, e);
     }
 
     private <T> java.lang.reflect.Type getType(Class<T> cls, int i) {
