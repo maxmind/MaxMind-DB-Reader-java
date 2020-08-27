@@ -44,14 +44,9 @@ public final class CacheKey<T> {
         }
 
         if (this.type == null) {
-            if (other.type != null) {
-                return false;
-            }
-        } else if (!this.type.equals(other.type)) {
-            return false;
+            return other.type == null;
         }
-
-        return true;
+        return this.type.equals(other.type);
     }
 
     @Override
