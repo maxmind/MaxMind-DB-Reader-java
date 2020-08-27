@@ -114,7 +114,7 @@ final class Decoder {
             int position = buffer.position();
 
             CacheKey key = new CacheKey(targetOffset, cls, genericType);
-            Object o = decode(key);
+            Object o = cache.get(key, cacheLoader);
 
             buffer.position(position);
             return o;
