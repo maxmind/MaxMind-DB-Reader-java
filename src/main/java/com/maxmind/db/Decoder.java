@@ -284,7 +284,7 @@ final class Decoder {
             Class<V> elementClass
     ) throws IOException {
         if (!List.class.isAssignableFrom(cls) && !cls.equals(Object.class)) {
-            throw new DeserializationException();
+            throw new DeserializationException("Unable to deserialize an array into an " + cls);
         }
 
         List<V> array;
