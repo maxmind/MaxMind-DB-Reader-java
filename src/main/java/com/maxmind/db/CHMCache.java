@@ -14,7 +14,7 @@ public class CHMCache implements NodeCache {
     private static final int DEFAULT_CAPACITY = 4096;
 
     private final int capacity;
-    private final HashMap<CacheKey, Object> cache;
+    private final HashMap<CacheKey, CacheValue> cache;
     private boolean cacheFull = false;
 
     public CHMCache() {
@@ -27,8 +27,8 @@ public class CHMCache implements NodeCache {
     }
 
     @Override
-    public Object get(CacheKey key, Loader loader) throws IOException {
-        Object value = cache.get(key);
+    public CacheValue get(CacheKey key, Loader loader) throws IOException {
+        CacheValue value = cache.get(key);
         if (value == null) {
             value = loader.load(key);
             if (!cacheFull) {

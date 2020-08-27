@@ -28,7 +28,7 @@ public class LRUCache implements NodeCache {
     }
 
     @Override
-    public Object get(CacheKey key, Loader loader) throws IOException {
+    public CacheValue get(CacheKey key, Loader loader) throws IOException {
         LRUElement element = cache.get(key);
         if (element == null) {
             element = new LRUElement();

@@ -26,8 +26,8 @@ public class SimpleLRUCache implements NodeCache {
     }
 
     @Override
-    public Object get(CacheKey key, Loader loader) throws IOException {
-        Object value;
+    public CacheValue get(CacheKey key, Loader loader) throws IOException {
+        CacheValue value;
         Lock readLock = lock.readLock();
         readLock.lock();
         try {

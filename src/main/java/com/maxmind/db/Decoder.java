@@ -74,10 +74,10 @@ final class Decoder {
         }
 
         this.buffer.position(offset);
-        return cls.cast(decode(cls, null));
+        return cls.cast(decode(cls, null).value);
     }
 
-    private <T> Object decodeUncached(CacheKey<T> key) throws IOException {
+    private <T> CacheValue decodeUncached(CacheKey<T> key) throws IOException {
         int offset = key.getOffset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -90,23 +90,20 @@ final class Decoder {
         return decodeUncached(cls, key.getType());
     }
 
-    public <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType) throws IOException {
+    public <T> CacheValue decode(Class<T> cls, java.lang.reflect.Type genericType) throws IOException {
         int position = buffer.position();
 
         CacheKey key = new CacheKey(position, cls, genericType);
 
-        T o = cls.cast(cache.get(key, cacheLoader));
-
-        if (key.finalOffset == -1) {
-            key.finalOffset = buffer.position();
-        } else {
+        CacheValue o = cache.get(key, cacheLoader);
 
             // The value came out of the cache
-            buffer.position(key.finalOffset);
-        }
+            buffer.position(o.finalOffset);
+
         return o;
     }
-    private <T> Object decodeUncached(Class<T> cls, java.lang.reflect.Type genericType)
+
+    private <T> CacheValue decodeUncached(Class<T> cls, java.lang.reflect.Type genericType)
             throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
 
@@ -123,16 +120,23 @@ final class Decoder {
 
             // for unit testing
             if (this.POINTER_TEST_HACK) {
-                return pointer;
+                return new CacheValue(Type.POINTER, pointer, 0);
             }
 
             int targetOffset = (int) pointer;
             int position = buffer.position();
 
-            T o = decode(targetOffset, cls, genericType);
+            if (targetOffset >= this.buffer.capacity()) {
+                throw new InvalidDatabaseException(
+                        "The MaxMind DB file's data section contains bad data: "
+                                + "pointer larger than the database.");
+            }
+
+            this.buffer.position(targetOffset);
+            CacheValue o = decode(cls, genericType);
 
             buffer.position(position);
-            return o;
+            return new CacheValue(o.type, o.value, position);
         }
 
         if (type.equals(Type.EXTENDED)) {
@@ -164,7 +168,7 @@ final class Decoder {
             }
         }
 
-        return this.decodeByType(type, size, cls, genericType);
+        return new CacheValue(type, this.decodeByType(type, size, cls, genericType), buffer.position());
     }
 
     private <T> Object decodeByType(
@@ -220,15 +224,15 @@ final class Decoder {
         return s;
     }
 
-    private Integer decodeUint16(int size) {
+    private int decodeUint16(int size) {
         return this.decodeInteger(size);
     }
 
-    private Integer decodeInt32(int size) {
+    private int decodeInt32(int size) {
         return this.decodeInteger(size);
     }
 
-    private Long decodeLong(int size) {
+    private long decodeLong(int size) {
         long integer = 0;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (this.buffer.get() & 0xFF);
@@ -236,19 +240,19 @@ final class Decoder {
         return integer;
     }
 
-    private Long decodeUint32(int size) {
+    private long decodeUint32(int size) {
         return this.decodeLong(size);
     }
 
-    private Integer decodeInteger(int size) {
+    private int decodeInteger(int size) {
         return this.decodeInteger(0, size);
     }
 
-    private Integer decodeInteger(int base, int size) {
+    private int decodeInteger(int base, int size) {
         return Decoder.decodeInteger(this.buffer, base, size);
     }
 
-    static Integer decodeInteger(ByteBuffer buffer, int base, int size) {
+    static int decodeInteger(ByteBuffer buffer, int base, int size) {
         int integer = base;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (buffer.get() & 0xFF);
@@ -261,7 +265,7 @@ final class Decoder {
         return new BigInteger(1, bytes);
     }
 
-    private Double decodeDouble(int size) throws InvalidDatabaseException {
+    private double decodeDouble(int size) throws InvalidDatabaseException {
         if (size != 8) {
             throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
@@ -279,7 +283,7 @@ final class Decoder {
         return this.buffer.getFloat();
     }
 
-    private static Boolean decodeBoolean(int size)
+    private static boolean decodeBoolean(int size)
             throws InvalidDatabaseException {
         switch (size) {
             case 0:
@@ -325,7 +329,7 @@ final class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            Object e = this.decode(elementClass, null);
+            Object e = this.decode(elementClass, null).value;
             array.add(elementClass.cast(e));
         }
 
@@ -386,8 +390,8 @@ final class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null);
-            Object value = this.decode(valueClass, null);
+            String key = (String) this.decode(String.class, null).value;
+            Object value = this.decode(valueClass, null).value;
             map.put(key, valueClass.cast(value));
         }
 
@@ -433,7 +437,7 @@ final class Decoder {
 
         Object[] parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null);
+            String key = (String) this.decode(String.class, null).value;
 
             Integer parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
@@ -445,7 +449,7 @@ final class Decoder {
             parameters[parameterIndex] = this.decode(
                 parameterTypes[parameterIndex],
                 parameterGenericTypes[parameterIndex]
-            );
+            ).value;
         }
 
         try {

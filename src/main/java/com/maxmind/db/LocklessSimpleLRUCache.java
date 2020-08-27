@@ -24,8 +24,8 @@ public class LocklessSimpleLRUCache implements NodeCache {
     }
 
     @Override
-    public Object get(CacheKey key, Loader loader) throws IOException {
-        Object value = cache.get(key);
+    public CacheValue get(CacheKey key, Loader loader) throws IOException {
+        CacheValue value = cache.get(key);
         if (value == null) {
             value = loader.load(key);
         }

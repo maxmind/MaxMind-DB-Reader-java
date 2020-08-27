@@ -5,5 +5,5 @@ class LRUElement {
     LRUElement newer;
 
     CacheKey key;
-    Object value;
+    CacheValue value;
 }

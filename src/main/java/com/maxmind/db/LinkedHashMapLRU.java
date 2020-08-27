@@ -2,7 +2,7 @@ package com.maxmind.db;
 
 import java.util.LinkedHashMap;
 
-class LinkedHashMapLRU extends LinkedHashMap<CacheKey, Object> {
+class LinkedHashMapLRU extends LinkedHashMap<CacheKey, CacheValue> {
     private int capacity;
 
     public LinkedHashMapLRU(int capacity) {
@@ -11,7 +11,7 @@ class LinkedHashMapLRU extends LinkedHashMap<CacheKey, Object> {
     }
 
     @Override
-    protected boolean removeEldestEntry(java.util.Map.Entry<CacheKey, Object> eldest) {
+    protected boolean removeEldestEntry(java.util.Map.Entry<CacheKey, CacheValue> eldest) {
         return size() >= capacity;
     }
 }

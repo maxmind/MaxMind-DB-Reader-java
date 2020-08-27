@@ -13,7 +13,7 @@ public class NoCache implements NodeCache {
     }
 
     @Override
-    public Object get(CacheKey key, Loader loader) throws IOException {
+    public CacheValue get(CacheKey key, Loader loader) throws IOException {
         return loader.load(key);
     }
 
