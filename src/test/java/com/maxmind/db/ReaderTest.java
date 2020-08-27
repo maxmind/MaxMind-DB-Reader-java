@@ -133,25 +133,38 @@ public class ReaderTest {
     @Test
     public void testDecodingTypesFile() throws IOException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
-        this.testDecodingTypes(this.testReader);
-        this.testDecodingTypesIntoModelObject(this.testReader);
-        this.testDecodingTypesIntoModelObjectBoxed(this.testReader);
+        this.testDecodingTypes(this.testReader, true);
+        this.testDecodingTypesIntoModelObject(this.testReader, true);
+        this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
     }
 
     @Test
     public void testDecodingTypesStream() throws IOException {
         this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"));
-        this.testDecodingTypes(this.testReader);
-        this.testDecodingTypesIntoModelObject(this.testReader);
-        this.testDecodingTypesIntoModelObjectBoxed(this.testReader);
+        this.testDecodingTypes(this.testReader, true);
+        this.testDecodingTypesIntoModelObject(this.testReader, true);
+        this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
     }
 
-    private void testDecodingTypes(Reader reader) throws IOException {
+    @Test
+    public void testDecodingTypesPointerDecoderFile() throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-pointer-decoder.mmdb"));
+        this.testDecodingTypes(this.testReader, false);
+        this.testDecodingTypesIntoModelObject(this.testReader, false);
+        this.testDecodingTypesIntoModelObjectBoxed(this.testReader, false);
+        this.testDecodingTypesIntoModelWithList(this.testReader);
+    }
+
+    private void testDecodingTypes(Reader reader, boolean booleanValue) throws IOException {
         Map record = reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
 
-        assertTrue((boolean) record.get("boolean"));
+        if (booleanValue) {
+            assertTrue((boolean) record.get("boolean"));
+        } else {
+            assertFalse((boolean) record.get("boolean"));
+        }
 
         assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, (byte[]) record
                 .get("bytes"));
@@ -191,11 +204,15 @@ public class ReaderTest {
                 (BigInteger) record.get("uint128"));
     }
 
-    private void testDecodingTypesIntoModelObject(Reader reader)
+    private void testDecodingTypesIntoModelObject(Reader reader, boolean booleanValue)
             throws IOException {
         TestModel model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModel.class);
 
-        assertTrue(model.booleanField);
+        if (booleanValue) {
+            assertTrue(model.booleanField);
+        } else {
+            assertFalse(model.booleanField);
+        }
 
         assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, model.bytesField);
 
@@ -307,11 +324,15 @@ public class ReaderTest {
         }
     }
 
-    private void testDecodingTypesIntoModelObjectBoxed(Reader reader)
+    private void testDecodingTypesIntoModelObjectBoxed(Reader reader, boolean booleanValue)
             throws IOException {
         TestModelBoxed model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelBoxed.class);
 
-        assertTrue(model.booleanField);
+        if (booleanValue) {
+            assertTrue(model.booleanField);
+        } else {
+            assertFalse(model.booleanField);
+        }
 
         assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, model.bytesField);
 
