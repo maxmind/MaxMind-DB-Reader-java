@@ -2,7 +2,6 @@ package com.maxmind.db;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
@@ -74,10 +73,10 @@ final class Decoder {
         }
 
         this.buffer.position(offset);
-        return cls.cast(decode(cls, null));
+        return cls.cast(decode(cls, null).getValue());
     }
 
-    private <T> Object decode(CacheKey<T> key) throws IOException {
+    private <T> DecodedValue decode(CacheKey<T> key) throws IOException {
         int offset = key.getOffset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -90,7 +89,7 @@ final class Decoder {
         return decode(cls, key.getType());
     }
 
-    private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
+    private <T> DecodedValue decode(Class<T> cls, java.lang.reflect.Type genericType)
             throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
 
@@ -107,14 +106,14 @@ final class Decoder {
 
             // for unit testing
             if (this.POINTER_TEST_HACK) {
-                return pointer;
+                return new DecodedValue(pointer);
             }
 
             int targetOffset = (int) pointer;
             int position = buffer.position();
 
             CacheKey key = new CacheKey(targetOffset, cls, genericType);
-            Object o = cache.get(key, cacheLoader);
+            DecodedValue o = cache.get(key, cacheLoader);
 
             buffer.position(position);
             return o;
@@ -149,7 +148,7 @@ final class Decoder {
             }
         }
 
-        return this.decodeByType(type, size, cls, genericType);
+        return new DecodedValue(this.decodeByType(type, size, cls, genericType));
     }
 
     private <T> Object decodeByType(
@@ -310,7 +309,7 @@ final class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            Object e = this.decode(elementClass, null);
+            Object e = this.decode(elementClass, null).getValue();
             array.add(elementClass.cast(e));
         }
 
@@ -371,8 +370,8 @@ final class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null);
-            Object value = this.decode(valueClass, null);
+            String key = (String) this.decode(String.class, null).getValue();
+            Object value = this.decode(valueClass, null).getValue();
             map.put(key, valueClass.cast(value));
         }
 
@@ -418,7 +417,7 @@ final class Decoder {
 
         Object[] parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null);
+            String key = (String) this.decode(String.class, null).getValue();
 
             Integer parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
@@ -430,7 +429,7 @@ final class Decoder {
             parameters[parameterIndex] = this.decode(
                 parameterTypes[parameterIndex],
                 parameterGenericTypes[parameterIndex]
-            );
+            ).getValue();
         }
 
         try {
