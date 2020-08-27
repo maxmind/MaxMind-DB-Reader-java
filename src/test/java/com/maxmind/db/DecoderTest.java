@@ -3,7 +3,6 @@ package com.maxmind.db;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
