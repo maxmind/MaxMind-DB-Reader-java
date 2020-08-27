@@ -77,7 +77,7 @@ final class Decoder {
         return cls.cast(decode(cls, null));
     }
 
-    private <T> T decode(CacheKey<T> key) throws IOException {
+    private <T> Object decode(CacheKey<T> key) throws IOException {
         int offset = key.getOffset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -87,7 +87,7 @@ final class Decoder {
 
         this.buffer.position(offset);
         Class<T> cls = key.getCls();
-        return cls.cast(decode(cls, key.getType()));
+        return decode(cls, key.getType());
     }
 
     private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
@@ -114,7 +114,7 @@ final class Decoder {
             int position = buffer.position();
 
             CacheKey key = new CacheKey(targetOffset, cls, genericType);
-            T o = cls.cast(cache.get(key, cacheLoader));
+            Object o = decode(key);
 
             buffer.position(position);
             return o;
