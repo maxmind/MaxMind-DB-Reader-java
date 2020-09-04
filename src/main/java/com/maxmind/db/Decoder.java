@@ -39,7 +39,7 @@ final class Decoder {
     private final long pointerBase;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
-    private final CharsetEncoder utfEncoder = UTF_8.newEncoder();
+    //private final CharsetEncoder utfEncoder = UTF_8.newEncoder();
 
     private final ByteBuffer buffer;
 
@@ -417,8 +417,11 @@ final class Decoder {
                     i,
                     annotations[i]
                 );
-                ByteBuffer nameUTF8 = utfEncoder.encode(
-                    CharBuffer.wrap(parameterName)
+                //ByteBuffer nameUTF8 = utfEncoder.encode(
+                //    CharBuffer.wrap(parameterName)
+                //);
+                ByteBuffer nameUTF8 = ByteBuffer.wrap(
+                    parameterName.getBytes(UTF_8)
                 );
                 parameterIndexes.put(nameUTF8, i);
             }
