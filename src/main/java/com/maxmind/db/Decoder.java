@@ -7,9 +7,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +39,7 @@ final class Decoder {
     private final long pointerBase;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
+    private final CharsetEncoder utfEncoder = UTF_8.newEncoder();
 
     private final ByteBuffer buffer;
 
@@ -174,6 +177,9 @@ final class Decoder {
             case BOOLEAN:
                 return Decoder.decodeBoolean(size);
             case UTF8_STRING:
+                if (cls == ByteBuffer.class) {
+                    return this.decodeStringAsBytes(size);
+                }
                 return this.decodeString(size);
             case DOUBLE:
                 return this.decodeDouble(size);
@@ -194,6 +200,17 @@ final class Decoder {
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
         }
+    }
+
+    private ByteBuffer decodeStringAsBytes(int size) {
+        //ByteBuffer string = buffer.duplicate();
+        //string.limit(buffer.position() + size);
+
+        ByteBuffer string = buffer.slice();
+        string.limit(size);
+
+        buffer.position(buffer.position() + size);
+        return string;
     }
 
     private String decodeString(int size) throws CharacterCodingException {
@@ -384,7 +401,7 @@ final class Decoder {
         Constructor<T> constructor;
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
-        Map<String, Integer> parameterIndexes;
+        Map<ByteBuffer, Integer> parameterIndexes;
         if (cachedConstructor == null) {
             constructor = this.findConstructor(cls);
 
@@ -395,8 +412,15 @@ final class Decoder {
             parameterIndexes = new HashMap<>();
             Annotation[][] annotations = constructor.getParameterAnnotations();
             for (int i = 0; i < constructor.getParameterCount(); i++) {
-                String parameterName = this.getParameterName(cls, i, annotations[i]);
-                parameterIndexes.put(parameterName, i);
+                String parameterName = this.getParameterName(
+                    cls,
+                    i,
+                    annotations[i]
+                );
+                ByteBuffer nameUTF8 = utfEncoder.encode(
+                    CharBuffer.wrap(parameterName)
+                );
+                parameterIndexes.put(nameUTF8, i);
             }
 
             this.constructors.put(
@@ -417,7 +441,10 @@ final class Decoder {
 
         Object[] parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null).getValue();
+            ByteBuffer key = (ByteBuffer) this.decode(
+                ByteBuffer.class,
+                null
+            ).getValue();
 
             Integer parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {

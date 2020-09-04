@@ -1,19 +1,20 @@
 package com.maxmind.db;
 
 import java.lang.reflect.Constructor;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 final class CachedConstructor<T> {
     private final Constructor<T> constructor;
     private final Class<?>[] parameterTypes;
     private final java.lang.reflect.Type[] parameterGenericTypes;
-    private final Map<String, Integer> parameterIndexes;
+    private final Map<ByteBuffer, Integer> parameterIndexes;
 
     CachedConstructor(
             Constructor<T> constructor,
             Class<?>[] parameterTypes,
             java.lang.reflect.Type[] parameterGenericTypes,
-            Map<String, Integer> parameterIndexes
+            Map<ByteBuffer, Integer> parameterIndexes
     ) {
         this.constructor = constructor;
         this.parameterTypes = parameterTypes;
@@ -33,7 +34,7 @@ final class CachedConstructor<T> {
         return this.parameterGenericTypes;
     }
 
-    Map<String, Integer> getParameterIndexes() {
+    Map<ByteBuffer, Integer> getParameterIndexes() {
         return this.parameterIndexes;
     }
 }
