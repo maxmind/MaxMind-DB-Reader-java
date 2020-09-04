@@ -7,11 +7,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +37,6 @@ final class Decoder {
     private final long pointerBase;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
-    //private final CharsetEncoder utfEncoder = UTF_8.newEncoder();
 
     private final ByteBuffer buffer;
 
@@ -202,15 +199,16 @@ final class Decoder {
         }
     }
 
-    private ByteBuffer decodeStringAsBytes(int size) {
-        //ByteBuffer string = buffer.duplicate();
-        //string.limit(buffer.position() + size);
-
+    //private ByteBuffer decodeStringAsBytes(int size) {
+    private ParameterName decodeStringAsBytes(int size) {
         ByteBuffer string = buffer.slice();
         string.limit(size);
 
+        ParameterName parameterName = new ParameterName(string);
+
         buffer.position(buffer.position() + size);
-        return string;
+
+        return parameterName;
     }
 
     private String decodeString(int size) throws CharacterCodingException {
@@ -401,7 +399,7 @@ final class Decoder {
         Constructor<T> constructor;
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
-        Map<ByteBuffer, Integer> parameterIndexes;
+        Map<ParameterName, Integer> parameterIndexes;
         if (cachedConstructor == null) {
             constructor = this.findConstructor(cls);
 
@@ -417,13 +415,10 @@ final class Decoder {
                     i,
                     annotations[i]
                 );
-                //ByteBuffer nameUTF8 = utfEncoder.encode(
-                //    CharBuffer.wrap(parameterName)
-                //);
                 ByteBuffer nameUTF8 = ByteBuffer.wrap(
                     parameterName.getBytes(UTF_8)
                 );
-                parameterIndexes.put(nameUTF8, i);
+                parameterIndexes.put(new ParameterName(nameUTF8), i);
             }
 
             this.constructors.put(
@@ -444,8 +439,12 @@ final class Decoder {
 
         Object[] parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            ByteBuffer key = (ByteBuffer) this.decode(
-                ByteBuffer.class,
+            //ByteBuffer key = (ByteBuffer) this.decode(
+            //    ByteBuffer.class,
+            //    null
+            //).getValue();
+            ParameterName key = (ParameterName) this.decode(
+                ByteBuffer.class, // XXX
                 null
             ).getValue();
 
