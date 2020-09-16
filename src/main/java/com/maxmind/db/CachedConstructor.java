@@ -2,12 +2,14 @@ package com.maxmind.db;
 
 import java.lang.reflect.Constructor;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 final class CachedConstructor<T> {
     private final Constructor<T> constructor;
     private final Class<?>[] parameterTypes;
     private final java.lang.reflect.Type[] parameterGenericTypes;
     private final Map<ParameterName, Integer> parameterIndexes;
+    private final Map<ParameterName, Integer> dbParameterIndexes;
 
     CachedConstructor(
             Constructor<T> constructor,
@@ -19,6 +21,7 @@ final class CachedConstructor<T> {
         this.parameterTypes = parameterTypes;
         this.parameterGenericTypes = parameterGenericTypes;
         this.parameterIndexes = parameterIndexes;
+        this.dbParameterIndexes = new ConcurrentHashMap<ParameterName, Integer>();
     }
 
     Constructor<T> getConstructor() {
@@ -35,5 +38,9 @@ final class CachedConstructor<T> {
 
     Map<ParameterName, Integer> getParameterIndexes() {
         return this.parameterIndexes;
+    }
+
+    Map<ParameterName, Integer> getDBParameterIndexes() {
+        return this.dbParameterIndexes;
     }
 }

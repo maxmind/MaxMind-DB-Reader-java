@@ -204,7 +204,7 @@ final class Decoder {
         ByteBuffer string = buffer.slice();
         string.limit(size);
 
-        ParameterName parameterName = new ParameterName(string);
+        ParameterName parameterName = new ParameterName(string, buffer, buffer.position());
 
         buffer.position(buffer.position() + size);
 
@@ -400,6 +400,7 @@ final class Decoder {
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
         Map<ParameterName, Integer> parameterIndexes;
+        Map<ParameterName, Integer> dbParameterIndexes;
         if (cachedConstructor == null) {
             constructor = this.findConstructor(cls);
 
@@ -421,14 +422,15 @@ final class Decoder {
                 parameterIndexes.put(new ParameterName(nameUTF8), i);
             }
 
+            cachedConstructor =                     new CachedConstructor(
+                    constructor,
+                    parameterTypes,
+                    parameterGenericTypes,
+                    parameterIndexes
+            );
             this.constructors.put(
                     cls,
-                    new CachedConstructor(
-                        constructor,
-                        parameterTypes,
-                        parameterGenericTypes,
-                        parameterIndexes
-                    )
+                    cachedConstructor
             );
         } else {
             constructor = cachedConstructor.getConstructor();
@@ -436,6 +438,7 @@ final class Decoder {
             parameterGenericTypes = cachedConstructor.getParameterGenericTypes();
             parameterIndexes = cachedConstructor.getParameterIndexes();
         }
+        dbParameterIndexes = cachedConstructor.getDBParameterIndexes();
 
         Object[] parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
@@ -448,11 +451,15 @@ final class Decoder {
                 null
             ).getValue();
 
-            Integer parameterIndex = parameterIndexes.get(key);
+            Integer parameterIndex = dbParameterIndexes.get(key);
             if (parameterIndex == null) {
-                int offset = this.nextValueOffset(this.buffer.position(), 1);
-                this.buffer.position(offset);
-                continue;
+                parameterIndex = parameterIndexes.get(key);
+                if (parameterIndex == null) {
+                    int offset = this.nextValueOffset(this.buffer.position(), 1);
+                    this.buffer.position(offset);
+                    continue;
+                }
+                dbParameterIndexes.put(key, parameterIndex);
             }
 
             parameters[parameterIndex] = this.decode(
