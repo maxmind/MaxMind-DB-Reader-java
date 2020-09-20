@@ -31,7 +31,7 @@ public class AreasOfInterest { // TODO: Rename to 'CallbackAPI'?
 	    super(fieldsOfInterest);
 	}
 	
-	public void network(X state, InetAddress ipAddress, int prefixLength) {}
+	public void network(X state, byte[] ipAddress, int prefixLength) {}
     }
 
     

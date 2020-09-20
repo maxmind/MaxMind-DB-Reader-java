@@ -235,45 +235,45 @@ public final class CallbackReader implements Closeable {
 
     //==================== Lookup & decoding ====================
 
-    /** Look up the record for an IP address, reporting the results through a callback object.
+    /**
+     * Looks up <code>ipAddress</code> in the MaxMind DB, reporting the results through the callback object <code>callback</code>.
+     * @throws IOException if a file I/O error occurs.
      */
-    public <State> void lookupRecord(InetAddress ipAddress, AreasOfInterest.RecordCallback<State> callback, State state) {
-	//TODO
+    public <State> void lookupRecord(InetAddress ipAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
+        byte[] rawAddress = ipAddress.getAddress();
+	lookupRecord(rawAddress, callback, state);
+    }
+    
+    public <State> void lookupRecord(byte[] rawAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
+        ByteBuffer buffer = this.getBufferHolder().get();
+
+        int bitLength = rawAddress.length * 8;
+        int record = this.startNode(bitLength);
+        int nodeCount = this.metadata.getNodeCount();
+
+        int pl = 0;
+        for (; pl < bitLength && record < nodeCount; pl++) {
+            int b = 0xFF & rawAddress[pl / 8];
+            int bit = 1 & (b >> 7 - (pl % 8));
+            record = this.readNode(buffer, record, bit);
+        }
+
+	// Subnet is known.
+	callback.network(state, rawAddress, pl);
+	
+        if (record > nodeCount) {
+            // record is a data pointer
+	    resolveObject(buffer, record, callback, state);
+        }
     }
 
-    // /**
-    //  * Looks up <code>ipAddress</code> in the MaxMind DB.
-    //  *
-    //  * @param ipAddress the IP address to look up.
-    //  * @return the record for the IP address. If there is no data for the
-    //  * address, the non-null {@link Record} will still be returned.
-    //  * @throws IOException if a file I/O error occurs.
-    //  */
-    // public Record getRecord(InetAddress ipAddress)
-    //         throws IOException {
-    //     ByteBuffer buffer = this.getBufferHolder().get();
-
-    //     byte[] rawAddress = ipAddress.getAddress();
-
-    //     int bitLength = rawAddress.length * 8;
-    //     int record = this.startNode(bitLength);
-    //     int nodeCount = this.metadata.getNodeCount();
-
-    //     int pl = 0;
-    //     for (; pl < bitLength && record < nodeCount; pl++) {
-    //         int b = 0xFF & rawAddress[pl / 8];
-    //         int bit = 1 & (b >> 7 - (pl % 8));
-    //         record = this.readNode(buffer, record, bit);
-    //     }
-
-    //     JsonNode dataRecord = null;
-    //     if (record > nodeCount) {
-    //         // record is a data pointer
-    //         dataRecord = this.resolveDataPointer(buffer, record);
-    //     }
-
-    //     return new Record(dataRecord, ipAddress, pl);
-    // }
+    private <State> void resolveObject(ByteBuffer buffer, int pointer, AreasOfInterest.ObjectNode callback, State state)
+            throws IOException {
+        int resolved = (pointer - this.metadata.getNodeCount())
+                + this.metadata.getSearchTreeSize();
+	callback.objectBegin(state);
+	callback.objectEnd(state);
+    }
 
         // private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer)
     //         throws IOException {

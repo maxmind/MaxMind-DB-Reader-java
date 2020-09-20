@@ -60,11 +60,16 @@ public class NewReaderTest {
 	String theNetwork = null;
 	AreasOfInterest.TextNode countryNode = null;
 	AreasOfInterest.RecordCallback<Accumulator> callback = new AreasOfInterest.RecordCallback<Accumulator>(null) {
-		public void network(Accumulator state, InetAddress ipAddress, int prefixLength) {
+		@Override
+		public void network(Accumulator state, byte[] ipAddress, int prefixLength) {
 		    state.ipAddress = ipAddress;
 		    state.prefixLength = prefixLength;
 		}
 
+		@Override
+		public void objectBegin(Accumulator state) {
+		    state.recordFound = true;
+		}
 	    };
 
 	System.out.println("ERK| In test - without cache");
@@ -74,8 +79,9 @@ public class NewReaderTest {
 		System.out.println("ERK| Test case: " + test.ip +" in " + test.db);
 		Accumulator acc = new Accumulator();
 		for (int i=1; i<=3; i++) {
+		    byte[] rawAddress = test.ip.getAddress();
 		    long a0 = ErikUtil.allocCount();
-		    reader.lookupRecord(test.ip, callback, acc);
+		    reader.lookupRecord(rawAddress, callback, acc);
 		    long a1 = ErikUtil.allocCount();
 		    System.out.println("ERK| Read #"+i+": alloc=" + (a1-a0));
 		}
@@ -214,7 +220,7 @@ public class NewReaderTest {
     }
 
     static class Accumulator {
-	InetAddress ipAddress;
+	byte[] ipAddress;
 	int prefixLength;
 	boolean recordFound;
 
@@ -224,7 +230,11 @@ public class NewReaderTest {
 	    recordFound = false;
 	}
 
-	public Network getNetwork() { return new Network(ipAddress, prefixLength); }
+	public Network getNetwork() {
+	    try {
+		return new Network(InetAddress.getByAddress(ipAddress), prefixLength);
+	    } catch (UnknownHostException uhe) {throw new RuntimeException(uhe);}
+	}
     }
 
 }
