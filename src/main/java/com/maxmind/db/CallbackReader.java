@@ -128,6 +128,24 @@ public final class CallbackReader implements Closeable {
         return bufferHolder;
     }
 
+    private ThreadLocal<ByteBuffer> threadLocalBuffer = new ThreadLocal<ByteBuffer>() {
+	    @Override public ByteBuffer initialValue() {
+		
+		BufferHolder bufferHolder = bufferHolderReference.get();
+		return bufferHolder.get();
+	    }
+	    /*
+	    public ByteBuffer checkAndGet() throws ClosedDatabaseException {
+		BufferHolder bufferHolder = bufferHolderReference.get();
+		if (bufferHolder == null) {
+		    throw new ClosedDatabaseException();
+		}
+		return super.get();
+	    }
+	    */
+	};
+
+
     private int startNode(int bitLength) {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
@@ -245,7 +263,13 @@ public final class CallbackReader implements Closeable {
     }
     
     public <State> void lookupRecord(byte[] rawAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
-        ByteBuffer buffer = this.getBufferHolder().get();
+	BufferHolder bufferHolder = bufferHolderReference.get();
+	if (bufferHolder == null) {
+	    threadLocalBuffer.remove();
+	    throw new ClosedDatabaseException();
+	}
+
+	ByteBuffer buffer = threadLocalBuffer.get();
 
         int bitLength = rawAddress.length * 8;
         int record = this.startNode(bitLength);
