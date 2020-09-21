@@ -25,6 +25,7 @@ public final class CallbackReader implements Closeable {
     private final int ipV4Start;
     private final Metadata metadata;
     private final AtomicReference<BufferHolder> bufferHolderReference;
+    private final long pointerBase;
     private final NodeCache cache;
 
     /**
@@ -118,6 +119,8 @@ public final class CallbackReader implements Closeable {
         this.metadata = new Metadata(metadataDecoder.decode(start));
 
         this.ipV4Start = this.findIpV4StartNode(buffer);
+
+	this.pointerBase = this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE;
     }
 
     private BufferHolder getBufferHolder() throws ClosedDatabaseException {
@@ -128,21 +131,12 @@ public final class CallbackReader implements Closeable {
         return bufferHolder;
     }
 
-    private ThreadLocal<ByteBuffer> threadLocalBuffer = new ThreadLocal<ByteBuffer>() {
-	    @Override public ByteBuffer initialValue() {
+    private ThreadLocal<PerThread> threadLocalState = new ThreadLocal<PerThread>() {
+	    @Override public PerThread initialValue() {
 		
 		BufferHolder bufferHolder = bufferHolderReference.get();
-		return bufferHolder.get();
+		return new PerThread(bufferHolder.get());
 	    }
-	    /*
-	    public ByteBuffer checkAndGet() throws ClosedDatabaseException {
-		BufferHolder bufferHolder = bufferHolderReference.get();
-		if (bufferHolder == null) {
-		    throw new ClosedDatabaseException();
-		}
-		return super.get();
-	    }
-	    */
 	};
 
 
@@ -265,38 +259,13 @@ public final class CallbackReader implements Closeable {
     public <State> void lookupRecord(byte[] rawAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
 	BufferHolder bufferHolder = bufferHolderReference.get();
 	if (bufferHolder == null) {
-	    threadLocalBuffer.remove();
+	    threadLocalState.remove();
 	    throw new ClosedDatabaseException();
 	}
 
-	ByteBuffer buffer = threadLocalBuffer.get();
+	PerThread perThreadState = threadLocalState.get();
 
-        int bitLength = rawAddress.length * 8;
-        int record = this.startNode(bitLength);
-        int nodeCount = this.metadata.getNodeCount();
-
-        int pl = 0;
-        for (; pl < bitLength && record < nodeCount; pl++) {
-            int b = 0xFF & rawAddress[pl / 8];
-            int bit = 1 & (b >> 7 - (pl % 8));
-            record = this.readNode(buffer, record, bit);
-        }
-
-	// Subnet is known.
-	callback.network(state, rawAddress, pl);
-	
-        if (record > nodeCount) {
-            // record is a data pointer
-	    resolveObject(buffer, record, callback, state);
-        }
-    }
-
-    private <State> void resolveObject(ByteBuffer buffer, int pointer, AreasOfInterest.ObjectNode callback, State state)
-            throws IOException {
-        int resolved = (pointer - this.metadata.getNodeCount())
-                + this.metadata.getSearchTreeSize();
-	callback.objectBegin(state);
-	callback.objectEnd(state);
+	perThreadState.lookupRecord(rawAddress, callback, state);
     }
 
         // private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer)
@@ -318,4 +287,44 @@ public final class CallbackReader implements Closeable {
     // }
 
 
+    private class PerThread {
+	private ByteBuffer buffer;
+	private CallbackDecoder decoder;
+
+	PerThread(ByteBuffer buffer) {
+	    this.buffer = buffer;
+	    this.decoder = new CallbackDecoder(buffer, pointerBase);
+	}
+
+	public <State> void lookupRecord(byte[] rawAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
+	    int bitLength = rawAddress.length * 8;
+	    int record = startNode(bitLength);
+	    int nodeCount = metadata.getNodeCount();
+
+	    int pl = 0;
+	    for (; pl < bitLength && record < nodeCount; pl++) {
+		int b = 0xFF & rawAddress[pl / 8];
+		int bit = 1 & (b >> 7 - (pl % 8));
+		record = readNode(buffer, record, bit);
+	    }
+
+	    // Subnet is known.
+	    callback.network(state, rawAddress, pl);
+
+	    if (record > nodeCount) {
+		// record is a data pointer
+		resolveObject(buffer, record, callback, state);
+	    }
+	}
+
+	private <State> void resolveObject(ByteBuffer buffer, int pointer, AreasOfInterest.ObjectNode callback, State state)
+            throws IOException {
+	    int resolved = (pointer - metadata.getNodeCount())
+                + metadata.getSearchTreeSize();
+	    callback.objectBegin(state);
+	    //TODO: Visit object.
+	    callback.objectEnd(state);
+	}
+
+    }
 }
