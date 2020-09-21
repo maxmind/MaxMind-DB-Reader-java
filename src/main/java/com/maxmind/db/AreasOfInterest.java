@@ -11,11 +11,11 @@ public class AreasOfInterest { // TODO: Rename to 'CallbackAPI'?
 
     public static abstract class Callback<X> {}
 
-    public static abstract class TextNode<X> extends Callback<X>{
-	public abstract void apply(X state, String value);
+    public static abstract class TextNode<X> extends Callback<X> {
+	public abstract void setValue(X state, CharSequence value);
     }
 
-    public static abstract class ObjectNode<X> {
+    public static class ObjectNode<X> extends Callback<X> {
 	private final Map<String, Callback<X>> fieldsOfInterest;
 
 	public ObjectNode(Map<String, Callback<X>> fieldsOfInterest) {

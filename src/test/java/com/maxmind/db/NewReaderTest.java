@@ -55,11 +55,17 @@ public class NewReaderTest {
                 new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
         };
 
-	boolean hasRecord = false;
-	String theIP = null;
-	String theNetwork = null;
-	AreasOfInterest.TextNode countryNode = null;
-	AreasOfInterest.RecordCallback<Accumulator> callback = new AreasOfInterest.RecordCallback<Accumulator>(null) {
+	AreasOfInterest.TextNode countryTextNode = new AreasOfInterest.TextNode<Accumulator>() {
+		@Override public void setValue(Accumulator state, CharSequence value) {
+		    state.country = value.toString();
+		}
+	    };
+	Map<String, AreasOfInterest.Callback<Accumulator>> countryFieldMap = new HashMap();
+	countryFieldMap.put("en", countryTextNode);
+	AreasOfInterest.ObjectNode<Accumulator> countryNode = new AreasOfInterest.ObjectNode(countryFieldMap);
+	Map<String, AreasOfInterest.Callback<Accumulator>> rootFieldMap = new HashMap();
+	rootFieldMap.put("country", countryNode);
+	AreasOfInterest.RecordCallback<Accumulator> callback = new AreasOfInterest.RecordCallback<Accumulator>(rootFieldMap) {
 		@Override
 		public void network(Accumulator state, byte[] ipAddress, int prefixLength) {
 		    state.ipAddress = ipAddress;
@@ -84,36 +90,13 @@ public class NewReaderTest {
 		    reader.lookupRecord(rawAddress, callback, acc);
 		    long a1 = ErikUtil.allocCount();
 		    System.out.println("ERK| Read #"+i+": alloc=" + (a1-a0));
+		    System.out.println("ERK| - Country: " + acc.country);
 		}
 
                 assertEquals(test.network, acc.getNetwork().toString());
 		assertEquals(test.hasRecord, acc.recordFound);
             }
         }
-	/*
-	System.out.println("ERK| In test - with cache");
-        for (GetRecordTest test : tests) {
-            try (CallbackReader reader = new CallbackReader(test.db, new CHMCache())) {
-		System.out.println("ERK| Test case: " + test.ip +" in " + test.db);
-		Accumulator acc = new Accumulator();
-		for (int i=1; i<=3; i++) {
-		    Accumulator acc = new Accumulator();
-		    long a0 = ErikUtil.allocCount();
-		    reader.lookupRecord(test.ip, callback, acc);
-		    long a1 = ErikUtil.allocCount();
-		    System.out.println("ERK| Read #"+i+": alloc=" + (a1-a0));
-		}
-		System.out.println("Result: " + record.getData());
-                assertEquals(test.network, record.getNetwork().toString());
-
-                if (test.hasRecord) {
-                    assertNotNull(record.getData());
-                } else {
-                    assertNull(record.getData());
-                }
-            }
-        }
-	*/
     }
 
 
@@ -224,10 +207,19 @@ public class NewReaderTest {
 	int prefixLength;
 	boolean recordFound;
 
+	String continent;
+	String country;
+	double latitude, longitude;
+
 	public void reset() {
 	    ipAddress = null;
 	    prefixLength = -1;
 	    recordFound = false;
+
+	    continent = null;
+	    country = null;
+	    latitude = Double.NaN;
+	    longitude = Double.NaN;
 	}
 
 	public Network getNetwork() {
