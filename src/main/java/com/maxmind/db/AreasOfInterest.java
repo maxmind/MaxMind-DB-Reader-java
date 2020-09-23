@@ -2,6 +2,7 @@ package com.maxmind.db;
 
 import java.net.InetAddress;
 import java.util.Map;
+import java.util.HashMap;
 
 /** Low-alloc database query interface.
  * The way this works is that you provide a specification of
@@ -16,13 +17,15 @@ public class AreasOfInterest { // TODO: Rename to 'CallbackAPI'?
     }
 
     public static class ObjectNode<X> extends Callback<X> {
-	private final Map<String, Callback<X>> fieldsOfInterest;
+	private final Map<CharSequence, Callback<X>> fieldsOfInterest;
 
 	public ObjectNode(Map<String, Callback<X>> fieldsOfInterest) {
-	    this.fieldsOfInterest = fieldsOfInterest;
+	    Map<CharSequence, Callback<X>> mapToUse = new HashMap<>();
+	    mapToUse.putAll(fieldsOfInterest);
+	    this.fieldsOfInterest = mapToUse;
 	}
 
-	public Callback<X> callbackForField(String field) {
+	public Callback<X> callbackForField(CharSequence field) {
 	    return fieldsOfInterest.get(field);
 	}
 

@@ -387,7 +387,7 @@ final class CallbackDecoder {
     private <State> void decodeMap(int size, AreasOfInterest.ObjectNode<State> callback, State state) throws IOException {
 	callback.objectBegin(state);
         for (int i = 0; i < size; i++) {
-	    String key = this.decodeAsText();
+	    CharSequence key = this.decodeAsText();
 	    AreasOfInterest.Callback<State> fieldCallback = callback.callbackForField(key);
 	    if (fieldCallback != null) {
 		decode(fieldCallback, state); // Value is of interest.
