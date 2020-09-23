@@ -345,12 +345,8 @@ final class CallbackDecoder {
     }
 
     private <State> void decodeString(int size, AreasOfInterest.TextNode<State> callback, State state) throws CharacterCodingException {
-        int oldLimit = buffer.limit();
-        buffer.limit(buffer.position() + size);
-        String s = utfDecoder.decode(buffer).toString();
-        buffer.limit(oldLimit);
-
-        callback.setValue(state, s);
+        CharSequence value = decodeStringAsText(size);
+        callback.setValue(state, value);
     }
 
     private CharSequence decodeStringAsText(int size) throws CharacterCodingException {
