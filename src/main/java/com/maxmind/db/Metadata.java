@@ -1,28 +1,23 @@
 package com.maxmind.db;
 
-import java.util.ArrayList;
+import java.math.BigInteger;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public final class Metadata {
     private final int binaryFormatMajorVersion;
     private final int binaryFormatMinorVersion;
 
-    private final long buildEpoch;
+    private final BigInteger buildEpoch;
 
     private final String databaseType;
 
-    private final JsonNode description;
+    private final Map<String, String> description;
 
     private final int ipVersion;
 
-    private final JsonNode languages;
+    private final List<String> languages;
 
     private final int nodeByteSize;
 
@@ -32,18 +27,37 @@ public final class Metadata {
 
     private final int searchTreeSize;
 
-    Metadata(JsonNode metadata) {
-        this.binaryFormatMajorVersion = metadata.get(
-                "binary_format_major_version").asInt();
-        this.binaryFormatMinorVersion = metadata.get(
-                "binary_format_minor_version").asInt();
-        this.buildEpoch = metadata.get("build_epoch").asLong();
-        this.databaseType = metadata.get("database_type").asText();
-        this.languages = metadata.get("languages");
-        this.description = metadata.get("description");
-        this.ipVersion = metadata.get("ip_version").asInt();
-        this.nodeCount = metadata.get("node_count").asInt();
-        this.recordSize = metadata.get("record_size").asInt();
+    @MaxMindDbConstructor
+    public Metadata(
+            @MaxMindDbParameter(name="binary_format_major_version")
+            int binaryFormatMajorVersion,
+            @MaxMindDbParameter(name="binary_format_minor_version")
+            int binaryFormatMinorVersion,
+            @MaxMindDbParameter(name="build_epoch")
+            BigInteger buildEpoch,
+            @MaxMindDbParameter(name="database_type")
+            String databaseType,
+            @MaxMindDbParameter(name="languages")
+            List<String> languages,
+            @MaxMindDbParameter(name="description")
+            Map<String, String> description,
+            @MaxMindDbParameter(name="ip_version")
+            int ipVersion,
+            @MaxMindDbParameter(name="node_count")
+            long nodeCount,
+            @MaxMindDbParameter(name="record_size")
+            int recordSize
+    ) {
+        this.binaryFormatMajorVersion = binaryFormatMajorVersion;
+        this.binaryFormatMinorVersion = binaryFormatMinorVersion;
+        this.buildEpoch = buildEpoch;
+        this.databaseType = databaseType;
+        this.languages = languages;
+        this.description = description;
+        this.ipVersion = ipVersion;
+        this.nodeCount = (int) nodeCount;
+        this.recordSize = recordSize;
+
         this.nodeByteSize = this.recordSize / 4;
         this.searchTreeSize = this.nodeCount * this.nodeByteSize;
     }
@@ -66,7 +80,7 @@ public final class Metadata {
      * @return the date of the database build.
      */
     public Date getBuildDate() {
-        return new Date(this.buildEpoch * 1000);
+        return new Date(this.buildEpoch.longValue() * 1000);
     }
 
     /**
@@ -82,9 +96,7 @@ public final class Metadata {
      * @return map from language code to description in that language.
      */
     public Map<String, String> getDescription() {
-        return new ObjectMapper().convertValue(this.description,
-                new TypeReference<HashMap<String, String>>() {
-                });
+        return this.description;
     }
 
     /**
@@ -99,9 +111,7 @@ public final class Metadata {
      * @return list of languages supported by the database.
      */
     public List<String> getLanguages() {
-        return new ObjectMapper().convertValue(this.languages,
-                new TypeReference<ArrayList<String>>() {
-                });
+        return this.languages;
     }
 
     /**

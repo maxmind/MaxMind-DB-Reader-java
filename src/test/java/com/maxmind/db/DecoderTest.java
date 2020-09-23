@@ -9,16 +9,13 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.FloatNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -267,20 +264,18 @@ public class DecoderTest {
         return booleans;
     }
 
-    private static Map<ObjectNode, byte[]> maps() {
-        Map<ObjectNode, byte[]> maps = new HashMap<>();
+    private static Map<Map, byte[]> maps() {
+        Map<Map, byte[]> maps = new HashMap<>();
 
-        ObjectMapper om = new ObjectMapper();
-
-        ObjectNode empty = om.createObjectNode();
+        Map empty = new HashMap();
         maps.put(empty, new byte[]{(byte) 0xe0});
 
-        ObjectNode one = om.createObjectNode();
+        Map<String, String> one = new HashMap<>();
         one.put("en", "Foo");
         maps.put(one, new byte[]{(byte) 0xe1, /* en */0x42, 0x65, 0x6e,
                 /* Foo */0x43, 0x46, 0x6f, 0x6f});
 
-        ObjectNode two = om.createObjectNode();
+        Map<String, String> two = new HashMap<>();
         two.put("en", "Foo");
         two.put("zh", "人");
         maps.put(two, new byte[]{(byte) 0xe2,
@@ -293,8 +288,8 @@ public class DecoderTest {
                 /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        ObjectNode nested = om.createObjectNode();
-        nested.set("name", two);
+        Map<String, Map<String, String>> nested = new HashMap<>();
+        nested.put("name", two);
 
         maps.put(nested, new byte[]{(byte) 0xe1, /* name */
                 0x44, 0x6e, 0x61, 0x6d, 0x65, (byte) 0xe2,/* en */
@@ -306,11 +301,11 @@ public class DecoderTest {
                 /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        ObjectNode guess = om.createObjectNode();
-        ArrayNode languages = om.createArrayNode();
+        Map<String, List<Object>> guess = new HashMap<>();
+        List<Object> languages = new ArrayList<>();
         languages.add("en");
         languages.add("zh");
-        guess.set("languages", languages);
+        guess.put("languages", languages);
         maps.put(guess, new byte[]{(byte) 0xe1,/* languages */
                 0x49, 0x6c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x73,
                 /* array */
@@ -323,17 +318,16 @@ public class DecoderTest {
         return maps;
     }
 
-    private static Map<ArrayNode, byte[]> arrays() {
-        Map<ArrayNode, byte[]> arrays = new HashMap<>();
-        ObjectMapper om = new ObjectMapper();
+    private static Map<List<String>, byte[]> arrays() {
+        Map<List<String>, byte[]> arrays = new HashMap<>();
 
-        ArrayNode f1 = om.createArrayNode();
+        ArrayList<String> f1 = new ArrayList<>();
         f1.add("Foo");
         arrays.put(f1, new byte[]{0x1, 0x4,
                 /* Foo */
                 0x43, 0x46, 0x6f, 0x6f});
 
-        ArrayNode f2 = om.createArrayNode();
+        ArrayList<String> f2 = new ArrayList<>();
         f2.add("Foo");
         f2.add("人");
         arrays.put(f2, new byte[]{0x2, 0x4,
@@ -342,7 +336,7 @@ public class DecoderTest {
                 /* 人 */
                 0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        ArrayNode empty = om.createArrayNode();
+        ArrayList<String> empty = new ArrayList<>();
         arrays.put(empty, new byte[]{0x0, 0x4});
 
         return arrays;
@@ -350,70 +344,70 @@ public class DecoderTest {
 
     @Test
     public void testUint16() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.UINT16, uint16());
+        DecoderTest.testTypeDecoding(Type.UINT16, uint16());
     }
 
     @Test
     public void testUint32() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.UINT32, uint32());
+        DecoderTest.testTypeDecoding(Type.UINT32, uint32());
     }
 
     @Test
     public void testInt32() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.INT32, int32());
+        DecoderTest.testTypeDecoding(Type.INT32, int32());
     }
 
     @Test
     public void testUint64() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.UINT64, largeUint(64));
+        DecoderTest.testTypeDecoding(Type.UINT64, largeUint(64));
     }
 
     @Test
     public void testUint128() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.UINT128, largeUint(128));
+        DecoderTest.testTypeDecoding(Type.UINT128, largeUint(128));
     }
 
     @Test
     public void testDoubles() throws IOException {
         DecoderTest
-                .testTypeDecoding(Decoder.Type.DOUBLE, DecoderTest.doubles());
+                .testTypeDecoding(Type.DOUBLE, DecoderTest.doubles());
     }
 
     @Test
     public void testFloats() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.FLOAT, DecoderTest.floats());
+        DecoderTest.testTypeDecoding(Type.FLOAT, DecoderTest.floats());
     }
 
     @Test
     public void testPointers() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.POINTER, pointers());
+        DecoderTest.testTypeDecoding(Type.POINTER, pointers());
     }
 
     @Test
     public void testStrings() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.UTF8_STRING,
+        DecoderTest.testTypeDecoding(Type.UTF8_STRING,
                 DecoderTest.strings());
     }
 
     @Test
     public void testBooleans() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.BOOLEAN,
+        DecoderTest.testTypeDecoding(Type.BOOLEAN,
                 DecoderTest.booleans());
     }
 
     @Test
     public void testBytes() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.BYTES, DecoderTest.bytes());
+        DecoderTest.testTypeDecoding(Type.BYTES, DecoderTest.bytes());
     }
 
     @Test
     public void testMaps() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.MAP, DecoderTest.maps());
+        DecoderTest.testTypeDecoding(Type.MAP, DecoderTest.maps());
     }
 
     @Test
     public void testArrays() throws IOException {
-        DecoderTest.testTypeDecoding(Decoder.Type.ARRAY, DecoderTest.arrays());
+        DecoderTest.testTypeDecoding(Type.ARRAY, DecoderTest.arrays());
     }
 
     @Test
@@ -424,14 +418,13 @@ public class DecoderTest {
             Decoder decoder = new Decoder(new CHMCache(), mmap, 0);
             InvalidDatabaseException ex = assertThrows(
                     InvalidDatabaseException.class,
-                    () -> decoder.decode(0));
+                    () -> decoder.decode(0, String.class));
             assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
         }
     }
 
-    private static <T> void testTypeDecoding(Decoder.Type type, Map<T, byte[]> tests)
+    private static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
             throws IOException {
-
         NodeCache cache = new CHMCache();
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
@@ -446,29 +439,45 @@ public class DecoderTest {
                 decoder.POINTER_TEST_HACK = true;
 
                 // XXX - this could be streamlined
-                if (type.equals(Decoder.Type.BYTES)) {
-                    assertArrayEquals(desc, (byte[]) expect, decoder.decode(0).binaryValue());
-                } else if (type.equals(Decoder.Type.ARRAY)) {
-                    assertEquals(desc, expect, decoder.decode(0));
-                } else if (type.equals(Decoder.Type.UINT16)
-                        || type.equals(Decoder.Type.INT32)) {
-                    assertEquals(desc, expect, decoder.decode(0).asInt());
-                } else if (type.equals(Decoder.Type.UINT32)
-                        || type.equals(Decoder.Type.POINTER)) {
-                    assertEquals(desc, expect, decoder.decode(0).asLong());
-                } else if (type.equals(Decoder.Type.UINT64)
-                        || type.equals(Decoder.Type.UINT128)) {
-                    assertEquals(desc, expect, decoder.decode(0).bigIntegerValue());
-                } else if (type.equals(Decoder.Type.DOUBLE)) {
-                    assertEquals(desc, expect, decoder.decode(0).asDouble());
-                } else if (type.equals(Decoder.Type.FLOAT)) {
-                    assertEquals(desc, new FloatNode((Float) expect), decoder.decode(0));
-                } else if (type.equals(Decoder.Type.UTF8_STRING)) {
-                    assertEquals(desc, expect, decoder.decode(0).asText());
-                } else if (type.equals(Decoder.Type.BOOLEAN)) {
-                    assertEquals(desc, expect, decoder.decode(0).asBoolean());
+                if (type.equals(Type.BYTES)) {
+                    assertArrayEquals(desc, (byte[]) expect, decoder.decode(0, byte[].class));
+                } else if (type.equals(Type.ARRAY)) {
+                    assertEquals(desc, expect, decoder.decode(0, List.class));
+                } else if (type.equals(Type.UINT16)
+                        || type.equals(Type.INT32)) {
+                    assertEquals(desc, expect, decoder.decode(0, Integer.class));
+                } else if (type.equals(Type.UINT32)
+                        || type.equals(Type.POINTER)) {
+                    assertEquals(desc, expect, decoder.decode(0, Long.class));
+                } else if (type.equals(Type.UINT64)
+                        || type.equals(Type.UINT128)) {
+                    assertEquals(desc, expect, decoder.decode(0, BigInteger.class));
+                } else if (type.equals(Type.DOUBLE)) {
+                    assertEquals(desc, expect, decoder.decode(0, Double.class));
+                } else if (type.equals(Type.FLOAT)) {
+                    assertEquals(desc, (Float) expect, decoder.decode(0, Float.class));
+                } else if (type.equals(Type.UTF8_STRING)) {
+                    assertEquals(desc, expect, decoder.decode(0, String.class));
+                } else if (type.equals(Type.BOOLEAN)) {
+                    assertEquals(desc, expect, decoder.decode(0, Boolean.class));
                 } else {
-                    assertEquals(desc, expect, decoder.decode(0));
+                    // We hit this for Type.MAP.
+
+                    Map got = decoder.decode(0, Map.class);
+                    Map expectMap = (Map) expect;
+
+                    assertEquals(desc, expectMap.size(), got.size());
+
+                    for (Object keyObject : expectMap.keySet()) {
+                        String key = (String) keyObject;
+                        Object value = expectMap.get(key);
+
+                        if (value instanceof Object[]) {
+                            assertArrayEquals(desc, (Object[]) value, (Object[]) got.get(key));
+                        } else {
+                            assertEquals(desc, value, got.get(key));
+                        }
+                    }
                 }
             }
         }

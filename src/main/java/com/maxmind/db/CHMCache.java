@@ -3,8 +3,6 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
  * A simplistic cache using a {@link ConcurrentHashMap}. There's no eviction
  * policy, it just fills up until reaching the specified capacity <small>(or
@@ -15,7 +13,7 @@ public class CHMCache implements NodeCache {
     private static final int DEFAULT_CAPACITY = 4096;
 
     private final int capacity;
-    private final ConcurrentHashMap<Integer, JsonNode> cache;
+    private final ConcurrentHashMap<CacheKey, DecodedValue> cache;
     private boolean cacheFull = false;
 
     public CHMCache() {
@@ -28,14 +26,13 @@ public class CHMCache implements NodeCache {
     }
 
     @Override
-    public JsonNode get(int key, Loader loader) throws IOException {
-        Integer k = key;
-        JsonNode value = cache.get(k);
+    public DecodedValue get(CacheKey key, Loader loader) throws IOException {
+        DecodedValue value = cache.get(key);
         if (value == null) {
             value = loader.load(key);
             if (!cacheFull) {
                 if (cache.size() < capacity) {
-                    cache.put(k, value);
+                    cache.put(key, value);
                 } else {
                     cacheFull = true;
                 }

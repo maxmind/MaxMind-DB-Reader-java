@@ -1,14 +1,14 @@
 package com.maxmind.db;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.Class;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Instances of this class provide a reader for the MaxMind DB format. IP
@@ -24,6 +24,7 @@ public final class Reader implements Closeable {
     private final Metadata metadata;
     private final AtomicReference<BufferHolder> bufferHolderReference;
     private final NodeCache cache;
+    private final ConcurrentHashMap<Class, CachedConstructor> constructors;
 
     /**
      * The file mode to use when opening a MaxMind DB.
@@ -129,20 +130,23 @@ public final class Reader implements Closeable {
         int start = this.findMetadataStart(buffer, name);
 
         Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
-        this.metadata = new Metadata(metadataDecoder.decode(start));
+        this.metadata = metadataDecoder.decode(start, Metadata.class);
 
         this.ipV4Start = this.findIpV4StartNode(buffer);
+
+        this.constructors = new ConcurrentHashMap<>();
     }
 
     /**
      * Looks up <code>ipAddress</code> in the MaxMind DB.
      *
      * @param ipAddress the IP address to look up.
-     * @return the record data for the IP address.
+     * @param cls the class of object to populate.
+     * @return the object.
      * @throws IOException if a file I/O error occurs.
      */
-    public JsonNode get(InetAddress ipAddress) throws IOException {
-        return getRecord(ipAddress).getData();
+    public <T> T get(InetAddress ipAddress, Class<T> cls) throws IOException {
+        return getRecord(ipAddress, cls).getData();
     }
 
     /**
@@ -150,10 +154,10 @@ public final class Reader implements Closeable {
      *
      * @param ipAddress the IP address to look up.
      * @return the record for the IP address. If there is no data for the
-     * address, the non-null {@link Record} will still be returned.
+     * address, the non-null {@link DatabaseRecord} will still be returned.
      * @throws IOException if a file I/O error occurs.
      */
-    public Record getRecord(InetAddress ipAddress)
+    public <T> DatabaseRecord<T> getRecord(InetAddress ipAddress, Class<T> cls)
             throws IOException {
         ByteBuffer buffer = this.getBufferHolder().get();
 
@@ -170,13 +174,13 @@ public final class Reader implements Closeable {
             record = this.readNode(buffer, record, bit);
         }
 
-        JsonNode dataRecord = null;
+        T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
-            dataRecord = this.resolveDataPointer(buffer, record);
+            dataRecord = this.resolveDataPointer(buffer, record, cls);
         }
 
-        return new Record(dataRecord, ipAddress, pl);
+        return new DatabaseRecord<>(dataRecord, ipAddress, pl);
     }
 
     private BufferHolder getBufferHolder() throws ClosedDatabaseException {
@@ -238,8 +242,11 @@ public final class Reader implements Closeable {
         }
     }
 
-    private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer)
-            throws IOException {
+    private <T> T resolveDataPointer(
+            ByteBuffer buffer,
+            int pointer,
+            Class<T> cls
+    ) throws IOException {
         int resolved = (pointer - this.metadata.getNodeCount())
                 + this.metadata.getSearchTreeSize();
 
@@ -251,9 +258,13 @@ public final class Reader implements Closeable {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        Decoder decoder = new Decoder(this.cache, buffer,
-                this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE);
-        return decoder.decode(resolved);
+        Decoder decoder = new Decoder(
+                this.cache,
+                buffer,
+                this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE,
+                this.constructors
+        );
+        return decoder.decode(resolved, cls);
     }
 
     /*

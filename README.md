@@ -10,7 +10,7 @@ format that stores data indexed by IP address subnets (IPv4 or IPv6).
 
 ### Maven ###
 
-We recommend installing this package with [Maven](http://maven.apache.org/).
+We recommend installing this package with [Maven](https://maven.apache.org/).
 To do this, add the dependency to your pom.xml:
 
 ```xml
@@ -37,7 +37,7 @@ dependencies {
 ## Usage ##
 
 *Note:* For accessing MaxMind GeoIP2 databases, we generally recommend using
-the [GeoIP2 Java API](http://maxmind.github.io/GeoIP2-java/) rather than using
+the [GeoIP2 Java API](https://maxmind.github.io/GeoIP2-java/) rather than using
 this package directly.
 
 To use the API, you must first create a `Reader` object. The constructor for
@@ -48,11 +48,9 @@ memory. This often provides performance comparable to loading the file into
 real memory with `MEMORY`.
 
 To look up an IP address, pass the address as an `InetAddress` to the `get`
-method on `Reader`. This method will return the result as a
-`com.fasterxml.jackson.databind.JsonNode` object. `JsonNode` objects are used
-as they provide a convenient representation of multi-type data structures and
-the databind package of Jackson 2 supplies many tools for interacting with the
-data in this format.
+method on `Reader`, along with the class of the object you want to
+deserialize into. This method will create an instance of the class and
+populate it. See examples below.
 
 We recommend reusing the `Reader` object rather than creating a new one for
 each lookup. The creation of this object is relatively expensive as it must
@@ -61,7 +59,8 @@ read in metadata for the file.
 ## Example ##
 
 ```java
-import com.fasterxml.jackson.databind.JsonNode;
+import com.maxmind.db.MaxMindDbConstructor;
+import com.maxmind.db.MaxMindDbParameter;
 import com.maxmind.db.Reader;
 import com.maxmind.db.Record;
 
@@ -73,26 +72,56 @@ public class Lookup {
     public static void main(String[] args) throws IOException {
         File database = new File("/path/to/database/GeoIP2-City.mmdb");
         try (Reader reader = new Reader(database)) {
-
             InetAddress address = InetAddress.getByName("24.24.24.24");
 
             // get() returns just the data for the associated record
-            JsonNode recordData = reader.get(address);
+            LookupResult result = reader.get(address, LookupResult.class);
 
-            System.out.println(recordData);
+            System.out.println(result.getCountry().getIsoCode());
 
             // getRecord() returns a Record class that contains both
             // the data for the record and associated metadata.
-            Record record = reader.getRecord(address);
+            Record<LookupResult> record
+                = reader.getRecord(address, LookupResult.class);
 
-            System.out.println(record.getData());
+            System.out.println(record.getData().getCountry().getIsoCode());
             System.out.println(record.getNetwork());
+        }
+    }
+
+    public static class LookupResult {
+        private final Country country;
+
+        @MaxMindDbConstructor
+        public LookupResult (
+            @MaxMindDbParameter(name="country") Country country
+        ) {
+            this.country = country;
+        }
+
+        public Country getCountry() {
+            return this.country;
+        }
+    }
+
+    public static class Country {
+        private final String isoCode;
+
+        @MaxMindDbConstructor
+        public Country (
+            @MaxMindDbParameter(name="iso_code") String isoCode
+        ) {
+            this.isoCode = isoCode;
+        }
+
+        public String getIsoCode() {
+            return this.isoCode;
         }
     }
 }
 ```
 
-### Caching ###
+## Caching ##
 
 The database API supports pluggable caching (by default, no caching is
 performed). A simple implementation is provided by `com.maxmind.db.CHMCache`.
@@ -104,6 +133,10 @@ Usage:
 ```java
 Reader reader = new Reader(database, new CHMCache());
 ```
+
+Please note that the cache will hold references to the objects created
+during the lookup. If you mutate the objects, the mutated objects will be
+returned from the cache on subsequent lookups.
 
 ## Multi-Threaded Use ##
 
@@ -130,7 +163,7 @@ version. You may also call `System.gc()` after dereferencing the
 
 If you are packaging the database file as a resource in a JAR file using
 Maven, you must
-[disable binary file filtering](http://maven.apache.org/plugins/maven-resources-plugin/examples/binaries-filtering.html).
+[disable binary file filtering](https://maven.apache.org/plugins/maven-resources-plugin/examples/binaries-filtering.html).
 Failure to do so will result in `InvalidDatabaseException` exceptions being
 thrown when querying the database.
 
@@ -139,18 +172,18 @@ thrown when querying the database.
 The MaxMind DB format is an open format for quickly mapping IP addresses to
 records. The
 [specification](https://github.com/maxmind/MaxMind-DB/blob/master/MaxMind-DB-spec.md)
-is available as part of our
+is available, as is our
 [Perl writer](https://github.com/maxmind/MaxMind-DB-Writer-perl) for the
 format.
 
 ## Bug Tracker ##
 
-Please report all issues with this code using the [GitHub issue tracker]
-(https://github.com/maxmind/MaxMind-DB-Reader-java/issues).
+Please report all issues with this code using the [GitHub issue
+tracker](https://github.com/maxmind/MaxMind-DB-Reader-java/issues).
 
 If you are having an issue with a MaxMind database or service that is not
 specific to this reader, please [contact MaxMind support]
-(http://www.maxmind.com/en/support).
+(https://www.maxmind.com/en/support).
 
 ## Requirements  ##
 
@@ -163,7 +196,7 @@ possible.
 
 ## Versioning ##
 
-The MaxMind DB Reader API uses [Semantic Versioning](http://semver.org/).
+The MaxMind DB Reader API uses [Semantic Versioning](https://semver.org/).
 
 ## Copyright and License ##
 
