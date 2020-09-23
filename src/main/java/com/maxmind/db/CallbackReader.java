@@ -321,9 +321,7 @@ public final class CallbackReader implements Closeable {
             throws IOException {
 	    int resolved = (pointer - metadata.getNodeCount())
                 + metadata.getSearchTreeSize();
-	    callback.objectBegin(state);
-	    //TODO: Visit object.
-	    callback.objectEnd(state);
+	    decoder.decode(resolved, callback, state);
 	}
 
     }

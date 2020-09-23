@@ -22,6 +22,10 @@ public class AreasOfInterest { // TODO: Rename to 'CallbackAPI'?
 	    this.fieldsOfInterest = fieldsOfInterest;
 	}
 
+	public Callback<X> callbackForField(String field) {
+	    return fieldsOfInterest.get(field);
+	}
+
 	public void objectBegin(X state) {}
 	public void objectEnd(X state) {}
     }
