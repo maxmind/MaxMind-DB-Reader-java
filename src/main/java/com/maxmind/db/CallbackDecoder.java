@@ -3,9 +3,11 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,8 +25,11 @@ final class CallbackDecoder {
     private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + ((1) << 11), 0};
+    private static final int STRING_BUFFER_INITIAL_SIZE = 1024;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
+    private final CharBuffer charBuffer = CharBuffer.allocate(STRING_BUFFER_INITIAL_SIZE);
+    private final StringBuilder stringBuffer = new StringBuilder();
 
     private final ByteBuffer buffer;
     private final long pointerBase;
@@ -176,6 +181,61 @@ final class CallbackDecoder {
         skipByType(type, size);
     }
 
+    /** The output is only valid until the next time we decode a string. */
+    private CharSequence decodeAsText() throws IOException {
+        int ctrlByte = 0xFF & this.buffer.get();
+
+        Type type = Type.fromControlByte(ctrlByte);
+
+        // Pointers are a special case, we don't read the next 'size' bytes, we
+        // use the size to determine the length of the pointer and then follow
+        // it.
+        if (type.equals(Type.POINTER)) {
+            int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+            int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
+            int packed = this.decodeInteger(base, pointerSize);
+            long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
+
+            int targetOffset = (int) pointer;
+            int position = buffer.position(); // Save
+	    buffer.position(targetOffset);
+	    CharSequence result = decodeAsText();
+            buffer.position(position); // Restore
+	    return result;
+        }
+
+        if (type.equals(Type.EXTENDED)) {
+            int nextByte = this.buffer.get();
+
+            int typeNum = nextByte + 7;
+
+            if (typeNum < 8) {
+                throw new InvalidDatabaseException(
+						   "Something went horribly wrong in the decoder. An extended type "
+						   + "resolved to a type number < 8 (" + typeNum
+						   + ")");
+            }
+
+            type = Type.get(typeNum);
+        }
+
+        int size = ctrlByte & 0x1f;
+        if (size >= 29) {
+            switch (size) {
+	    case 29:
+		size = 29 + (0xFF & buffer.get());
+		break;
+	    case 30:
+		size = 285 + decodeInteger(2);
+		break;
+	    default:
+		size = 65821 + decodeInteger(3);
+            }
+        }
+
+        return decodeAsTextByType(type, size);
+    }
+
     private <State> void decodeByType(Type type, int size, AreasOfInterest.Callback<State> callback, State state)
             throws IOException {
         switch (type) {
@@ -199,6 +259,38 @@ final class CallbackDecoder {
 		} else {
 		    skipString(size);
 		}
+            case DOUBLE:
+                throw new RuntimeException("Not implemented"); // return this.decodeDouble(size);
+            case FLOAT:
+                throw new RuntimeException("Not implemented"); // return this.decodeFloat(size);
+            case BYTES:
+                throw new RuntimeException("Not implemented"); // return new BinaryNode(this.getByteArray(size));
+            case UINT16:
+                throw new RuntimeException("Not implemented"); // return this.decodeUint16(size);
+            case UINT32:
+                throw new RuntimeException("Not implemented"); // return this.decodeUint32(size);
+            case INT32:
+                throw new RuntimeException("Not implemented"); // return this.decodeInt32(size);
+            case UINT64:
+            case UINT128:
+                throw new RuntimeException("Not implemented"); // return this.decodeBigInteger(size);
+            default:
+                throw new InvalidDatabaseException(
+                        "Unknown or unexpected type: " + type.name());
+        }
+    }
+
+    private CharSequence decodeAsTextByType(Type type, int size)
+            throws IOException {
+        switch (type) {
+	    case MAP:
+		skipMap(size); return "";
+            case ARRAY:
+		skipArray(size); return "";
+            case BOOLEAN:
+                return Boolean.toString(decodeBoolean(size));
+            case UTF8_STRING:
+		return decodeStringAsText(size);
             case DOUBLE:
                 throw new RuntimeException("Not implemented"); // return this.decodeDouble(size);
             case FLOAT:
@@ -259,6 +351,26 @@ final class CallbackDecoder {
         buffer.limit(oldLimit);
 
         callback.setValue(state, s);
+    }
+
+    private CharSequence decodeStringAsText(int size) throws CharacterCodingException {
+	//System.err.println("DBG| decodeStringAsText @ " + buffer.position());
+	charBuffer.clear();
+
+        int oldLimit = buffer.limit();
+        buffer.limit(buffer.position() + size);
+	{
+	    utfDecoder.reset();
+	    CoderResult result = utfDecoder.decode(buffer, charBuffer, true);
+	    if (result.isError()) throw new CharacterCodingException();
+	    result = utfDecoder.flush(charBuffer);
+	    if (result.isError()) throw new CharacterCodingException();
+	    //TODO: Handle OVERFLOW decently.
+	}
+        buffer.limit(oldLimit);
+
+	charBuffer.flip();
+        return charBuffer;
     }
 
     private void skipString(int size) {
@@ -389,6 +501,7 @@ final class CallbackDecoder {
         for (int i = 0; i < size; i++) {
 	    CharSequence key = this.decodeAsText();
 	    AreasOfInterest.Callback<State> fieldCallback = callback.callbackForField(key);
+	    //System.err.println("DBG| - map key="+key+" hasCallback="+(fieldCallback != null));
 	    if (fieldCallback != null) {
 		decode(fieldCallback, state); // Value is of interest.
 	    } else {
@@ -403,27 +516,6 @@ final class CallbackDecoder {
             skip(); // value
         }
     }
-
-    private String decodeAsText() throws IOException {
-	// TODO - Transition measure:
-	Decoder decoder = new Decoder(NoCache.getInstance(), buffer, pointerBase);
-	return decoder.decode(buffer.position()).asText();
-    }
-
-    /*
-    private JsonNode decodeMap(int size) throws IOException {
-        int capacity = (int) (size / 0.75F + 1.0F);
-        Map<String, JsonNode> map = new HashMap<>(capacity);
-
-        for (int i = 0; i < size; i++) {
-            String key = this.decode().asText();
-            JsonNode value = this.decode();
-            map.put(key, value);
-        }
-
-        return new ObjectNode(OBJECT_MAPPER.getNodeFactory(), Collections.unmodifiableMap(map));
-    }
-    */
 
     private void skipByteArray(int length) {
         skipBytes(length);
