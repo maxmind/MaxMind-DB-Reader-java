@@ -55,6 +55,20 @@ public class NewReaderTest {
                 new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
         };
 
+	// Continent readout:
+	AreasOfInterest.TextNode continentTextNode = new AreasOfInterest.TextNode<Accumulator>() {
+		@Override public void setValue(Accumulator state, CharSequence value) {
+		    state.continent = value.toString();
+		}
+	    };
+	Map<String, AreasOfInterest.Callback<Accumulator>> continentNamesMap = new HashMap();
+	continentNamesMap.put("en", continentTextNode);
+	AreasOfInterest.ObjectNode<Accumulator> continentNamesNode = new AreasOfInterest.ObjectNode(continentNamesMap);
+	Map<String, AreasOfInterest.Callback<Accumulator>> continentMap = new HashMap();
+	continentMap.put("names", continentNamesNode);
+	AreasOfInterest.ObjectNode<Accumulator> continentNode = new AreasOfInterest.ObjectNode(continentMap);
+
+	// Country readout:
 	AreasOfInterest.TextNode countryTextNode = new AreasOfInterest.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
 		    state.country = value.toString();
@@ -66,8 +80,24 @@ public class NewReaderTest {
 	Map<String, AreasOfInterest.Callback<Accumulator>> countryMap = new HashMap();
 	countryMap.put("names", countryNamesNode);
 	AreasOfInterest.ObjectNode<Accumulator> countryNode = new AreasOfInterest.ObjectNode(countryMap);
+
+	// City readout:
+	AreasOfInterest.TextNode cityTextNode = new AreasOfInterest.TextNode<Accumulator>() {
+		@Override public void setValue(Accumulator state, CharSequence value) {
+		    state.city = value.toString();
+		}
+	    };
+	Map<String, AreasOfInterest.Callback<Accumulator>> cityNamesMap = new HashMap();
+	cityNamesMap.put("en", cityTextNode);
+	AreasOfInterest.ObjectNode<Accumulator> cityNamesNode = new AreasOfInterest.ObjectNode(cityNamesMap);
+	Map<String, AreasOfInterest.Callback<Accumulator>> cityMap = new HashMap();
+	cityMap.put("names", cityNamesNode);
+	AreasOfInterest.ObjectNode<Accumulator> cityNode = new AreasOfInterest.ObjectNode(cityMap);
+
 	Map<String, AreasOfInterest.Callback<Accumulator>> rootFieldMap = new HashMap();
+	rootFieldMap.put("continent", continentNode);
 	rootFieldMap.put("country", countryNode);
+	rootFieldMap.put("city", cityNode);
 	AreasOfInterest.RecordCallback<Accumulator> callback = new AreasOfInterest.RecordCallback<Accumulator>(rootFieldMap) {
 		@Override
 		public void network(Accumulator state, byte[] ipAddress, int prefixLength) {
@@ -93,7 +123,9 @@ public class NewReaderTest {
 		    reader.lookupRecord(rawAddress, callback, acc);
 		    long a1 = ErikUtil.allocCount();
 		    System.out.println("ERK| Read #"+i+": alloc=" + (a1-a0));
+		    System.out.println("ERK| - Continent: " + acc.continent);
 		    System.out.println("ERK| - Country: " + acc.country);
+		    System.out.println("ERK| - City: " + acc.city);
 		}
 
                 assertEquals(test.network, acc.getNetwork().toString());
@@ -210,6 +242,7 @@ public class NewReaderTest {
 	int prefixLength;
 	boolean recordFound;
 
+	String city;
 	String continent;
 	String country;
 	double latitude, longitude;
