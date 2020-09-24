@@ -140,12 +140,7 @@ final class CallbackDecoder {
         // it.
         if (type.equals(Type.POINTER)) {
             int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
-            //int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
             this.skipInteger(pointerSize);
-            //long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
-
-            //int targetOffset = (int) pointer;
-            //int position = buffer.position();
 	    return;
         }
 
@@ -305,18 +300,29 @@ final class CallbackDecoder {
                 return Boolean.toString(decodeBoolean(size));
             case UTF8_STRING:
 		return decodeStringAsText(size);
-            case DOUBLE:
-                throw new RuntimeException("Not implemented");
-            case FLOAT:
-                throw new RuntimeException("Not implemented");
+            case DOUBLE: {
+		double value = decodeDouble(size);
+		stringBuffer.setLength(0);
+		return stringBuffer.append(value);
+	    }
+            case FLOAT: {
+		float value = decodeFloat(size);
+		stringBuffer.setLength(0);
+		return stringBuffer.append(value);
+	    }
             case BYTES:
                 throw new RuntimeException("Not implemented");
             case UINT16:
-                throw new RuntimeException("Not implemented");
-            case UINT32:
-                throw new RuntimeException("Not implemented");
-            case INT32:
-                throw new RuntimeException("Not implemented");
+	    case INT32: {
+		int value = decodeInteger(size);
+		stringBuffer.setLength(0);
+		return stringBuffer.append(value);
+	    }
+	    case UINT32: {
+		long value = decodeLong(size);
+		stringBuffer.setLength(0);
+		return stringBuffer.append(value);
+	    }
             case UINT64:
             case UINT128:
                 throw new RuntimeException("Not implemented");
@@ -364,7 +370,6 @@ final class CallbackDecoder {
     }
 
     private CharSequence decodeStringAsText(int size) throws CharacterCodingException {
-	//System.err.println("DBG| decodeStringAsText @ " + buffer.position());
 	charBuffer.clear();
 
         int oldLimit = buffer.limit();
@@ -387,14 +392,6 @@ final class CallbackDecoder {
 	skipBytes(size);
     }
 
-    // private IntNode decodeUint16(int size) {
-    //     return new IntNode(this.decodeInteger(size));
-    // }
-
-    // private IntNode decodeInt32(int size) {
-    //     return new IntNode(this.decodeInteger(size));
-    // }
-
     private long decodeLong(int size) {
         long integer = 0;
         for (int i = 0; i < size; i++) {
@@ -402,10 +399,6 @@ final class CallbackDecoder {
         }
         return integer;
     }
-
-    // private LongNode decodeUint32(int size) {
-    //     return new LongNode(this.decodeLong(size));
-    // }
 
     private int decodeInteger(int size) {
         return this.decodeInteger(0, size);
@@ -511,7 +504,6 @@ final class CallbackDecoder {
         for (int i = 0; i < size; i++) {
 	    CharSequence key = this.decodeAsText();
 	    AreasOfInterest.Callback<State> fieldCallback = callback.callbackForField(key);
-	    //System.err.println("DBG| - map key="+key+" hasCallback="+(fieldCallback != null));
 	    if (fieldCallback != null) {
 		decode(fieldCallback, state); // Value is of interest.
 	    } else {
