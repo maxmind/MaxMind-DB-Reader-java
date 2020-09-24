@@ -248,9 +248,9 @@ final class CallbackDecoder {
 		}
 		return;
             case ARRAY:
-                throw new RuntimeException("Not implemented"); // return this.decodeArray(size);
+		skipArray(size); return;
             case BOOLEAN:
-                throw new RuntimeException("Not implemented"); // return Decoder.decodeBoolean(size);
+		return; //FUT support callback.
             case UTF8_STRING:
 		if (callback instanceof AreasOfInterest.TextNode) {
 		    AreasOfInterest.TextNode<State> cb = (AreasOfInterest.TextNode<State>)callback;
@@ -278,16 +278,16 @@ final class CallbackDecoder {
 		}
  		return;
             case BYTES:
-                throw new RuntimeException("Not implemented"); // return new BinaryNode(this.getByteArray(size));
+		skipByteArray(size); return;
             case UINT16:
-                throw new RuntimeException("Not implemented"); // return this.decodeUint16(size);
+		skipInteger(size); return; //FUT support callback
             case UINT32:
-                throw new RuntimeException("Not implemented"); // return this.decodeUint32(size);
+		skipInteger(size); return; //FUT support callback
             case INT32:
-                throw new RuntimeException("Not implemented"); // return this.decodeInt32(size);
+		skipInteger(size); return; //FUT support callback
             case UINT64:
             case UINT128:
-                throw new RuntimeException("Not implemented"); // return this.decodeBigInteger(size);
+                skipBigInteger(size); return;
             default:
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
@@ -306,20 +306,20 @@ final class CallbackDecoder {
             case UTF8_STRING:
 		return decodeStringAsText(size);
             case DOUBLE:
-                throw new RuntimeException("Not implemented"); // return this.decodeDouble(size);
+                throw new RuntimeException("Not implemented");
             case FLOAT:
-                throw new RuntimeException("Not implemented"); // return this.decodeFloat(size);
+                throw new RuntimeException("Not implemented");
             case BYTES:
-                throw new RuntimeException("Not implemented"); // return new BinaryNode(this.getByteArray(size));
+                throw new RuntimeException("Not implemented");
             case UINT16:
-                throw new RuntimeException("Not implemented"); // return this.decodeUint16(size);
+                throw new RuntimeException("Not implemented");
             case UINT32:
-                throw new RuntimeException("Not implemented"); // return this.decodeUint32(size);
+                throw new RuntimeException("Not implemented");
             case INT32:
-                throw new RuntimeException("Not implemented"); // return this.decodeInt32(size);
+                throw new RuntimeException("Not implemented");
             case UINT64:
             case UINT128:
-                throw new RuntimeException("Not implemented"); // return this.decodeBigInteger(size);
+                throw new RuntimeException("Not implemented");
             default:
                 throw new InvalidDatabaseException(
                         "Unknown or unexpected type: " + type.name());
