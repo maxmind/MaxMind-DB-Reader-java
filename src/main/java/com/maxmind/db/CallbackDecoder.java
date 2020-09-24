@@ -25,10 +25,10 @@ final class CallbackDecoder {
     private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + ((1) << 11), 0};
-    private static final int STRING_BUFFER_INITIAL_SIZE = 1024;
+    private static final int CHAR_BUFFER_SIZE = 32;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
-    private final CharBuffer charBuffer = CharBuffer.allocate(STRING_BUFFER_INITIAL_SIZE);
+    private final CharBuffer charBuffer = CharBuffer.allocate(CHAR_BUFFER_SIZE);
     private final StringBuilder stringBuffer = new StringBuilder();
 
     private final ByteBuffer buffer;
@@ -370,22 +370,55 @@ final class CallbackDecoder {
     }
 
     private CharSequence decodeStringAsText(int size) throws CharacterCodingException {
+
+        int oldLimit = buffer.limit(); // Save
+        buffer.limit(buffer.position() + size); // Set area to decode
+
+	CharSequence result = decodeStringFromBuffer(buffer);
+
+	buffer.limit(oldLimit); // Restore
+
+	return result;
+    }
+
+    /** Decode the string. Keep result in charBuffer if it is small
+     *  enough - otherwise, decode in chunks and append them to stringBuffer.
+     */
+    private CharSequence decodeStringFromBuffer(ByteBuffer buffer) throws CharacterCodingException {
+	boolean useStringBuffer = false;
+	utfDecoder.reset();
 	charBuffer.clear();
+	CoderResult result;
+	do {
+	    result = utfDecoder.decode(buffer, charBuffer, true);
+	    if (result.isError()) throw new CharacterCodingException();
+	    if (result == CoderResult.OVERFLOW) useStringBuffer = emptyCharBufferIntoStringBuffer(useStringBuffer);
+	} while (result == CoderResult.OVERFLOW);
 
-        int oldLimit = buffer.limit();
-        buffer.limit(buffer.position() + size);
-	{
-	    utfDecoder.reset();
-	    CoderResult result = utfDecoder.decode(buffer, charBuffer, true);
-	    if (result.isError()) throw new CharacterCodingException();
-	    result = utfDecoder.flush(charBuffer);
-	    if (result.isError()) throw new CharacterCodingException();
-	    //TODO: Handle OVERFLOW decently.
+	result = utfDecoder.flush(charBuffer);
+	if (result.isError()) throw new CharacterCodingException();
+	if (result == CoderResult.OVERFLOW || useStringBuffer) {
+	    useStringBuffer = emptyCharBufferIntoStringBuffer(useStringBuffer);
+	    if (result == CoderResult.OVERFLOW) {
+		result = utfDecoder.flush(charBuffer);
+		emptyCharBufferIntoStringBuffer(useStringBuffer);
+	    }
 	}
-        buffer.limit(oldLimit);
 
+	if (useStringBuffer) {
+	    return stringBuffer;
+	} else {
+	    charBuffer.flip();
+	    return charBuffer;
+	}
+    }
+
+    private boolean emptyCharBufferIntoStringBuffer(boolean notFirst) {
+	if (!notFirst) stringBuffer.setLength(0);
 	charBuffer.flip();
-        return charBuffer;
+	stringBuffer.append(charBuffer);
+	charBuffer.clear();
+	return true;
     }
 
     private void skipString(int size) {
