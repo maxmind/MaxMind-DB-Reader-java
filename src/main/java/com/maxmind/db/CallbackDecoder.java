@@ -247,7 +247,6 @@ final class CallbackDecoder {
 		    skipMap(size);
 		}
 		return;
-	//throw new RuntimeException("Not implemented"); // return this.decodeMap(size);
             case ARRAY:
                 throw new RuntimeException("Not implemented"); // return this.decodeArray(size);
             case BOOLEAN:
@@ -255,14 +254,29 @@ final class CallbackDecoder {
             case UTF8_STRING:
 		if (callback instanceof AreasOfInterest.TextNode) {
 		    AreasOfInterest.TextNode<State> cb = (AreasOfInterest.TextNode<State>)callback;
-		    decodeString(size, cb, state); return;
+		    decodeString(size, cb, state);
 		} else {
 		    skipString(size);
 		}
+		return;
             case DOUBLE:
-                throw new RuntimeException("Not implemented"); // return this.decodeDouble(size);
+		if (callback instanceof AreasOfInterest.DoubleNode) {
+		    AreasOfInterest.DoubleNode<State> cb = (AreasOfInterest.DoubleNode<State>)callback;
+		    double value = decodeDouble(size);
+		    cb.setValue(state, value);
+		} else {
+		    skipDouble(size);
+		}
+ 		return;
             case FLOAT:
-                throw new RuntimeException("Not implemented"); // return this.decodeFloat(size);
+		if (callback instanceof AreasOfInterest.DoubleNode) {
+		    AreasOfInterest.DoubleNode<State> cb = (AreasOfInterest.DoubleNode<State>)callback;
+		    float value = decodeFloat(size);
+		    cb.setValue(state, value);
+		} else {
+		    skipFloat(size);
+		}
+ 		return;
             case BYTES:
                 throw new RuntimeException("Not implemented"); // return new BinaryNode(this.getByteArray(size));
             case UINT16:

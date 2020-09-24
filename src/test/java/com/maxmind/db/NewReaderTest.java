@@ -94,10 +94,27 @@ public class NewReaderTest {
 	cityMap.put("names", cityNamesNode);
 	AreasOfInterest.ObjectNode<Accumulator> cityNode = new AreasOfInterest.ObjectNode(cityMap);
 
+	// Position readout:
+	AreasOfInterest.DoubleNode latitudeNode = new AreasOfInterest.DoubleNode<Accumulator>() {
+		@Override public void setValue(Accumulator state, double value) {
+		    state.latitude = value;
+		}
+	    };
+	AreasOfInterest.DoubleNode longitudeNode = new AreasOfInterest.DoubleNode<Accumulator>() {
+		@Override public void setValue(Accumulator state, double value) {
+		    state.longitude = value;
+		}
+	    };
+	Map<String, AreasOfInterest.Callback<Accumulator>> locationMap = new HashMap();
+	locationMap.put("latitude", latitudeNode);
+	locationMap.put("longitude", longitudeNode);
+	AreasOfInterest.ObjectNode<Accumulator> locationNode = new AreasOfInterest.ObjectNode(locationMap);
+
 	Map<String, AreasOfInterest.Callback<Accumulator>> rootFieldMap = new HashMap();
 	rootFieldMap.put("continent", continentNode);
 	rootFieldMap.put("country", countryNode);
 	rootFieldMap.put("city", cityNode);
+	rootFieldMap.put("location", locationNode);
 	AreasOfInterest.RecordCallback<Accumulator> callback = new AreasOfInterest.RecordCallback<Accumulator>(rootFieldMap) {
 		@Override
 		public void network(Accumulator state, byte[] ipAddress, int prefixLength) {
@@ -126,6 +143,7 @@ public class NewReaderTest {
 		    System.out.println("ERK| - Continent: " + acc.continent);
 		    System.out.println("ERK| - Country: " + acc.country);
 		    System.out.println("ERK| - City: " + acc.city);
+		    System.out.println("ERK| - Location: " + acc.longitude + ", "+acc.latitude);
 		}
 
                 assertEquals(test.network, acc.getNetwork().toString());

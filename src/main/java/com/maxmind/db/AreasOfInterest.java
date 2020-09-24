@@ -23,6 +23,10 @@ public class AreasOfInterest { // TODO: Rename to 'CallbackAPI'?
 	}
     }
 
+    public static abstract class DoubleNode<X> extends Callback<X> {
+	public abstract void setValue(X state, double value);
+    }
+
     public static class ObjectNode<X> extends Callback<X> {
 	private final Map<CharSequence, Callback<X>> fieldsOfInterest;
 
