@@ -1,8 +1,9 @@
 CHANGELOG
 =========
 
-2.0.0
-------------------
+2.0.0-rc1 (2020-09-24)
+----------------------
+
 * Significant API changes. The `get()` and `getRecord()` methods now take a
   class parameter specifying the type of object to deserialize into. You
   can either deserialize into a `Map` or to model classes that use the
