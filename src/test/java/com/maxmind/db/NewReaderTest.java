@@ -58,7 +58,7 @@ public class NewReaderTest {
 	// Continent readout:
 	AreasOfInterest.TextNode continentTextNode = new AreasOfInterest.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
-		    state.continent = value.toString();
+		    assignToStringBuilder(state.continent, value);
 		}
 	    };
 	Map<String, AreasOfInterest.Callback<Accumulator>> continentNamesMap = new HashMap();
@@ -71,7 +71,7 @@ public class NewReaderTest {
 	// Country readout:
 	AreasOfInterest.TextNode countryTextNode = new AreasOfInterest.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
-		    state.country = value.toString();
+		    assignToStringBuilder(state.country, value);
 		}
 	    };
 	Map<String, AreasOfInterest.Callback<Accumulator>> countryNamesMap = new HashMap();
@@ -84,7 +84,7 @@ public class NewReaderTest {
 	// City readout:
 	AreasOfInterest.TextNode cityTextNode = new AreasOfInterest.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
-		    state.city = value.toString();
+		    assignToStringBuilder(state.city, value);
 		}
 	    };
 	Map<String, AreasOfInterest.Callback<Accumulator>> cityNamesMap = new HashMap();
@@ -242,9 +242,9 @@ public class NewReaderTest {
 	int prefixLength;
 	boolean recordFound;
 
-	String city;
-	String continent;
-	String country;
+	final StringBuilder continent = new StringBuilder();
+	final StringBuilder country = new StringBuilder();
+	final StringBuilder city = new StringBuilder();
 	double latitude, longitude;
 
 	public void reset() {
@@ -252,8 +252,9 @@ public class NewReaderTest {
 	    prefixLength = -1;
 	    recordFound = false;
 
-	    continent = null;
-	    country = null;
+	    city.setLength(0);
+	    continent.setLength(0);
+	    country.setLength(0);
 	    latitude = Double.NaN;
 	    longitude = Double.NaN;
 	}

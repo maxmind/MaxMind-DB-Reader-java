@@ -15,6 +15,12 @@ public class AreasOfInterest { // TODO: Rename to 'CallbackAPI'?
 
     public static abstract class TextNode<X> extends Callback<X> {
 	public abstract void setValue(X state, CharSequence value);
+
+	// Utility function:
+	public static void assignToStringBuilder(StringBuilder sb, CharSequence value) {
+	    sb.setLength(0);
+	    sb.append(value);
+	}
     }
 
     public static class ObjectNode<X> extends Callback<X> {
