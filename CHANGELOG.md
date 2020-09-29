@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+2.0.0-rc2 (2020-09-29)
+----------------------
+
+* Build using the `--release` command-line option so linking when using
+  Java 8 works.
+
 2.0.0-rc1 (2020-09-24)
 ----------------------
 
