@@ -1,5 +1,4 @@
 # MaxMind DB Reader #
-[![Build Status](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java.png?branch=master)](https://travis-ci.org/maxmind/MaxMind-DB-Reader-java)
 
 ## Description ##
 
