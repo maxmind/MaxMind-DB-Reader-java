@@ -13,8 +13,9 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * Low-alloc database query interface.
  * Instances of this class provide a reader for the MaxMind DB format. IP
- * addresses can be looked up using the <code>get</code> method.
+ * addresses can be looked up using the <code>lookupRecord</code> method.
  */
 public final class CallbackReader implements Closeable {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
@@ -251,12 +252,12 @@ public final class CallbackReader implements Closeable {
      * Looks up <code>ipAddress</code> in the MaxMind DB, reporting the results through the callback object <code>callback</code>.
      * @throws IOException if a file I/O error occurs.
      */
-    public <State> void lookupRecord(InetAddress ipAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
+    public <State> void lookupRecord(InetAddress ipAddress, Callbacks.RecordCallback<State> callback, State state) throws IOException {
         byte[] rawAddress = ipAddress.getAddress();
 	lookupRecord(rawAddress, callback, state);
     }
     
-    public <State> void lookupRecord(byte[] rawAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
+    public <State> void lookupRecord(byte[] rawAddress, Callbacks.RecordCallback<State> callback, State state) throws IOException {
 	BufferHolder bufferHolder = bufferHolderReference.get();
 	if (bufferHolder == null) {
 	    threadLocalState.remove();
@@ -296,7 +297,7 @@ public final class CallbackReader implements Closeable {
 	    this.decoder = new CallbackDecoder(buffer, pointerBase);
 	}
 
-	public <State> void lookupRecord(byte[] rawAddress, AreasOfInterest.RecordCallback<State> callback, State state) throws IOException {
+	public <State> void lookupRecord(byte[] rawAddress, Callbacks.RecordCallback<State> callback, State state) throws IOException {
 	    int bitLength = rawAddress.length * 8;
 	    int record = startNode(bitLength);
 	    int nodeCount = metadata.getNodeCount();
@@ -317,7 +318,7 @@ public final class CallbackReader implements Closeable {
 	    }
 	}
 
-	private <State> void resolveObject(ByteBuffer buffer, int pointer, AreasOfInterest.ObjectNode callback, State state)
+	private <State> void resolveObject(ByteBuffer buffer, int pointer, Callbacks.ObjectNode callback, State state)
             throws IOException {
 	    int resolved = (pointer - metadata.getNodeCount())
                 + metadata.getSearchTreeSize();

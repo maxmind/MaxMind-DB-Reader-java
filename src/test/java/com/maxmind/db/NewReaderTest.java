@@ -41,6 +41,8 @@ public class NewReaderTest {
     public void testGetRecord() throws IOException {
         GetRecordTest[] tests = {
 	    new GetRecordTest("8.8.8.8", "ip-db-0cf0e7a0b9649404168f52a0c8be57c9.mmdb", "8.8.0.0/17", true), //ERK
+	    new GetRecordTest("85.191.80.236",  "ip-db-0cf0e7a0b9649404168f52a0c8be57c9.mmdb", "85.191.80.0/21", true), //ERK
+	    /*
                 new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
                 new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
                 new GetRecordTest("::2:0:1", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:2:0:0/122", true),
@@ -53,69 +55,70 @@ public class NewReaderTest {
                 // new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
                 // new GetRecordTest("0:0:0:0:ffff:ffff:ffff:ffff", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
                 new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
+	    */
         };
 
 	// Continent readout:
-	AreasOfInterest.TextNode continentTextNode = new AreasOfInterest.TextNode<Accumulator>() {
+	Callbacks.TextNode continentTextNode = new Callbacks.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
 		    assignToStringBuilder(state.continent, value);
 		}
 	    };
-	Map<String, AreasOfInterest.Callback<Accumulator>> continentNamesMap = new HashMap();
+	Map<String, Callbacks.Callback<Accumulator>> continentNamesMap = new HashMap();
 	continentNamesMap.put("en", continentTextNode);
-	AreasOfInterest.ObjectNode<Accumulator> continentNamesNode = new AreasOfInterest.ObjectNode(continentNamesMap);
-	Map<String, AreasOfInterest.Callback<Accumulator>> continentMap = new HashMap();
+	Callbacks.ObjectNode<Accumulator> continentNamesNode = new Callbacks.ObjectNode(continentNamesMap);
+	Map<String, Callbacks.Callback<Accumulator>> continentMap = new HashMap();
 	continentMap.put("names", continentNamesNode);
-	AreasOfInterest.ObjectNode<Accumulator> continentNode = new AreasOfInterest.ObjectNode(continentMap);
+	Callbacks.ObjectNode<Accumulator> continentNode = new Callbacks.ObjectNode(continentMap);
 
 	// Country readout:
-	AreasOfInterest.TextNode countryTextNode = new AreasOfInterest.TextNode<Accumulator>() {
+	Callbacks.TextNode countryTextNode = new Callbacks.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
 		    assignToStringBuilder(state.country, value);
 		}
 	    };
-	Map<String, AreasOfInterest.Callback<Accumulator>> countryNamesMap = new HashMap();
+	Map<String, Callbacks.Callback<Accumulator>> countryNamesMap = new HashMap();
 	countryNamesMap.put("en", countryTextNode);
-	AreasOfInterest.ObjectNode<Accumulator> countryNamesNode = new AreasOfInterest.ObjectNode(countryNamesMap);
-	Map<String, AreasOfInterest.Callback<Accumulator>> countryMap = new HashMap();
+	Callbacks.ObjectNode<Accumulator> countryNamesNode = new Callbacks.ObjectNode(countryNamesMap);
+	Map<String, Callbacks.Callback<Accumulator>> countryMap = new HashMap();
 	countryMap.put("names", countryNamesNode);
-	AreasOfInterest.ObjectNode<Accumulator> countryNode = new AreasOfInterest.ObjectNode(countryMap);
+	Callbacks.ObjectNode<Accumulator> countryNode = new Callbacks.ObjectNode(countryMap);
 
 	// City readout:
-	AreasOfInterest.TextNode cityTextNode = new AreasOfInterest.TextNode<Accumulator>() {
+	Callbacks.TextNode cityTextNode = new Callbacks.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
 		    assignToStringBuilder(state.city, value);
 		}
 	    };
-	Map<String, AreasOfInterest.Callback<Accumulator>> cityNamesMap = new HashMap();
+	Map<String, Callbacks.Callback<Accumulator>> cityNamesMap = new HashMap();
 	cityNamesMap.put("en", cityTextNode);
-	AreasOfInterest.ObjectNode<Accumulator> cityNamesNode = new AreasOfInterest.ObjectNode(cityNamesMap);
-	Map<String, AreasOfInterest.Callback<Accumulator>> cityMap = new HashMap();
+	Callbacks.ObjectNode<Accumulator> cityNamesNode = new Callbacks.ObjectNode(cityNamesMap);
+	Map<String, Callbacks.Callback<Accumulator>> cityMap = new HashMap();
 	cityMap.put("names", cityNamesNode);
-	AreasOfInterest.ObjectNode<Accumulator> cityNode = new AreasOfInterest.ObjectNode(cityMap);
+	Callbacks.ObjectNode<Accumulator> cityNode = new Callbacks.ObjectNode(cityMap);
 
 	// Position readout:
-	AreasOfInterest.DoubleNode latitudeNode = new AreasOfInterest.DoubleNode<Accumulator>() {
+	Callbacks.DoubleNode latitudeNode = new Callbacks.DoubleNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, double value) {
 		    state.latitude = value;
 		}
 	    };
-	AreasOfInterest.DoubleNode longitudeNode = new AreasOfInterest.DoubleNode<Accumulator>() {
+	Callbacks.DoubleNode longitudeNode = new Callbacks.DoubleNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, double value) {
 		    state.longitude = value;
 		}
 	    };
-	Map<String, AreasOfInterest.Callback<Accumulator>> locationMap = new HashMap();
+	Map<String, Callbacks.Callback<Accumulator>> locationMap = new HashMap();
 	locationMap.put("latitude", latitudeNode);
 	locationMap.put("longitude", longitudeNode);
-	AreasOfInterest.ObjectNode<Accumulator> locationNode = new AreasOfInterest.ObjectNode(locationMap);
+	Callbacks.ObjectNode<Accumulator> locationNode = new Callbacks.ObjectNode(locationMap);
 
-	Map<String, AreasOfInterest.Callback<Accumulator>> rootFieldMap = new HashMap();
+	Map<String, Callbacks.Callback<Accumulator>> rootFieldMap = new HashMap();
 	rootFieldMap.put("continent", continentNode);
 	rootFieldMap.put("country", countryNode);
 	rootFieldMap.put("city", cityNode);
 	rootFieldMap.put("location", locationNode);
-	AreasOfInterest.RecordCallback<Accumulator> callback = new AreasOfInterest.RecordCallback<Accumulator>(rootFieldMap) {
+	Callbacks.RecordCallback<Accumulator> callback = new Callbacks.RecordCallback<Accumulator>(rootFieldMap) {
 		@Override
 		public void network(Accumulator state, byte[] ipAddress, int prefixLength) {
 		    state.ipAddress = ipAddress;

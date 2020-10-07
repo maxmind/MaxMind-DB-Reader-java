@@ -65,7 +65,7 @@ final class CallbackDecoder {
     }
 
 
-    <State> void decode(int offset, AreasOfInterest.Callback<State> callback, State state) throws IOException {
+    <State> void decode(int offset, Callbacks.Callback<State> callback, State state) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
 					       "The MaxMind DB file's data section contains bad data: "
@@ -76,7 +76,7 @@ final class CallbackDecoder {
         decode(callback, state);
     }
 
-    private <State> void decode(AreasOfInterest.Callback<State> callback, State state) throws IOException {
+    private <State> void decode(Callbacks.Callback<State> callback, State state) throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -231,12 +231,12 @@ final class CallbackDecoder {
         return decodeAsTextByType(type, size);
     }
 
-    private <State> void decodeByType(Type type, int size, AreasOfInterest.Callback<State> callback, State state)
+    private <State> void decodeByType(Type type, int size, Callbacks.Callback<State> callback, State state)
             throws IOException {
         switch (type) {
 	    case MAP:
-		if (callback instanceof AreasOfInterest.ObjectNode) {
-		    AreasOfInterest.ObjectNode<State> cb = (AreasOfInterest.ObjectNode<State>)callback;
+		if (callback instanceof Callbacks.ObjectNode) {
+		    Callbacks.ObjectNode<State> cb = (Callbacks.ObjectNode<State>)callback;
 		    decodeMap(size, cb, state);
 		} else {
 		    skipMap(size);
@@ -247,16 +247,16 @@ final class CallbackDecoder {
             case BOOLEAN:
 		return; //FUT support callback.
             case UTF8_STRING:
-		if (callback instanceof AreasOfInterest.TextNode) {
-		    AreasOfInterest.TextNode<State> cb = (AreasOfInterest.TextNode<State>)callback;
+		if (callback instanceof Callbacks.TextNode) {
+		    Callbacks.TextNode<State> cb = (Callbacks.TextNode<State>)callback;
 		    decodeString(size, cb, state);
 		} else {
 		    skipString(size);
 		}
 		return;
             case DOUBLE:
-		if (callback instanceof AreasOfInterest.DoubleNode) {
-		    AreasOfInterest.DoubleNode<State> cb = (AreasOfInterest.DoubleNode<State>)callback;
+		if (callback instanceof Callbacks.DoubleNode) {
+		    Callbacks.DoubleNode<State> cb = (Callbacks.DoubleNode<State>)callback;
 		    double value = decodeDouble(size);
 		    cb.setValue(state, value);
 		} else {
@@ -264,8 +264,8 @@ final class CallbackDecoder {
 		}
  		return;
             case FLOAT:
-		if (callback instanceof AreasOfInterest.DoubleNode) {
-		    AreasOfInterest.DoubleNode<State> cb = (AreasOfInterest.DoubleNode<State>)callback;
+		if (callback instanceof Callbacks.DoubleNode) {
+		    Callbacks.DoubleNode<State> cb = (Callbacks.DoubleNode<State>)callback;
 		    float value = decodeFloat(size);
 		    cb.setValue(state, value);
 		} else {
@@ -364,7 +364,7 @@ final class CallbackDecoder {
         }
     }
 
-    private <State> void decodeString(int size, AreasOfInterest.TextNode<State> callback, State state) throws CharacterCodingException {
+    private <State> void decodeString(int size, Callbacks.TextNode<State> callback, State state) throws CharacterCodingException {
         CharSequence value = decodeStringAsText(size);
         callback.setValue(state, value);
     }
@@ -532,11 +532,11 @@ final class CallbackDecoder {
     }
 
 
-    private <State> void decodeMap(int size, AreasOfInterest.ObjectNode<State> callback, State state) throws IOException {
+    private <State> void decodeMap(int size, Callbacks.ObjectNode<State> callback, State state) throws IOException {
 	callback.objectBegin(state);
         for (int i = 0; i < size; i++) {
 	    CharSequence key = this.decodeAsText();
-	    AreasOfInterest.Callback<State> fieldCallback = callback.callbackForField(key);
+	    Callbacks.Callback<State> fieldCallback = callback.callbackForField(key);
 	    if (fieldCallback != null) {
 		decode(fieldCallback, state); // Value is of interest.
 	    } else {

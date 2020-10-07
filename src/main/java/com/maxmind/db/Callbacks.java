@@ -5,11 +5,10 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
-/** Low-alloc database query interface.
- * The way this works is that you provide a specification of
- * "areas of interest", providing callbacks.
+/** Callbacks for the low-allocation database query interface.
+ * This lets you build a specification of which object paths you want callback for.
  */
-public class AreasOfInterest { // TODO: Rename to 'CallbackAPI'?
+public class Callbacks {
 
     public static abstract class Callback<X> {}
 
