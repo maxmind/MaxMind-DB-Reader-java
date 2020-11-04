@@ -15,10 +15,13 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.function.BiFunction;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.containsString;
+
+import com.maxmind.db.Callbacks.*;
 
 public class NewReaderTest {
     private final ObjectMapper om = new ObjectMapper();
@@ -35,6 +38,103 @@ public class NewReaderTest {
             this.network = network;
             this.hasRecord = hasRecord;
         }
+    }
+
+    @Test
+    public void testDecodingTypesFile() throws IOException {
+        CallbackReader testReader = new CallbackReader(getFile("MaxMind-DB-test-decoder.mmdb"));
+        this.testDecodingTypes(testReader);
+    }
+
+    @Test
+    public void testDecodingTypesStream() throws IOException {
+        CallbackReader testReader = new CallbackReader(getStream("MaxMind-DB-test-decoder.mmdb"));
+        this.testDecodingTypes(testReader);
+    }
+
+    private void testDecodingTypes(CallbackReader reader) throws IOException {
+	final AllocMeter allocMeter = new AllocMeter();
+	InetAddress key = InetAddress.getByName("::1.1.1.0");
+	byte[] rawKey = key.getAddress();
+
+	final String STRING_BUILDER_KEY = "<stringbuilder>";
+	BiFunction<String, RecordCallbackBuilder<AccumulatorForTypes>, AccumulatorForTypes> runIt = new BiFunction<String, RecordCallbackBuilder<AccumulatorForTypes>, AccumulatorForTypes>() {
+		public AccumulatorForTypes apply(String runDescription, RecordCallbackBuilder<AccumulatorForTypes> builder) {
+		    RecordCallback<AccumulatorForTypes> callback = builder.build();
+		    AccumulatorForTypes acc = new AccumulatorForTypes();
+		    try {
+			long a0 = allocMeter.allocByteCount();
+			reader.lookupRecord(rawKey, callback, acc);
+			long a1 = allocMeter.allocByteCount();
+			System.err.println("Allocation by lookup call for '" + runDescription + "': "+ (a1-a0));
+		    } catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		    }
+		    return acc;
+		}
+	    };
+
+	// Node type not handled yet: "boolean"
+	// Node type not handled yet: "bytes"
+
+	{ // Strings:
+	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
+	    builder.text("utf8_string", new Callbacks.TextNode<AccumulatorForTypes>() {
+		    @Override public void setValue(AccumulatorForTypes state, CharSequence value) {
+			state.string1.append(value);
+		    }
+		});
+	    AccumulatorForTypes result = runIt.apply("String value", builder);
+	    assertEquals("unicode! ☯ - ♫", result.string1.toString());
+	}
+	{ // Strings:
+	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
+	    builder.text("utf8_string", new Callbacks.TextNode<AccumulatorForTypes>() {
+		    @Override public void setValue(AccumulatorForTypes state, CharSequence value) {
+			state.string1.append(value);
+		    }
+		});
+	    AccumulatorForTypes result = runIt.apply("String value2", builder);
+	    assertEquals("unicode! ☯ - ♫", result.string1.toString());
+	}
+
+	{ // Floating-point numbers:
+	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
+	    builder.number("double", new Callbacks.DoubleNode<AccumulatorForTypes>() {
+		    @Override public void setValue(AccumulatorForTypes state, double value) {
+			state.double1 = value;
+		    }
+		});
+	    builder.number("float", new Callbacks.DoubleNode<AccumulatorForTypes>() {
+		    @Override public void setValue(AccumulatorForTypes state, double value) {
+			state.double2 = value;
+		    }
+		});
+	    AccumulatorForTypes result = runIt.apply("Number values", builder);
+	    assertEquals(42.123456, result.double1, 0.000000001);
+	    assertEquals(1.1, result.double2, 0.000001);
+	}
+
+	{ // Nested records:
+	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
+	    builder.obj("map").obj("mapX").text("utf8_stringX", new Callbacks.TextNode<AccumulatorForTypes>() {
+		    @Override public void setValue(AccumulatorForTypes state, CharSequence value) {
+			state.string1.append(value);
+		    }
+		});
+	    AccumulatorForTypes result = runIt.apply("Value in nested records", builder);
+	    assertEquals("hello", result.string1.toString());
+	}
+
+	// Node type not handled yet: "array"
+	// Node type not handled yet: "map" - existence signal
+	// Node type not handled yet: "int"
+    }
+
+    static class AccumulatorForTypes {
+	StringBuilder string1 = new StringBuilder(1000);
+	double double1 = Double.NaN;
+	double double2 = Double.NaN;
     }
 
     @Test
@@ -155,32 +255,6 @@ public class NewReaderTest {
         }
     }
 
-
-    private void testMetadata(Reader reader, int ipVersion, long recordSize) {
-
-        Metadata metadata = reader.getMetadata();
-
-        assertEquals("major version", 2, metadata.getBinaryFormatMajorVersion());
-        assertEquals(0, metadata.getBinaryFormatMinorVersion());
-        assertEquals(ipVersion, metadata.getIpVersion());
-        assertEquals("Test", metadata.getDatabaseType());
-
-        List<String> languages = new ArrayList<>(Arrays.asList("en", "zh"));
-
-        assertEquals(languages, metadata.getLanguages());
-
-        Map<String, String> description = new HashMap<>();
-        description.put("en", "Test Database");
-        description.put("zh", "Test Database Chinese");
-
-        assertEquals(description, metadata.getDescription());
-        assertEquals(recordSize, metadata.getRecordSize());
-
-        Calendar cal = Calendar.getInstance();
-        cal.set(2014, Calendar.JANUARY, 1);
-
-        assertTrue(metadata.getBuildDate().compareTo(cal.getTime()) > 0);
-    }
 
     private void testIpV4(Reader reader, File file) throws IOException {
 
