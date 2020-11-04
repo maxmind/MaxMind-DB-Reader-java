@@ -269,25 +269,6 @@ public final class CallbackReader implements Closeable {
 	perThreadState.lookupRecord(rawAddress, callback, state);
     }
 
-        // private JsonNode resolveDataPointer(ByteBuffer buffer, int pointer)
-    //         throws IOException {
-    //     int resolved = (pointer - this.metadata.getNodeCount())
-    //             + this.metadata.getSearchTreeSize();
-
-    //     if (resolved >= buffer.capacity()) {
-    //         throw new InvalidDatabaseException(
-    //                 "The MaxMind DB file's search tree is corrupt: "
-    //                         + "contains pointer larger than the database.");
-    //     }
-
-    //     // We only want the data from the decoder, not the offset where it was
-    //     // found.
-    //     Decoder decoder = new Decoder(this.cache, buffer,
-    //             this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE);
-    //     return decoder.decode(resolved);
-    // }
-
-
     private class PerThread {
 	private ByteBuffer buffer;
 	private CallbackDecoder decoder;
