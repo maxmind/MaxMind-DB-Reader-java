@@ -57,7 +57,6 @@ public class NewReaderTest {
 	InetAddress key = InetAddress.getByName("::1.1.1.0");
 	byte[] rawKey = key.getAddress();
 
-	final String STRING_BUILDER_KEY = "<stringbuilder>";
 	BiFunction<String, RecordCallbackBuilder<AccumulatorForTypes>, AccumulatorForTypes> runIt = new BiFunction<String, RecordCallbackBuilder<AccumulatorForTypes>, AccumulatorForTypes>() {
 		public AccumulatorForTypes apply(String runDescription, RecordCallbackBuilder<AccumulatorForTypes> builder) {
 		    RecordCallback<AccumulatorForTypes> callback = builder.build();
@@ -66,7 +65,14 @@ public class NewReaderTest {
 			long a0 = allocMeter.allocByteCount();
 			reader.lookupRecord(rawKey, callback, acc);
 			long a1 = allocMeter.allocByteCount();
-			System.err.println("Allocation by lookup call for '" + runDescription + "': "+ (a1-a0));
+
+			long allocatedBytes = a1 - a0;
+			//System.out.println("Allocation by lookup call for '" + runDescription + "': "+ allocatedBytes);
+
+			if (!"Warmup".equals(runDescription)) {
+			    assertTrue("Zero-allocation broken by '"+runDescription+"': allocatedBytes = "+allocatedBytes,
+				       allocatedBytes == 0);
+			}
 		    } catch (IOException ioe) {
 			throw new RuntimeException(ioe);
 		    }
@@ -74,8 +80,8 @@ public class NewReaderTest {
 		}
 	    };
 
-	// Node type not handled yet: "boolean"
-	// Node type not handled yet: "bytes"
+	// Warm up the reader:
+	runIt.apply("Warmup", new RecordCallbackBuilder<AccumulatorForTypes>());
 
 	{ // Strings:
 	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
@@ -126,6 +132,8 @@ public class NewReaderTest {
 	    assertEquals("hello", result.string1.toString());
 	}
 
+	// Node type not handled yet: "boolean"
+	// Node type not handled yet: "bytes"
 	// Node type not handled yet: "array"
 	// Node type not handled yet: "map" - existence signal
 	// Node type not handled yet: "int"
@@ -135,6 +143,9 @@ public class NewReaderTest {
 	StringBuilder string1 = new StringBuilder(1000);
 	double double1 = Double.NaN;
 	double double2 = Double.NaN;
+	{
+	    string1.append("test\u1010").setLength(0); // Ensure buffer is primed for non-Latin1 content.
+	}
     }
 
     @Test
