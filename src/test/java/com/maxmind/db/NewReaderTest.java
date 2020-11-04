@@ -268,6 +268,12 @@ public class NewReaderTest {
 	builder.obj("city").obj("names").text("en", (Accumulator state, CharSequence value) -> TextNode.assignToStringBuilder(state.city, value));
 	builder.obj("location").number("latitude", (Accumulator state, double value) -> state.latitude = value);
 	builder.obj("location").number("longitude", (Accumulator state, double value) -> state.longitude = value);
+	builder.onBegin(state -> state.recordFound = true);
+	builder.onNetwork((Accumulator state, byte[] ipAddress, int prefixLength) -> {
+		state.ipAddress = ipAddress;
+		state.prefixLength = prefixLength;
+	    });
+
 
 	Callbacks.RecordCallback<Accumulator> callback = builder.build();
 

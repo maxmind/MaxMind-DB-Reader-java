@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 /** Callbacks for the low-allocation database query interface.
  * This lets you build a specification of which object paths you want callback for.
@@ -46,7 +47,7 @@ public class Callbacks {
 	public void objectEnd(X state) {}
     }
 
-    public static abstract class RecordCallback<X> extends ObjectNode<X> {
+    public static class RecordCallback<X> extends ObjectNode<X> {
 	public RecordCallback(Map<String, Callback<X>> fieldsOfInterest) {
 	    super(fieldsOfInterest);
 	}
@@ -82,19 +83,30 @@ public class Callbacks {
     public static class ObjectCallbackBuilder<X> {
 	private final Map<String, Callback<X>> here = new HashMap<>();
 	private final Map<String, ObjectCallbackBuilder<X>> deeper = new HashMap<>();
+	protected Consumer<X> onBegin = null, onEnd = null;
 
 	public ObjectCallbackBuilder() {}
 
 	public void text(String key, TextNode<X> callback) {
-	    if (deeper.containsKey(key)) throw new IllegalStateException("A record is already registered here: '"+key+"'");
+	    if (deeper.containsKey(key)) throw new IllegalStateException("An inner object is already registered here: '"+key+"'");
 	    if (here.containsKey(key)) throw new IllegalStateException("Another callback is already registered here: '"+key+"'");
 	    here.put(key, callback);
 	}
 
 	public void number(String key, DoubleNode<X> callback) {
-	    if (deeper.containsKey(key)) throw new IllegalStateException("A record is already registered here: '"+key+"'");
+	    if (deeper.containsKey(key)) throw new IllegalStateException("An inner object is already registered here: '"+key+"'");
 	    if (here.containsKey(key)) throw new IllegalStateException("Another callback is already registered here: '"+key+"'");
 	    here.put(key, callback);
+	}
+
+	public void onBegin(Consumer<X> callback) {
+	    if (onBegin != null) throw new IllegalStateException("An onBegin callback is already registered on this object.");
+	    onBegin = callback;
+	}
+
+	public void onEnd(Consumer<X> callback) {
+	    if (onEnd != null) throw new IllegalStateException("An onEnd callback is already registered on this object.");
+	    onEnd = callback;
 	}
 
 	private ObjectCallbackBuilder<X> getOrCreateSubObject(String key) {
@@ -112,7 +124,16 @@ public class Callbacks {
 	}
 
 	public ObjectNode<X> build() {
-	    return new ObjectNode<X>(buildMap());
+	    final Consumer<X> onBegin = this.onBegin;
+	    final Consumer<X> onEnd = this.onEnd;
+	    return new ObjectNode<X>(buildMap()) {
+		@Override public void objectBegin(X state) {
+		    if (onBegin != null) onBegin.accept(state);
+		}
+		@Override public void objectEnd(X state) {
+		    if (onEnd != null) onEnd.accept(state);
+		}
+	    };
 	}
 
 	protected Map<String, Callback<X>> buildMap() {
@@ -125,12 +146,38 @@ public class Callbacks {
     }
 
     public static class RecordCallbackBuilder<X> extends ObjectCallbackBuilder<X> {
+	private RecordNetworkCallback<X> onNetwork = null;
+
 	public RecordCallbackBuilder() {}
+
+	public void onNetwork(RecordNetworkCallback<X> callback) {
+	    if (onNetwork != null) throw new IllegalStateException("An onNetwork callback is already registered on this object.");
+	    onNetwork = callback;
+	}
 
 	@Override
     	public RecordCallback<X> build() {
-	    return new RecordCallback<X>(buildMap()) {};
+	    final RecordNetworkCallback<X> onNetwork = this.onNetwork;
+	    final Consumer<X> onBegin = this.onBegin;
+	    final Consumer<X> onEnd = this.onEnd;
+	    return new RecordCallback<X>(buildMap()) {
+		@Override public void network(X state, byte[] ipAddress, int prefixLength) {
+		    if (onNetwork != null) onNetwork.network(state, ipAddress, prefixLength);
+		}
+		@Override public void objectBegin(X state) {
+		    if (onBegin != null) onBegin.accept(state);
+		}
+		@Override public void objectEnd(X state) {
+		    if (onEnd != null) onEnd.accept(state);
+		}
+	    };
 	}
     }
+
+    @FunctionalInterface
+    public interface RecordNetworkCallback<X> {
+ 	public void network(X state, byte[] ipAddress, int prefixLength);
+    }
+
 
 }
