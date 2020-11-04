@@ -3,6 +3,7 @@ package com.maxmind.db;
 import java.net.InetAddress;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.TreeMap;
 
 /** Callbacks for the low-allocation database query interface.
@@ -75,5 +76,59 @@ public class Callbacks {
     }
 
     private static final Comparator<CharSequence> CHARSEQ_COMPARATOR = new CharSequenceComparator();
+
+    public static class ObjectCallbackBuilder<X> {
+	private final Map<String, Callback<X>> here = new HashMap<>();
+	private final Map<String, ObjectCallbackBuilder<X>> deeper = new HashMap<>();
+
+	public ObjectCallbackBuilder() {}
+
+	public void text(String key, TextNode<X> callback) {
+	    if (deeper.containsKey(key)) throw new IllegalStateException("A record is already registered here: '"+key+"'");
+	    if (here.containsKey(key)) throw new IllegalStateException("Another callback is already registered here: '"+key+"'");
+	    here.put(key, callback);
+	}
+
+	public void number(String key, DoubleNode<X> callback) {
+	    if (deeper.containsKey(key)) throw new IllegalStateException("A record is already registered here: '"+key+"'");
+	    if (here.containsKey(key)) throw new IllegalStateException("Another callback is already registered here: '"+key+"'");
+	    here.put(key, callback);
+	}
+
+	private ObjectCallbackBuilder<X> getOrCreateSubObject(String key) {
+	    if (here.containsKey(key)) throw new IllegalStateException("Another callback is already registered here: '"+key+"'");
+	    ObjectCallbackBuilder<X> r = deeper.get(key);
+	    if (r == null) {
+		deeper.put(key, r = new ObjectCallbackBuilder<X>());
+	    }
+	    return r;
+	}
+
+	public ObjectCallbackBuilder<X> obj(String key) {
+	    ObjectCallbackBuilder<X> subObject = getOrCreateSubObject(key);
+	    return subObject;
+	}
+
+	public ObjectNode<X> build() {
+	    return new ObjectNode<X>(buildMap());
+	}
+
+	protected Map<String, Callback<X>> buildMap() {
+	    Map<String, Callback<X>> fieldsOfInterest = new HashMap<>(here);
+	    for (Map.Entry<String, ObjectCallbackBuilder<X>> e : deeper.entrySet()) {
+		fieldsOfInterest.put(e.getKey(), e.getValue().build());
+	    }
+	    return fieldsOfInterest;
+	}
+    }
+
+    public static class RecordCallbackBuilder<X> extends ObjectCallbackBuilder<X> {
+	public RecordCallbackBuilder() {}
+
+	@Override
+    	public RecordCallback<X> build() {
+	    return new RecordCallback<X>(buildMap()) {};
+	}
+    }
 
 }
