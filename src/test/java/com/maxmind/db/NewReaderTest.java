@@ -85,37 +85,15 @@ public class NewReaderTest {
 
 	{ // Strings:
 	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
-	    builder.text("utf8_string", new Callbacks.TextNode<AccumulatorForTypes>() {
-		    @Override public void setValue(AccumulatorForTypes state, CharSequence value) {
-			state.string1.append(value);
-		    }
-		});
+	    builder.text("utf8_string", (AccumulatorForTypes state, CharSequence value) -> TextNode.assignToStringBuilder(state.string1, value));
 	    AccumulatorForTypes result = runIt.apply("String value", builder);
-	    assertEquals("unicode! ☯ - ♫", result.string1.toString());
-	}
-	{ // Strings:
-	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
-	    builder.text("utf8_string", new Callbacks.TextNode<AccumulatorForTypes>() {
-		    @Override public void setValue(AccumulatorForTypes state, CharSequence value) {
-			state.string1.append(value);
-		    }
-		});
-	    AccumulatorForTypes result = runIt.apply("String value2", builder);
 	    assertEquals("unicode! ☯ - ♫", result.string1.toString());
 	}
 
 	{ // Floating-point numbers:
 	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
-	    builder.number("double", new Callbacks.DoubleNode<AccumulatorForTypes>() {
-		    @Override public void setValue(AccumulatorForTypes state, double value) {
-			state.double1 = value;
-		    }
-		});
-	    builder.number("float", new Callbacks.DoubleNode<AccumulatorForTypes>() {
-		    @Override public void setValue(AccumulatorForTypes state, double value) {
-			state.double2 = value;
-		    }
-		});
+	    builder.number("double", (AccumulatorForTypes state, double value) -> state.double1 = value);
+	    builder.number("float", (AccumulatorForTypes state, double value) -> state.double2 = value);
 	    AccumulatorForTypes result = runIt.apply("Number values", builder);
 	    assertEquals(42.123456, result.double1, 0.000000001);
 	    assertEquals(1.1, result.double2, 0.000001);
@@ -123,11 +101,7 @@ public class NewReaderTest {
 
 	{ // Nested records:
 	    RecordCallbackBuilder<AccumulatorForTypes> builder = new RecordCallbackBuilder<>();
-	    builder.obj("map").obj("mapX").text("utf8_stringX", new Callbacks.TextNode<AccumulatorForTypes>() {
-		    @Override public void setValue(AccumulatorForTypes state, CharSequence value) {
-			state.string1.append(value);
-		    }
-		});
+	    builder.obj("map").obj("mapX").text("utf8_stringX", (AccumulatorForTypes state, CharSequence value) -> TextNode.assignToStringBuilder(state.string1, value));
 	    AccumulatorForTypes result = runIt.apply("Value in nested records", builder);
 	    assertEquals("hello", result.string1.toString());
 	}
@@ -172,7 +146,7 @@ public class NewReaderTest {
 	// Continent readout:
 	Callbacks.TextNode continentTextNode = new Callbacks.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
-		    assignToStringBuilder(state.continent, value);
+		    TextNode.assignToStringBuilder(state.continent, value);
 		}
 	    };
 	Map<String, Callbacks.Callback<Accumulator>> continentNamesMap = new HashMap();
@@ -185,7 +159,7 @@ public class NewReaderTest {
 	// Country readout:
 	Callbacks.TextNode countryTextNode = new Callbacks.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
-		    assignToStringBuilder(state.country, value);
+		    TextNode.assignToStringBuilder(state.country, value);
 		}
 	    };
 	Map<String, Callbacks.Callback<Accumulator>> countryNamesMap = new HashMap();
@@ -198,7 +172,7 @@ public class NewReaderTest {
 	// City readout:
 	Callbacks.TextNode cityTextNode = new Callbacks.TextNode<Accumulator>() {
 		@Override public void setValue(Accumulator state, CharSequence value) {
-		    assignToStringBuilder(state.city, value);
+		    TextNode.assignToStringBuilder(state.city, value);
 		}
 	    };
 	Map<String, Callbacks.Callback<Accumulator>> cityNamesMap = new HashMap();
@@ -266,6 +240,60 @@ public class NewReaderTest {
         }
     }
 
+    @Test
+    public void testGetRecordWithBuilder() throws IOException {
+        GetRecordTest[] tests = {
+	    new GetRecordTest("8.8.8.8", "ip-db-0cf0e7a0b9649404168f52a0c8be57c9.mmdb", "8.8.0.0/17", true), //ERK
+	    new GetRecordTest("85.191.80.236",  "ip-db-0cf0e7a0b9649404168f52a0c8be57c9.mmdb", "85.191.80.0/21", true), //ERK
+	    /*
+                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
+                new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
+                new GetRecordTest("::2:0:1", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:2:0:0/122", true),
+                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.1/32", true),
+                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.2/31", true),
+                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
+                new GetRecordTest("::ffff:1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
+                new GetRecordTest("::1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "0:0:0:0:0:0:101:100/120", true),
+                // new GetRecordTest("200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0.0.0.0/0", true),
+                // new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
+                // new GetRecordTest("0:0:0:0:ffff:ffff:ffff:ffff", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
+                new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
+	    */
+        };
+
+	// Build callback:
+	RecordCallbackBuilder<Accumulator> builder = new RecordCallbackBuilder<>();
+	builder.obj("continent").obj("names").text("en", (Accumulator state, CharSequence value) -> TextNode.assignToStringBuilder(state.continent, value));
+	builder.obj("country").obj("names").text("en", (Accumulator state, CharSequence value) -> TextNode.assignToStringBuilder(state.country, value));
+	builder.obj("city").obj("names").text("en", (Accumulator state, CharSequence value) -> TextNode.assignToStringBuilder(state.city, value));
+	builder.obj("location").number("latitude", (Accumulator state, double value) -> state.latitude = value);
+	builder.obj("location").number("longitude", (Accumulator state, double value) -> state.longitude = value);
+
+	Callbacks.RecordCallback<Accumulator> callback = builder.build();
+
+	System.out.println("ERK| In test - without cache");
+        for (GetRecordTest test : tests) {
+            try (CallbackReader reader = new CallbackReader(test.db, NoCache.getInstance())) {
+
+		System.out.println("ERK| Test case: " + test.ip +" in " + test.db);
+		Accumulator acc = new Accumulator();
+		for (int i=1; i<=3; i++) {
+		    byte[] rawAddress = test.ip.getAddress();
+		    long a0 = ErikUtil.allocCount();
+		    reader.lookupRecord(rawAddress, callback, acc);
+		    long a1 = ErikUtil.allocCount();
+		    System.out.println("ERK| Read #"+i+": alloc=" + (a1-a0));
+		    System.out.println("ERK| - Continent: " + acc.continent);
+		    System.out.println("ERK| - Country: " + acc.country);
+		    System.out.println("ERK| - City: " + acc.city);
+		    System.out.println("ERK| - Location: " + acc.longitude + ", "+acc.latitude);
+		}
+
+                assertEquals(test.network, acc.getNetwork().toString());
+		assertEquals(test.hasRecord, acc.recordFound);
+            }
+        }
+    }
 
     private void testIpV4(Reader reader, File file) throws IOException {
 

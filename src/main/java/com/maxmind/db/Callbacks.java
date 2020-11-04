@@ -11,9 +11,10 @@ import java.util.TreeMap;
  */
 public class Callbacks {
 
-    public static abstract class Callback<X> {}
+    public static interface Callback<X> {}
 
-    public static abstract class TextNode<X> extends Callback<X> {
+    @FunctionalInterface
+    public static interface TextNode<X> extends Callback<X> {
 	public abstract void setValue(X state, CharSequence value);
 
 	// Utility function:
@@ -23,11 +24,12 @@ public class Callbacks {
 	}
     }
 
-    public static abstract class DoubleNode<X> extends Callback<X> {
+    @FunctionalInterface
+    public static interface DoubleNode<X> extends Callback<X> {
 	public abstract void setValue(X state, double value);
     }
 
-    public static class ObjectNode<X> extends Callback<X> {
+    public static class ObjectNode<X> implements Callback<X> {
 	private final Map<CharSequence, Callback<X>> fieldsOfInterest;
 
 	public ObjectNode(Map<String, Callback<X>> fieldsOfInterest) {
