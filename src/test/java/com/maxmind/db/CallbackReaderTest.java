@@ -112,67 +112,6 @@ public class CallbackReaderTest {
     }
 
 
-    @Test
-    public void testGetRecordWithBuilder() throws IOException {
-        GetRecordTest[] tests = {
-	    new GetRecordTest("8.8.8.8", "ip-db-0cf0e7a0b9649404168f52a0c8be57c9.mmdb", "8.8.0.0/17", true), //ERK
-	    new GetRecordTest("85.191.80.236",  "ip-db-0cf0e7a0b9649404168f52a0c8be57c9.mmdb", "85.191.80.0/21", true), //ERK
-	    /*
-                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
-                new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
-                new GetRecordTest("::2:0:1", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:2:0:0/122", true),
-                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.1/32", true),
-                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.2/31", true),
-                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
-                new GetRecordTest("::ffff:1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
-                new GetRecordTest("::1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "0:0:0:0:0:0:101:100/120", true),
-                // new GetRecordTest("200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0.0.0.0/0", true),
-                // new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
-                // new GetRecordTest("0:0:0:0:ffff:ffff:ffff:ffff", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
-                new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
-	    */
-        };
-
-	// Build callback:
-	RecordCallbackBuilder<Accumulator> builder = new RecordCallbackBuilder<>();
-	builder.obj("continent").obj("names").text("en", (Accumulator state, CharSequence value) -> TextNode.assignToStringBuilder(state.continent, value));
-	builder.obj("country").obj("names").text("en", (Accumulator state, CharSequence value) -> TextNode.assignToStringBuilder(state.country, value));
-	builder.obj("city").obj("names").text("en", (Accumulator state, CharSequence value) -> TextNode.assignToStringBuilder(state.city, value));
-	builder.obj("location").number("latitude", (Accumulator state, double value) -> state.latitude = value);
-	builder.obj("location").number("longitude", (Accumulator state, double value) -> state.longitude = value);
-	builder.onBegin(state -> state.recordFound = true);
-	builder.onNetwork((Accumulator state, byte[] ipAddress, int prefixLength) -> {
-		state.ipAddress = ipAddress;
-		state.prefixLength = prefixLength;
-	    });
-
-
-	Callbacks.RecordCallback<Accumulator> callback = builder.build();
-
-	System.out.println("ERK| In test - without cache");
-        for (GetRecordTest test : tests) {
-            try (CallbackReader reader = new CallbackReader(test.db, NoCache.getInstance())) {
-
-		System.out.println("ERK| Test case: " + test.ip +" in " + test.db);
-		Accumulator acc = new Accumulator();
-		for (int i=1; i<=3; i++) {
-		    byte[] rawAddress = test.ip.getAddress();
-		    long a0 = ErikUtil.allocCount();
-		    reader.lookupRecord(rawAddress, callback, acc);
-		    long a1 = ErikUtil.allocCount();
-		    System.out.println("ERK| Read #"+i+": alloc=" + (a1-a0));
-		    System.out.println("ERK| - Continent: " + acc.continent);
-		    System.out.println("ERK| - Country: " + acc.country);
-		    System.out.println("ERK| - City: " + acc.city);
-		    System.out.println("ERK| - Location: " + acc.longitude + ", "+acc.latitude);
-		}
-
-                assertEquals(test.network, acc.getNetwork().toString());
-		assertEquals(test.hasRecord, acc.recordFound);
-            }
-        }
-    }
-
     static File getFile(String name) {
         return new File(ReaderTest.class.getResource("/maxmind-db/test-data/" + name).getFile());
     }
