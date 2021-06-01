@@ -111,6 +111,11 @@ public class ReaderTest {
         }
     }
 
+    @Test
+    public void testMetadataPointers() throws IOException {
+        Reader reader = new Reader(getFile("MaxMind-DB-test-metadata-pointers.mmdb"));
+        assertEquals("Lots of pointers in metadata", reader.getMetadata().getDatabaseType());
+    }
 
     @Test
     public void testNoIpV4SearchTreeFile() throws IOException {
