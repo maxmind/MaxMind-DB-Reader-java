@@ -61,7 +61,7 @@ read in metadata for the file.
 import com.maxmind.db.MaxMindDbConstructor;
 import com.maxmind.db.MaxMindDbParameter;
 import com.maxmind.db.Reader;
-import com.maxmind.db.Record;
+import com.maxmind.db.DatabaseRecord;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,9 +78,9 @@ public class Lookup {
 
             System.out.println(result.getCountry().getIsoCode());
 
-            // getRecord() returns a Record class that contains both
+            // getRecord() returns a DatabaseRecord class that contains both
             // the data for the record and associated metadata.
-            Record<LookupResult> record
+            DatabaseRecord<LookupResult> record
                 = reader.getRecord(address, LookupResult.class);
 
             System.out.println(record.getData().getCountry().getIsoCode());
