@@ -128,10 +128,6 @@ popd
 git push
 git push --tags
 
-message="$version
-
-$notes"
-
-hub release create -m "$message" "$tag"
+gh release create --target "$(git branch --show-current)" -t "$version" -n "$notes" "$tag"
 
 echo "Remember to do the release on https://oss.sonatype.org/!"
