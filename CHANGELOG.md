@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+2.1.0
+------------------
+
+* Messages for `DeserializationException` have been improved and the
+  cause is included, if any.
+
 2.0.0 (2020-10-13)
 ------------------
 

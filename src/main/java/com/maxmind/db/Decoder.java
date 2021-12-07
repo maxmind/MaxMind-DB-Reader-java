@@ -294,7 +294,7 @@ final class Decoder {
             try {
                 constructor = cls.getConstructor(Integer.TYPE);
             } catch (NoSuchMethodException e) {
-                throw new DeserializationException("No constructor found for the List: " + e);
+                throw new DeserializationException("No constructor found for the List: " + e.getMessage(), e);
             }
             Object[] parameters = {size};
             try {
@@ -304,7 +304,7 @@ final class Decoder {
             } catch (InstantiationException |
                     IllegalAccessException |
                     InvocationTargetException e) {
-                throw new DeserializationException("Error creating list: " + e);
+                throw new DeserializationException("Error creating list: " + e.getMessage(), e);
             }
         }
 
@@ -355,7 +355,7 @@ final class Decoder {
             try {
                 constructor = cls.getConstructor(Integer.TYPE);
             } catch (NoSuchMethodException e) {
-                throw new DeserializationException("No constructor found for the Map: " + e);
+                throw new DeserializationException("No constructor found for the Map: " + e.getMessage(), e);
             }
             Object[] parameters = {size};
             try {
@@ -365,7 +365,7 @@ final class Decoder {
             } catch (InstantiationException |
                     IllegalAccessException |
                     InvocationTargetException e) {
-                throw new DeserializationException("Error creating map: " + e);
+                throw new DeserializationException("Error creating map: " + e.getMessage(), e);
             }
         }
 
@@ -437,7 +437,7 @@ final class Decoder {
         } catch (InstantiationException |
                 IllegalAccessException |
                 InvocationTargetException e) {
-            throw new DeserializationException("Error creating object: " + e);
+            throw new DeserializationException("Error creating object: " + e.getMessage(), e);
         }
     }
 
