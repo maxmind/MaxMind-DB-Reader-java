@@ -181,8 +181,7 @@ Please report all issues with this code using the [GitHub issue
 tracker](https://github.com/maxmind/MaxMind-DB-Reader-java/issues).
 
 If you are having an issue with a MaxMind database or service that is not
-specific to this reader, please [contact MaxMind support]
-(https://www.maxmind.com/en/support).
+specific to this reader, please [contact MaxMind support](https://www.maxmind.com/en/support).
 
 ## Requirements  ##
 
