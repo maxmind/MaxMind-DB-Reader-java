@@ -177,7 +177,12 @@ public final class Reader implements Closeable {
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
-            dataRecord = this.resolveDataPointer(buffer, record, cls);
+            try {
+                dataRecord = this.resolveDataPointer(buffer, record, cls);
+            } catch (DeserializationException exception) {
+                throw new DeserializationException("Error getting record for IP " + ipAddress.toString(), exception);
+            }
+
         }
 
         return new DatabaseRecord<>(dataRecord, ipAddress, pl);
