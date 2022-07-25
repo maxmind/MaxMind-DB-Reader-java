@@ -568,10 +568,33 @@ public class ReaderTest {
     }
 
     @Test
-    public void testDecodeWrongTypeSubdivisions() throws IOException {
+    public void testDecodeWrongTypeWithConstructorException() throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
         DeserializationException ex = assertThrows(DeserializationException.class,
-        () -> this.testReader.get( InetAddress.getByName("2.125.160.216"),TestWrongModelSubdivisions.class));
+            () -> this.testReader.get( InetAddress.getByName("2.125.160.216"),
+            TestModelSubdivisionsWithUnknownException.class));
+        
+        assertThat(ex.getMessage(), containsString("Error getting record for IP /2.125.160.216 -  Error creating object"));
+    }
+
+    static class TestModelSubdivisionsWithUnknownException {
+        List<TestModelSubdivision> subdivisions;
+
+        @MaxMindDbConstructor
+        public TestModelSubdivisionsWithUnknownException (
+            @MaxMindDbParameter(name="subdivisions")
+            List<TestModelSubdivision> subdivisions
+        ) throws Exception{
+            throw new Exception();
+        }
+    }
+
+    @Test
+    public void testDecodeWrongTypeWithWrongArguments() throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+        DeserializationException ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get( InetAddress.getByName("2.125.160.216"),
+            TestWrongModelSubdivisions.class));
         assertThat(ex.getMessage(), containsString("Error getting record for IP"));
     }
 
@@ -807,7 +830,7 @@ public class ReaderTest {
                 TestModelInvalidMap.class
             )
         );
-        assertEquals("Error getting record for IP /2.125.160.216", ex.getMessage());
+        assertEquals("Error getting record for IP /2.125.160.216 -  Map keys must be strings.", ex.getMessage());
     }
 
     static class TestModelInvalidMap {

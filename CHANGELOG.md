@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+2.1.1
+------------------
+
+* Messages for `DeserializationException` provide more detail about the involved types when an `IllegalArgumentException` is thrown.
+
 2.1.0
 ------------------
 
