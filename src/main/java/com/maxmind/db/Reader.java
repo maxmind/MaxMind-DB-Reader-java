@@ -184,9 +184,7 @@ public final class Reader implements Closeable {
                 String msgCause = Optional.ofNullable(exception).map(Exception::getMessage).orElse("");
                 throw new DeserializationException("Error getting record for IP " + ipAddress.toString() + " -  " + msgCause, exception);
             }
-
         }
-
         return new DatabaseRecord<>(dataRecord, ipAddress, pl);
     }
 

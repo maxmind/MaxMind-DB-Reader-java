@@ -1,16 +1,11 @@
 CHANGELOG
 =========
-
-2.1.1
-------------------
-
-* Messages for `DeserializationException` provide more detail about the involved types when an `IllegalArgumentException` is thrown.
-
 2.1.0
 ------------------
 
-* Messages for `DeserializationException` have been improved and the
-  cause is included, if any.
+* Messages for `DeserializationException` have been improved and the cause
+ is included, if any. Moreover, the message provides detail about the involved
+ types, if the exeption is caused by an `IllegalArgumentException`.
 
 2.0.0 (2020-10-13)
 ------------------
