@@ -8,6 +8,7 @@ import java.lang.Class;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -177,9 +178,13 @@ public final class Reader implements Closeable {
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
-            dataRecord = this.resolveDataPointer(buffer, record, cls);
+            try {
+                dataRecord = this.resolveDataPointer(buffer, record, cls);
+            } catch (DeserializationException exception) {
+                String msgCause = Optional.ofNullable(exception).map(Exception::getMessage).orElse("");
+                throw new DeserializationException("Error getting record for IP " + ipAddress.toString() + " -  " + msgCause, exception);
+            }
         }
-
         return new DatabaseRecord<>(dataRecord, ipAddress, pl);
     }
 
