@@ -141,6 +141,7 @@ public final class Reader implements Closeable {
     /**
      * Looks up <code>ipAddress</code> in the MaxMind DB.
      *
+     * @param <T> the type to populate.
      * @param ipAddress the IP address to look up.
      * @param cls the class of object to populate.
      * @return the object.
@@ -153,7 +154,9 @@ public final class Reader implements Closeable {
     /**
      * Looks up <code>ipAddress</code> in the MaxMind DB.
      *
+     * @param <T> the type to populate.
      * @param ipAddress the IP address to look up.
+     * @param cls the class of object to populate.
      * @return the record for the IP address. If there is no data for the
      * address, the non-null {@link DatabaseRecord} will still be returned.
      * @throws IOException if a file I/O error occurs.
