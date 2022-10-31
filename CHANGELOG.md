@@ -1,11 +1,12 @@
 CHANGELOG
 =========
-2.1.0
+
+2.1.0 (2022-10-31)
 ------------------
 
-* Messages for `DeserializationException` have been improved and the cause
+* Messages for `DeserializationException` have been improved, and the cause
  is included, if any. Moreover, the message provides detail about the involved
- types, if the exeption is caused by an `IllegalArgumentException`.
+ types, if the exception is caused by an `IllegalArgumentException`.
 
 2.0.0 (2020-10-13)
 ------------------

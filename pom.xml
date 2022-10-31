@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.maxmind.db</groupId>
     <artifactId>maxmind-db</artifactId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>2.1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>MaxMind DB Reader</name>
     <description>Reader for MaxMind DB</description>
@@ -98,6 +98,24 @@
                     <format>xml</format>
                     <maxmem>256m</maxmem>
                     <check />
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <id>invoke build</id>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>git</executable>
+                    <commandlineArgs>submodule update --init --recursive</commandlineArgs>
                 </configuration>
             </plugin>
             <plugin>
