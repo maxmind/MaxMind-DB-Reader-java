@@ -2,7 +2,7 @@
 layout: default
 title: MaxMind DB Java API
 language: java
-version: v2.0.0
+version: v2.1.0
 ---
 
 # MaxMind DB Reader #
@@ -23,7 +23,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>2.0.0</version>
+        <version>2.1.0</version>
     </dependency>
 ```
 
@@ -36,7 +36,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:2.0.0'
+    compile 'com.maxmind.db:maxmind-db:2.1.0'
 }
 ```
 
@@ -68,7 +68,7 @@ read in metadata for the file.
 import com.maxmind.db.MaxMindDbConstructor;
 import com.maxmind.db.MaxMindDbParameter;
 import com.maxmind.db.Reader;
-import com.maxmind.db.Record;
+import com.maxmind.db.DatabaseRecord;
 
 import java.io.File;
 import java.io.IOException;
@@ -85,9 +85,9 @@ public class Lookup {
 
             System.out.println(result.getCountry().getIsoCode());
 
-            // getRecord() returns a Record class that contains both
+            // getRecord() returns a DatabaseRecord class that contains both
             // the data for the record and associated metadata.
-            Record<LookupResult> record
+            DatabaseRecord<LookupResult> record
                 = reader.getRecord(address, LookupResult.class);
 
             System.out.println(record.getData().getCountry().getIsoCode());
@@ -177,7 +177,7 @@ thrown when querying the database.
 
 The MaxMind DB format is an open format for quickly mapping IP addresses to
 records. The
-[specification](https://github.com/maxmind/MaxMind-DB/blob/master/MaxMind-DB-spec.md)
+[specification](https://github.com/maxmind/MaxMind-DB/blob/main/MaxMind-DB-spec.md)
 is available, as is our
 [Perl writer](https://github.com/maxmind/MaxMind-DB-Writer-perl) for the
 format.
@@ -188,8 +188,7 @@ Please report all issues with this code using the [GitHub issue
 tracker](https://github.com/maxmind/MaxMind-DB-Reader-java/issues).
 
 If you are having an issue with a MaxMind database or service that is not
-specific to this reader, please [contact MaxMind support]
-(https://www.maxmind.com/en/support).
+specific to this reader, please [contact MaxMind support](https://www.maxmind.com/en/support).
 
 ## Requirements  ##
 
