@@ -5,6 +5,7 @@ CHANGELOG
 ------------------
 
 * Java 11 or greater is now required.
+* This library is now a Java module.
 
 2.1.0 (2022-10-31)
 ------------------
