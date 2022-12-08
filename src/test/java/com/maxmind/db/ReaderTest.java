@@ -1,8 +1,15 @@
 package com.maxmind.db;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,12 +18,17 @@ import java.lang.reflect.Constructor;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static org.junit.Assert.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.CoreMatchers.containsString;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class ReaderTest {
     private Reader testReader;
@@ -35,8 +47,8 @@ public class ReaderTest {
 
     @Test
     public void test() throws IOException {
-        for (long recordSize : new long[]{24, 28, 32}) {
-            for (int ipVersion : new int[]{4, 6}) {
+        for (long recordSize : new long[] {24, 28, 32}) {
+            for (int ipVersion : new int[] {4, 6}) {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
                 try (Reader reader = new Reader(file)) {
                     this.testMetadata(reader, ipVersion, recordSize);
@@ -56,7 +68,8 @@ public class ReaderTest {
         String network;
         boolean hasRecord;
 
-        GetRecordTest(String ip, String file, String network, boolean hasRecord) throws UnknownHostException {
+        GetRecordTest(String ip, String file, String network, boolean hasRecord)
+            throws UnknownHostException {
             this.ip = InetAddress.getByName(ip);
             db = getFile(file);
             this.network = network;
@@ -67,14 +80,18 @@ public class ReaderTest {
     @Test
     public void testGetRecord() throws IOException {
         GetRecordTest[] mapTests = {
-                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
-                new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:1:ffff:ffff/128", true),
-                new GetRecordTest("::2:0:1", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:2:0:0/122", true),
-                new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.1/32", true),
-                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.2/31", true),
-                new GetRecordTest("1.1.1.3", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
-                new GetRecordTest("::ffff:1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
-                new GetRecordTest("::1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "0:0:0:0:0:0:101:100/120", true),
+            new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
+            new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb",
+                "0:0:0:0:0:1:ffff:ffff/128", true),
+            new GetRecordTest("::2:0:1", "MaxMind-DB-test-ipv6-24.mmdb", "0:0:0:0:0:2:0:0/122",
+                true),
+            new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.1/32", true),
+            new GetRecordTest("1.1.1.3", "MaxMind-DB-test-ipv4-24.mmdb", "1.1.1.2/31", true),
+            new GetRecordTest("1.1.1.3", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24", true),
+            new GetRecordTest("::ffff:1.1.1.128", "MaxMind-DB-test-decoder.mmdb", "1.1.1.0/24",
+                true),
+            new GetRecordTest("::1.1.1.128", "MaxMind-DB-test-decoder.mmdb",
+                "0:0:0:0:0:0:101:100/120", true),
         };
         for (GetRecordTest test : mapTests) {
             try (Reader reader = new Reader(test.db)) {
@@ -91,10 +108,14 @@ public class ReaderTest {
         }
 
         GetRecordTest[] stringTests = {
-                new GetRecordTest("200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0.0.0.0/0", true),
-                new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
-                new GetRecordTest("0:0:0:0:ffff:ffff:ffff:ffff", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0:0:0:0:0:0:0:0/64", true),
-                new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb", "8000:0:0:0:0:0:0:0/1", false)
+            new GetRecordTest("200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0.0.0.0/0",
+                true),
+            new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb",
+                "0:0:0:0:0:0:0:0/64", true),
+            new GetRecordTest("0:0:0:0:ffff:ffff:ffff:ffff", "MaxMind-DB-no-ipv4-search-tree.mmdb",
+                "0:0:0:0:0:0:0:0/64", true),
+            new GetRecordTest("ef00::", "MaxMind-DB-no-ipv4-search-tree.mmdb",
+                "8000:0:0:0:0:0:0:0/1", false)
         };
         for (GetRecordTest test : stringTests) {
             try (Reader reader = new Reader(test.db)) {
@@ -171,10 +192,10 @@ public class ReaderTest {
             assertFalse((boolean) record.get("boolean"));
         }
 
-        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, (byte[]) record
-                .get("bytes"));
+        assertArrayEquals(new byte[] {0, 0, 0, (byte) 42}, (byte[]) record
+            .get("bytes"));
 
-        assertEquals("unicode! ☯ - ♫", (String) record.get("utf8_string"));
+        assertEquals("unicode! ☯ - ♫", record.get("utf8_string"));
 
         @SuppressWarnings("unchecked")
         List<Object> array = (List<Object>) record.get("array");
@@ -196,21 +217,21 @@ public class ReaderTest {
         assertEquals(8, (long) arrayX.get(1));
         assertEquals(9, (long) arrayX.get(2));
 
-        assertEquals("hello", (String) mapX.get("utf8_stringX"));
+        assertEquals("hello", mapX.get("utf8_stringX"));
 
         assertEquals(42.123456, (double) record.get("double"), 0.000000001);
         assertEquals(1.1, (float) record.get("float"), 0.000001);
         assertEquals(-268435456, (int) record.get("int32"));
         assertEquals(100, (int) record.get("uint16"));
         assertEquals(268435456, (long) record.get("uint32"));
-        assertEquals(new BigInteger("1152921504606846976"), (BigInteger) record
-                .get("uint64"));
+        assertEquals(new BigInteger("1152921504606846976"), record
+            .get("uint64"));
         assertEquals(new BigInteger("1329227995784915872903807060280344576"),
-                (BigInteger) record.get("uint128"));
+            record.get("uint128"));
     }
 
     private void testDecodingTypesIntoModelObject(Reader reader, boolean booleanValue)
-            throws IOException {
+        throws IOException {
         TestModel model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModel.class);
 
         if (booleanValue) {
@@ -219,7 +240,7 @@ public class ReaderTest {
             assertFalse(model.booleanField);
         }
 
-        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, model.bytesField);
+        assertArrayEquals(new byte[] {0, 0, 0, (byte) 42}, model.bytesField);
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
@@ -242,7 +263,7 @@ public class ReaderTest {
         assertEquals(268435456, model.uint32Field);
         assertEquals(new BigInteger("1152921504606846976"), model.uint64Field);
         assertEquals(new BigInteger("1329227995784915872903807060280344576"),
-                model.uint128Field);
+            model.uint128Field);
     }
 
     static class TestModel {
@@ -260,30 +281,30 @@ public class ReaderTest {
         BigInteger uint128Field;
 
         @MaxMindDbConstructor
-        public TestModel (
-            @MaxMindDbParameter(name="boolean")
+        public TestModel(
+            @MaxMindDbParameter(name = "boolean")
             boolean booleanField,
-            @MaxMindDbParameter(name="bytes")
+            @MaxMindDbParameter(name = "bytes")
             byte[] bytesField,
-            @MaxMindDbParameter(name="utf8_string")
+            @MaxMindDbParameter(name = "utf8_string")
             String utf8StringField,
-            @MaxMindDbParameter(name="array")
+            @MaxMindDbParameter(name = "array")
             List<Long> arrayField,
-            @MaxMindDbParameter(name="map")
+            @MaxMindDbParameter(name = "map")
             MapModel mapField,
-            @MaxMindDbParameter(name="double")
+            @MaxMindDbParameter(name = "double")
             double doubleField,
-            @MaxMindDbParameter(name="float")
+            @MaxMindDbParameter(name = "float")
             float floatField,
-            @MaxMindDbParameter(name="int32")
+            @MaxMindDbParameter(name = "int32")
             int int32Field,
-            @MaxMindDbParameter(name="uint16")
+            @MaxMindDbParameter(name = "uint16")
             int uint16Field,
-            @MaxMindDbParameter(name="uint32")
+            @MaxMindDbParameter(name = "uint32")
             long uint32Field,
-            @MaxMindDbParameter(name="uint64")
+            @MaxMindDbParameter(name = "uint64")
             BigInteger uint64Field,
-            @MaxMindDbParameter(name="uint128")
+            @MaxMindDbParameter(name = "uint128")
             BigInteger uint128Field
         ) {
             this.booleanField = booleanField;
@@ -305,8 +326,8 @@ public class ReaderTest {
         MapXModel mapXField;
 
         @MaxMindDbConstructor
-        public MapModel (
-            @MaxMindDbParameter(name="mapX")
+        public MapModel(
+            @MaxMindDbParameter(name = "mapX")
             MapXModel mapXField
         ) {
             this.mapXField = mapXField;
@@ -318,10 +339,10 @@ public class ReaderTest {
         String utf8StringXField;
 
         @MaxMindDbConstructor
-        public MapXModel (
-            @MaxMindDbParameter(name="arrayX")
+        public MapXModel(
+            @MaxMindDbParameter(name = "arrayX")
             List<Long> arrayXField,
-            @MaxMindDbParameter(name="utf8_stringX")
+            @MaxMindDbParameter(name = "utf8_stringX")
             String utf8StringXField
         ) {
             this.arrayXField = arrayXField;
@@ -330,7 +351,7 @@ public class ReaderTest {
     }
 
     private void testDecodingTypesIntoModelObjectBoxed(Reader reader, boolean booleanValue)
-            throws IOException {
+        throws IOException {
         TestModelBoxed model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelBoxed.class);
 
         if (booleanValue) {
@@ -339,7 +360,7 @@ public class ReaderTest {
             assertFalse(model.booleanField);
         }
 
-        assertArrayEquals(new byte[]{0, 0, 0, (byte) 42}, model.bytesField);
+        assertArrayEquals(new byte[] {0, 0, 0, (byte) 42}, model.bytesField);
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
@@ -362,7 +383,7 @@ public class ReaderTest {
         assertEquals(Long.valueOf(268435456), model.uint32Field);
         assertEquals(new BigInteger("1152921504606846976"), model.uint64Field);
         assertEquals(new BigInteger("1329227995784915872903807060280344576"),
-                model.uint128Field);
+            model.uint128Field);
     }
 
     static class TestModelBoxed {
@@ -380,30 +401,30 @@ public class ReaderTest {
         BigInteger uint128Field;
 
         @MaxMindDbConstructor
-        public TestModelBoxed (
-            @MaxMindDbParameter(name="boolean")
+        public TestModelBoxed(
+            @MaxMindDbParameter(name = "boolean")
             Boolean booleanField,
-            @MaxMindDbParameter(name="bytes")
+            @MaxMindDbParameter(name = "bytes")
             byte[] bytesField,
-            @MaxMindDbParameter(name="utf8_string")
+            @MaxMindDbParameter(name = "utf8_string")
             String utf8StringField,
-            @MaxMindDbParameter(name="array")
+            @MaxMindDbParameter(name = "array")
             List<Long> arrayField,
-            @MaxMindDbParameter(name="map")
+            @MaxMindDbParameter(name = "map")
             MapModelBoxed mapField,
-            @MaxMindDbParameter(name="double")
+            @MaxMindDbParameter(name = "double")
             Double doubleField,
-            @MaxMindDbParameter(name="float")
+            @MaxMindDbParameter(name = "float")
             Float floatField,
-            @MaxMindDbParameter(name="int32")
+            @MaxMindDbParameter(name = "int32")
             Integer int32Field,
-            @MaxMindDbParameter(name="uint16")
+            @MaxMindDbParameter(name = "uint16")
             Integer uint16Field,
-            @MaxMindDbParameter(name="uint32")
+            @MaxMindDbParameter(name = "uint32")
             Long uint32Field,
-            @MaxMindDbParameter(name="uint64")
+            @MaxMindDbParameter(name = "uint64")
             BigInteger uint64Field,
-            @MaxMindDbParameter(name="uint128")
+            @MaxMindDbParameter(name = "uint128")
             BigInteger uint128Field
         ) {
             this.booleanField = booleanField;
@@ -425,8 +446,8 @@ public class ReaderTest {
         MapXModelBoxed mapXField;
 
         @MaxMindDbConstructor
-        public MapModelBoxed (
-            @MaxMindDbParameter(name="mapX")
+        public MapModelBoxed(
+            @MaxMindDbParameter(name = "mapX")
             MapXModelBoxed mapXField
         ) {
             this.mapXField = mapXField;
@@ -438,10 +459,10 @@ public class ReaderTest {
         String utf8StringXField;
 
         @MaxMindDbConstructor
-        public MapXModelBoxed (
-            @MaxMindDbParameter(name="arrayX")
+        public MapXModelBoxed(
+            @MaxMindDbParameter(name = "arrayX")
             List<Long> arrayXField,
-            @MaxMindDbParameter(name="utf8_stringX")
+            @MaxMindDbParameter(name = "utf8_stringX")
             String utf8StringXField
         ) {
             this.arrayXField = arrayXField;
@@ -450,7 +471,7 @@ public class ReaderTest {
     }
 
     private void testDecodingTypesIntoModelWithList(Reader reader)
-            throws IOException {
+        throws IOException {
         TestModelList model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelList.class);
 
         assertEquals(Arrays.asList((long) 1, (long) 2, (long) 3), model.arrayField);
@@ -460,8 +481,8 @@ public class ReaderTest {
         List<Long> arrayField;
 
         @MaxMindDbConstructor
-        public TestModelList (
-            @MaxMindDbParameter(name="array") List<Long> arrayField
+        public TestModelList(
+            @MaxMindDbParameter(name = "array") List<Long> arrayField
         ) {
             this.arrayField = arrayField;
         }
@@ -488,7 +509,7 @@ public class ReaderTest {
 
         assertArrayEquals(new byte[0], (byte[]) record.get("bytes"));
 
-        assertEquals("", (String) record.get("utf8_string"));
+        assertEquals("", record.get("utf8_string"));
 
         @SuppressWarnings("unchecked")
         List<Object> array = (List<Object>) record.get("array");
@@ -502,8 +523,8 @@ public class ReaderTest {
         assertEquals(0, (int) record.get("int32"));
         assertEquals(0, (int) record.get("uint16"));
         assertEquals(0, (long) record.get("uint32"));
-        assertEquals(BigInteger.ZERO, (BigInteger) record.get("uint64"));
-        assertEquals(BigInteger.ZERO, (BigInteger) record.get("uint128"));
+        assertEquals(BigInteger.ZERO, record.get("uint64"));
+        assertEquals(BigInteger.ZERO, record.get("uint128"));
     }
 
     private void testZerosModelObject(Reader reader) throws IOException {
@@ -547,8 +568,8 @@ public class ReaderTest {
         List<TestModelSubdivision> subdivisions;
 
         @MaxMindDbConstructor
-        public TestModelSubdivisions (
-            @MaxMindDbParameter(name="subdivisions")
+        public TestModelSubdivisions(
+            @MaxMindDbParameter(name = "subdivisions")
             List<TestModelSubdivision> subdivisions
         ) {
             this.subdivisions = subdivisions;
@@ -560,7 +581,7 @@ public class ReaderTest {
 
         @MaxMindDbConstructor
         public TestModelSubdivision(
-            @MaxMindDbParameter(name="iso_code")
+            @MaxMindDbParameter(name = "iso_code")
             String isoCode
         ) {
             this.isoCode = isoCode;
@@ -571,20 +592,21 @@ public class ReaderTest {
     public void testDecodeWrongTypeWithConstructorException() throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
         DeserializationException ex = assertThrows(DeserializationException.class,
-            () -> this.testReader.get( InetAddress.getByName("2.125.160.216"),
-            TestModelSubdivisionsWithUnknownException.class));
-        
-        assertThat(ex.getMessage(), containsString("Error getting record for IP /2.125.160.216 -  Error creating object"));
+            () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
+                TestModelSubdivisionsWithUnknownException.class));
+
+        assertThat(ex.getMessage(),
+            containsString("Error getting record for IP /2.125.160.216 -  Error creating object"));
     }
 
     static class TestModelSubdivisionsWithUnknownException {
         List<TestModelSubdivision> subdivisions;
 
         @MaxMindDbConstructor
-        public TestModelSubdivisionsWithUnknownException (
-            @MaxMindDbParameter(name="subdivisions")
+        public TestModelSubdivisionsWithUnknownException(
+            @MaxMindDbParameter(name = "subdivisions")
             List<TestModelSubdivision> subdivisions
-        ) throws Exception{
+        ) throws Exception {
             throw new Exception();
         }
     }
@@ -593,8 +615,8 @@ public class ReaderTest {
     public void testDecodeWrongTypeWithWrongArguments() throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
         DeserializationException ex = assertThrows(DeserializationException.class,
-            () -> this.testReader.get( InetAddress.getByName("2.125.160.216"),
-            TestWrongModelSubdivisions.class));
+            () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
+                TestWrongModelSubdivisions.class));
         assertThat(ex.getMessage(), containsString("Error getting record for IP"));
     }
 
@@ -602,8 +624,8 @@ public class ReaderTest {
         List<TestWrongModelSubdivision> subdivisions;
 
         @MaxMindDbConstructor
-        public TestWrongModelSubdivisions (
-            @MaxMindDbParameter(name="subdivisions")
+        public TestWrongModelSubdivisions(
+            @MaxMindDbParameter(name = "subdivisions")
             List<TestWrongModelSubdivision> subdivisions
         ) {
             this.subdivisions = subdivisions;
@@ -612,13 +634,13 @@ public class ReaderTest {
 
     static class TestWrongModelSubdivision {
         Integer uint16Field;
+
         @MaxMindDbConstructor
         public TestWrongModelSubdivision(
-            @MaxMindDbParameter(name="iso_code")
+            @MaxMindDbParameter(name = "iso_code")
             Integer uint16Field
-            ) {
+        ) {
             this.uint16Field = uint16Field;
-            ;
         }
     }
 
@@ -661,7 +683,7 @@ public class ReaderTest {
 
         @MaxMindDbConstructor
         public TestModelVector(
-            @MaxMindDbParameter(name="array")
+            @MaxMindDbParameter(name = "array")
             Vector<Long> arrayField
         ) {
             this.arrayField = arrayField;
@@ -674,8 +696,8 @@ public class ReaderTest {
         NodeCache cache = new CHMCache();
 
         this.testReader = new Reader(
-                getFile("MaxMind-DB-test-decoder.mmdb"),
-                cache
+            getFile("MaxMind-DB-test-decoder.mmdb"),
+            cache
         );
 
         TestModelA modelA = this.testReader.get(
@@ -695,8 +717,8 @@ public class ReaderTest {
         String utf8StringFieldA;
 
         @MaxMindDbConstructor
-        public TestModelA (
-            @MaxMindDbParameter(name="utf8_string") String utf8StringFieldA
+        public TestModelA(
+            @MaxMindDbParameter(name = "utf8_string") String utf8StringFieldA
         ) {
             this.utf8StringFieldA = utf8StringFieldA;
         }
@@ -706,8 +728,8 @@ public class ReaderTest {
         String utf8StringFieldB;
 
         @MaxMindDbConstructor
-        public TestModelB (
-            @MaxMindDbParameter(name="utf8_string") String utf8StringFieldB
+        public TestModelB(
+            @MaxMindDbParameter(name = "utf8_string") String utf8StringFieldB
         ) {
             this.utf8StringFieldB = utf8StringFieldB;
         }
@@ -745,10 +767,10 @@ public class ReaderTest {
     }
 
     static class TestModelCacheKey {
-        private List<Long> a;
-        private List<Integer> b;
+        private final List<Long> a;
+        private final List<Integer> b;
 
-        public TestModelCacheKey (List<Long> a, List<Integer> b) {
+        public TestModelCacheKey(List<Long> a, List<Integer> b) {
             this.a = a;
             this.b = b;
         }
@@ -768,9 +790,10 @@ public class ReaderTest {
 
     private void testBrokenDatabase(Reader reader) {
         InvalidDatabaseException ex = assertThrows(
-                InvalidDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("2001:220::"), Map.class));
-        assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
+            InvalidDatabaseException.class,
+            () -> reader.get(InetAddress.getByName("2001:220::"), Map.class));
+        assertThat(ex.getMessage(),
+            containsString("The MaxMind DB file's data section contains bad data"));
     }
 
     @Test
@@ -787,7 +810,7 @@ public class ReaderTest {
 
     private void testBrokenSearchTreePointer(Reader reader) {
         InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("1.1.1.32"), Map.class));
+            () -> reader.get(InetAddress.getByName("1.1.1.32"), Map.class));
         assertThat(ex.getMessage(), containsString("The MaxMind DB file's search tree is corrupt"));
     }
 
@@ -805,8 +828,9 @@ public class ReaderTest {
 
     private void testBrokenDataPointer(Reader reader) {
         InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
-        assertThat(ex.getMessage(), containsString("The MaxMind DB file's data section contains bad data"));
+            () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
+        assertThat(ex.getMessage(),
+            containsString("The MaxMind DB file's data section contains bad data"));
     }
 
     @Test
@@ -815,7 +839,7 @@ public class ReaderTest {
 
         reader.close();
         ClosedDatabaseException ex = assertThrows(ClosedDatabaseException.class,
-                () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
+            () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
         assertEquals("The MaxMind DB has been closed.", ex.getMessage());
     }
 
@@ -830,15 +854,16 @@ public class ReaderTest {
                 TestModelInvalidMap.class
             )
         );
-        assertEquals("Error getting record for IP /2.125.160.216 -  Map keys must be strings.", ex.getMessage());
+        assertEquals("Error getting record for IP /2.125.160.216 -  Map keys must be strings.",
+            ex.getMessage());
     }
 
     static class TestModelInvalidMap {
         Map<Integer, String> postal;
 
         @MaxMindDbConstructor
-        public TestModelInvalidMap (
-            @MaxMindDbParameter(name="postal")
+        public TestModelInvalidMap(
+            @MaxMindDbParameter(name = "postal")
             Map<Integer, String> postal
         ) {
             this.postal = postal;
@@ -879,7 +904,7 @@ public class ReaderTest {
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
+                + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
         Map<String, String> pairs = new HashMap<>();
@@ -895,25 +920,25 @@ public class ReaderTest {
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
+                + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
-        for (String ip : new String[]{"1.1.1.33", "255.254.253.123"}) {
+        for (String ip : new String[] {"1.1.1.33", "255.254.253.123"}) {
             assertNull(reader.get(InetAddress.getByName(ip), Map.class));
         }
     }
 
     // XXX - logic could be combined with above
     private void testIpV6(Reader reader, File file) throws IOException {
-        String[] subnets = new String[]{"::1:ffff:ffff", "::2:0:0",
-                "::2:0:40", "::2:0:50", "::2:0:58"};
+        String[] subnets = new String[] {"::1:ffff:ffff", "::2:0:0",
+            "::2:0:40", "::2:0:50", "::2:0:58"};
 
         for (String address : subnets) {
             Map<String, String> data = new HashMap<>();
             data.put("ip", address);
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
+                + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
         Map<String, String> pairs = new HashMap<>();
@@ -931,10 +956,10 @@ public class ReaderTest {
             data.put("ip", pairs.get(address));
 
             assertEquals("found expected data record for " + address + " in "
-                    + file, data, reader.get(InetAddress.getByName(address), Map.class));
+                + file, data, reader.get(InetAddress.getByName(address), Map.class));
         }
 
-        for (String ip : new String[]{"1.1.1.33", "255.254.253.123", "89fa::"}) {
+        for (String ip : new String[] {"1.1.1.33", "255.254.253.123", "89fa::"}) {
             assertNull(reader.get(InetAddress.getByName(ip), Map.class));
         }
     }
@@ -946,5 +971,4 @@ public class ReaderTest {
     static InputStream getStream(String name) {
         return ReaderTest.class.getResourceAsStream("/maxmind-db/test-data/" + name);
     }
-
 }

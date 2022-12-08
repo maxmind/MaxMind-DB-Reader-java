@@ -46,7 +46,8 @@ public final class Network {
         try {
             networkAddress = InetAddress.getByAddress(networkBytes);
         } catch (UnknownHostException e) {
-            throw new RuntimeException("Illegal network address byte length of " + networkBytes.length);
+            throw new RuntimeException(
+                "Illegal network address byte length of " + networkBytes.length);
         }
         return networkAddress;
     }

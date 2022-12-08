@@ -1,5 +1,6 @@
 package com.maxmind.db;
 
+import com.maxmind.db.Reader.FileMode;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -9,23 +10,21 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-import com.maxmind.db.Reader.FileMode;
-
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
     private final ByteBuffer buffer;
 
     BufferHolder(File database, FileMode mode) throws IOException {
         try (
-                final RandomAccessFile file = new RandomAccessFile(database, "r");
-                final FileChannel channel = file.getChannel()
+            final RandomAccessFile file = new RandomAccessFile(database, "r");
+            final FileChannel channel = file.getChannel()
         ) {
             if (mode == FileMode.MEMORY) {
                 final ByteBuffer buf = ByteBuffer.wrap(new byte[(int) channel.size()]);
                 if (channel.read(buf) != buf.capacity()) {
                     throw new IOException("Unable to read "
-                            + database.getName()
-                            + " into memory. Unexpected end of stream.");
+                        + database.getName()
+                        + " into memory. Unexpected end of stream.");
                 }
                 this.buffer = buf.asReadOnlyBuffer();
             } else {

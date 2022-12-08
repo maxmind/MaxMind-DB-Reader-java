@@ -5,7 +5,7 @@ import java.io.IOException;
 /**
  * A no-op cache singleton.
  */
-public class NoCache implements NodeCache {
+public final class NoCache implements NodeCache {
 
     private static final NoCache INSTANCE = new NoCache();
 
