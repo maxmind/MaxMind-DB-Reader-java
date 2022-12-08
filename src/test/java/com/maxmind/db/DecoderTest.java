@@ -152,21 +152,21 @@ public class DecoderTest {
         DecoderTest.addTestString(strings, new byte[]{0x5d, 0x0},
                 "12345678901234567890123456789");
         DecoderTest.addTestString(strings, new byte[]{0x5d, (byte) 128},
-                DecoderTest.xString(157));
+                "x".repeat(157));
 
         DecoderTest
                 .addTestString(strings, new byte[]{0x5d, 0x0, (byte) 0xd7},
-                        DecoderTest.xString(500));
+                        "x".repeat(500));
 
         DecoderTest
                 .addTestString(strings, new byte[]{0x5e, 0x0, (byte) 0xd7},
-                        DecoderTest.xString(500));
+                        "x".repeat(500));
         DecoderTest.addTestString(strings,
                 new byte[]{0x5e, 0x6, (byte) 0xb3},
-                DecoderTest.xString(2000));
+                "x".repeat(2000));
         DecoderTest.addTestString(strings,
                 new byte[]{0x5f, 0x0, 0x10, 0x53,},
-                DecoderTest.xString(70000));
+                "x".repeat(70000));
 
         return strings;
 
@@ -185,14 +185,6 @@ public class DecoderTest {
         }
 
         return bytes;
-    }
-
-    private static String xString(int length) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            sb.append("x");
-        }
-        return sb.toString();
     }
 
     private static void addTestString(Map<String, byte[]> tests, byte ctrl,
