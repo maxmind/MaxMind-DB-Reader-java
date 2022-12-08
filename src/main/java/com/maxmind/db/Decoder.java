@@ -448,7 +448,7 @@ final class Decoder {
                     + " Java Type: " +parameterTypes[index].getCanonicalName());
                 }              
             }
-            throw new DeserializationException("Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors.toString(), e);
+            throw new DeserializationException("Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors, e);
         }
     }
 
