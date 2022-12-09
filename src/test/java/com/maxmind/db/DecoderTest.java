@@ -430,7 +430,7 @@ public class DecoderTest {
                 MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
 
                 Decoder decoder = new Decoder(cache, mmap, 0);
-                decoder.POINTER_TEST_HACK = true;
+                decoder.pointerTestHack = true;
 
                 // XXX - this could be streamlined
                 if (type.equals(Type.BYTES)) {

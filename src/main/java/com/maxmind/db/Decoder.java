@@ -30,7 +30,7 @@ final class Decoder {
 
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
-    boolean POINTER_TEST_HACK = false;
+    boolean pointerTestHack = false;
 
     private final NodeCache cache;
 
@@ -105,7 +105,7 @@ final class Decoder {
             long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
 
             // for unit testing
-            if (this.POINTER_TEST_HACK) {
+            if (this.pointerTestHack) {
                 return new DecodedValue(pointer);
             }
 
@@ -163,9 +163,8 @@ final class Decoder {
             case ARRAY:
                 Class<?> elementClass = Object.class;
                 if (genericType instanceof ParameterizedType) {
-                    ParameterizedType pType = (ParameterizedType) genericType;
-                    java.lang.reflect.Type[] actualTypes
-                        = pType.getActualTypeArguments();
+                    ParameterizedType ptype = (ParameterizedType) genericType;
+                    java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                     if (actualTypes.length == 1) {
                         elementClass = (Class<?>) actualTypes[0];
                     }
@@ -302,9 +301,9 @@ final class Decoder {
                 @SuppressWarnings("unchecked")
                 List<V> array2 = (List<V>) constructor.newInstance(parameters);
                 array = array2;
-            } catch (InstantiationException |
-                     IllegalAccessException |
-                     InvocationTargetException e) {
+            } catch (InstantiationException
+                     | IllegalAccessException
+                     | InvocationTargetException e) {
                 throw new DeserializationException("Error creating list: " + e.getMessage(), e);
             }
         }
@@ -325,9 +324,8 @@ final class Decoder {
         if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
             Class<?> valueClass = Object.class;
             if (genericType instanceof ParameterizedType) {
-                ParameterizedType pType = (ParameterizedType) genericType;
-                java.lang.reflect.Type[] actualTypes
-                    = pType.getActualTypeArguments();
+                ParameterizedType ptype = (ParameterizedType) genericType;
+                java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                 if (actualTypes.length == 2) {
                     Class<?> keyClass = (Class<?>) actualTypes[0];
                     if (!keyClass.equals(String.class)) {
@@ -364,9 +362,9 @@ final class Decoder {
                 @SuppressWarnings("unchecked")
                 Map<String, V> map2 = (Map<String, V>) constructor.newInstance(parameters);
                 map = map2;
-            } catch (InstantiationException |
-                     IllegalAccessException |
-                     InvocationTargetException e) {
+            } catch (InstantiationException
+                     | IllegalAccessException
+                     | InvocationTargetException e) {
                 throw new DeserializationException("Error creating map: " + e.getMessage(), e);
             }
         }
@@ -388,7 +386,7 @@ final class Decoder {
         java.lang.reflect.Type[] parameterGenericTypes;
         Map<String, Integer> parameterIndexes;
         if (cachedConstructor == null) {
-            constructor = this.findConstructor(cls);
+            constructor = findConstructor(cls);
 
             parameterTypes = constructor.getParameterTypes();
 
@@ -397,7 +395,7 @@ final class Decoder {
             parameterIndexes = new HashMap<>();
             Annotation[][] annotations = constructor.getParameterAnnotations();
             for (int i = 0; i < constructor.getParameterCount(); i++) {
-                String parameterName = this.getParameterName(cls, i, annotations[i]);
+                String parameterName = getParameterName(cls, i, annotations[i]);
                 parameterIndexes.put(parameterName, i);
             }
 
@@ -436,9 +434,9 @@ final class Decoder {
 
         try {
             return constructor.newInstance(parameters);
-        } catch (InstantiationException |
-                 IllegalAccessException |
-                 InvocationTargetException e) {
+        } catch (InstantiationException
+                 | IllegalAccessException
+                 | InvocationTargetException e) {
             throw new DeserializationException("Error creating object: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
             StringBuilder sbErrors = new StringBuilder();
