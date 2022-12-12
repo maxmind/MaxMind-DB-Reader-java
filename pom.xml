@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.maxmind.db</groupId>
     <artifactId>maxmind-db</artifactId>
-    <version>2.1.1-SNAPSHOT</version>
+    <version>3.0.0</version>
     <packaging>jar</packaging>
     <name>MaxMind DB Reader</name>
     <description>Reader for MaxMind DB</description>
@@ -125,7 +124,7 @@
                 <configuration>
                     <format>xml</format>
                     <maxmem>256m</maxmem>
-                    <check/>
+                    <check />
                 </configuration>
             </plugin>
             <plugin>
