@@ -29,24 +29,24 @@ public final class Metadata {
 
     @MaxMindDbConstructor
     public Metadata(
-            @MaxMindDbParameter(name="binary_format_major_version")
-            int binaryFormatMajorVersion,
-            @MaxMindDbParameter(name="binary_format_minor_version")
-            int binaryFormatMinorVersion,
-            @MaxMindDbParameter(name="build_epoch")
-            BigInteger buildEpoch,
-            @MaxMindDbParameter(name="database_type")
-            String databaseType,
-            @MaxMindDbParameter(name="languages")
-            List<String> languages,
-            @MaxMindDbParameter(name="description")
-            Map<String, String> description,
-            @MaxMindDbParameter(name="ip_version")
-            int ipVersion,
-            @MaxMindDbParameter(name="node_count")
-            long nodeCount,
-            @MaxMindDbParameter(name="record_size")
-            int recordSize
+        @MaxMindDbParameter(name = "binary_format_major_version")
+        int binaryFormatMajorVersion,
+        @MaxMindDbParameter(name = "binary_format_minor_version")
+        int binaryFormatMinorVersion,
+        @MaxMindDbParameter(name = "build_epoch")
+        BigInteger buildEpoch,
+        @MaxMindDbParameter(name = "database_type")
+        String databaseType,
+        @MaxMindDbParameter(name = "languages")
+        List<String> languages,
+        @MaxMindDbParameter(name = "description")
+        Map<String, String> description,
+        @MaxMindDbParameter(name = "ip_version")
+        int ipVersion,
+        @MaxMindDbParameter(name = "node_count")
+        long nodeCount,
+        @MaxMindDbParameter(name = "record_size")
+        int recordSize
     ) {
         this.binaryFormatMajorVersion = binaryFormatMajorVersion;
         this.binaryFormatMinorVersion = binaryFormatMinorVersion;
@@ -151,11 +151,11 @@ public final class Metadata {
     @Override
     public String toString() {
         return "Metadata [binaryFormatMajorVersion="
-                + this.binaryFormatMajorVersion + ", binaryFormatMinorVersion="
-                + this.binaryFormatMinorVersion + ", buildEpoch="
-                + this.buildEpoch + ", databaseType=" + this.databaseType
-                + ", description=" + this.description + ", ipVersion="
-                + this.ipVersion + ", nodeCount=" + this.nodeCount
-                + ", recordSize=" + this.recordSize + "]";
+            + this.binaryFormatMajorVersion + ", binaryFormatMinorVersion="
+            + this.binaryFormatMinorVersion + ", buildEpoch="
+            + this.buildEpoch + ", databaseType=" + this.databaseType
+            + ", description=" + this.description + ", ipVersion="
+            + this.ipVersion + ", nodeCount=" + this.nodeCount
+            + ", recordSize=" + this.recordSize + "]";
     }
 }

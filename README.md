@@ -185,7 +185,7 @@ specific to this reader, please [contact MaxMind support](https://www.maxmind.co
 
 ## Requirements  ##
 
-This API requires Java 8 or greater.
+This API requires Java 11 or greater.
 
 ## Contributing ##
 
@@ -198,6 +198,6 @@ The MaxMind DB Reader API uses [Semantic Versioning](https://semver.org/).
 
 ## Copyright and License ##
 
-This software is Copyright (c) 2014-2020 by MaxMind, Inc.
+This software is Copyright (c) 2014-2022 by MaxMind, Inc.
 
 This is free software, licensed under the Apache License, Version 2.0.

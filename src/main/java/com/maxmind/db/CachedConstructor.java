@@ -10,10 +10,10 @@ final class CachedConstructor<T> {
     private final Map<String, Integer> parameterIndexes;
 
     CachedConstructor(
-            Constructor<T> constructor,
-            Class<?>[] parameterTypes,
-            java.lang.reflect.Type[] parameterGenericTypes,
-            Map<String, Integer> parameterIndexes
+        Constructor<T> constructor,
+        Class<?>[] parameterTypes,
+        java.lang.reflect.Type[] parameterGenericTypes,
+        Map<String, Integer> parameterIndexes
     ) {
         this.constructor = constructor;
         this.parameterTypes = parameterTypes;

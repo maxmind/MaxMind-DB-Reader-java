@@ -1,12 +1,18 @@
 CHANGELOG
 =========
 
+3.0.0
+------------------
+
+* Java 11 or greater is now required.
+* This library is now a Java module.
+
 2.1.0 (2022-10-31)
 ------------------
 
 * Messages for `DeserializationException` have been improved, and the cause
- is included, if any. Moreover, the message provides detail about the involved
- types, if the exception is caused by an `IllegalArgumentException`.
+  is included, if any. Moreover, the message provides detail about the involved
+  types, if the exception is caused by an `IllegalArgumentException`.
 
 2.0.0 (2020-10-13)
 ------------------
@@ -100,7 +106,6 @@ CHANGELOG
 
 * Several optimizations have been made to reduce allocations when decoding a
   record. Pull requests by Viktor Szathmáry. GitHub #16 & #17.
-
 
 1.0.0 (2014-09-29)
 ------------------

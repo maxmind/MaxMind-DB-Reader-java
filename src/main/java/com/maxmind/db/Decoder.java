@@ -12,10 +12,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /*
  * Decoder for MaxMind DB data.
@@ -26,11 +26,11 @@ final class Decoder {
 
     private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
-    private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + ((1) << 11), 0};
+    private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + (1 << 11), 0};
 
     // XXX - This is only for unit testings. We should possibly make a
     // constructor to set this
-    boolean POINTER_TEST_HACK = false;
+    boolean pointerTestHack = false;
 
     private final NodeCache cache;
 
@@ -44,18 +44,18 @@ final class Decoder {
 
     Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
         this(
-                cache,
-                buffer,
-                pointerBase,
-                new ConcurrentHashMap<>()
+            cache,
+            buffer,
+            pointerBase,
+            new ConcurrentHashMap<>()
         );
     }
 
     Decoder(
-            NodeCache cache,
-            ByteBuffer buffer,
-            long pointerBase,
-            ConcurrentHashMap<Class, CachedConstructor> constructors
+        NodeCache cache,
+        ByteBuffer buffer,
+        long pointerBase,
+        ConcurrentHashMap<Class, CachedConstructor> constructors
     ) {
         this.cache = cache;
         this.pointerBase = pointerBase;
@@ -68,8 +68,8 @@ final class Decoder {
     public <T> T decode(int offset, Class<T> cls) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
-                    "The MaxMind DB file's data section contains bad data: "
-                            + "pointer larger than the database.");
+                "The MaxMind DB file's data section contains bad data: "
+                    + "pointer larger than the database.");
         }
 
         this.buffer.position(offset);
@@ -80,8 +80,8 @@ final class Decoder {
         int offset = key.getOffset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
-                    "The MaxMind DB file's data section contains bad data: "
-                            + "pointer larger than the database.");
+                "The MaxMind DB file's data section contains bad data: "
+                    + "pointer larger than the database.");
         }
 
         this.buffer.position(offset);
@@ -90,7 +90,7 @@ final class Decoder {
     }
 
     private <T> DecodedValue decode(Class<T> cls, java.lang.reflect.Type genericType)
-            throws IOException {
+        throws IOException {
         int ctrlByte = 0xFF & this.buffer.get();
 
         Type type = Type.fromControlByte(ctrlByte);
@@ -105,7 +105,7 @@ final class Decoder {
             long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
 
             // for unit testing
-            if (this.POINTER_TEST_HACK) {
+            if (this.pointerTestHack) {
                 return new DecodedValue(pointer);
             }
 
@@ -126,9 +126,9 @@ final class Decoder {
 
             if (typeNum < 8) {
                 throw new InvalidDatabaseException(
-                        "Something went horribly wrong in the decoder. An extended type "
-                                + "resolved to a type number < 8 (" + typeNum
-                                + ")");
+                    "Something went horribly wrong in the decoder. An extended type "
+                        + "resolved to a type number < 8 (" + typeNum
+                        + ")");
             }
 
             type = Type.get(typeNum);
@@ -152,10 +152,10 @@ final class Decoder {
     }
 
     private <T> Object decodeByType(
-            Type type,
-            int size,
-            Class<T> cls,
-            java.lang.reflect.Type genericType
+        Type type,
+        int size,
+        Class<T> cls,
+        java.lang.reflect.Type genericType
     ) throws IOException {
         switch (type) {
             case MAP:
@@ -163,9 +163,8 @@ final class Decoder {
             case ARRAY:
                 Class<?> elementClass = Object.class;
                 if (genericType instanceof ParameterizedType) {
-                    ParameterizedType pType = (ParameterizedType) genericType;
-                    java.lang.reflect.Type[] actualTypes
-                        = pType.getActualTypeArguments();
+                    ParameterizedType ptype = (ParameterizedType) genericType;
+                    java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                     if (actualTypes.length == 1) {
                         elementClass = (Class<?>) actualTypes[0];
                     }
@@ -192,7 +191,7 @@ final class Decoder {
                 return this.decodeBigInteger(size);
             default:
                 throw new InvalidDatabaseException(
-                        "Unknown or unexpected type: " + type.name());
+                    "Unknown or unexpected type: " + type.name());
         }
     }
 
@@ -248,8 +247,8 @@ final class Decoder {
     private double decodeDouble(int size) throws InvalidDatabaseException {
         if (size != 8) {
             throw new InvalidDatabaseException(
-                    "The MaxMind DB file's data section contains bad data: "
-                            + "invalid size of double.");
+                "The MaxMind DB file's data section contains bad data: "
+                    + "invalid size of double.");
         }
         return this.buffer.getDouble();
     }
@@ -257,14 +256,14 @@ final class Decoder {
     private float decodeFloat(int size) throws InvalidDatabaseException {
         if (size != 4) {
             throw new InvalidDatabaseException(
-                    "The MaxMind DB file's data section contains bad data: "
-                            + "invalid size of float.");
+                "The MaxMind DB file's data section contains bad data: "
+                    + "invalid size of float.");
         }
         return this.buffer.getFloat();
     }
 
     private static boolean decodeBoolean(int size)
-            throws InvalidDatabaseException {
+        throws InvalidDatabaseException {
         switch (size) {
             case 0:
                 return false;
@@ -272,15 +271,15 @@ final class Decoder {
                 return true;
             default:
                 throw new InvalidDatabaseException(
-                        "The MaxMind DB file's data section contains bad data: "
-                                + "invalid size of boolean.");
+                    "The MaxMind DB file's data section contains bad data: "
+                        + "invalid size of boolean.");
         }
     }
 
     private <T, V> List<V> decodeArray(
-            int size,
-            Class<T> cls,
-            Class<V> elementClass
+        int size,
+        Class<T> cls,
+        Class<V> elementClass
     ) throws IOException {
         if (!List.class.isAssignableFrom(cls) && !cls.equals(Object.class)) {
             throw new DeserializationException("Unable to deserialize an array into an " + cls);
@@ -294,16 +293,17 @@ final class Decoder {
             try {
                 constructor = cls.getConstructor(Integer.TYPE);
             } catch (NoSuchMethodException e) {
-                throw new DeserializationException("No constructor found for the List: " + e.getMessage(), e);
+                throw new DeserializationException(
+                    "No constructor found for the List: " + e.getMessage(), e);
             }
             Object[] parameters = {size};
             try {
                 @SuppressWarnings("unchecked")
                 List<V> array2 = (List<V>) constructor.newInstance(parameters);
                 array = array2;
-            } catch (InstantiationException |
-                    IllegalAccessException |
-                    InvocationTargetException e) {
+            } catch (InstantiationException
+                     | IllegalAccessException
+                     | InvocationTargetException e) {
                 throw new DeserializationException("Error creating list: " + e.getMessage(), e);
             }
         }
@@ -317,16 +317,15 @@ final class Decoder {
     }
 
     private <T> Object decodeMap(
-            int size,
-            Class<T> cls,
-            java.lang.reflect.Type genericType
+        int size,
+        Class<T> cls,
+        java.lang.reflect.Type genericType
     ) throws IOException {
         if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
             Class<?> valueClass = Object.class;
             if (genericType instanceof ParameterizedType) {
-                ParameterizedType pType = (ParameterizedType) genericType;
-                java.lang.reflect.Type[] actualTypes
-                    = pType.getActualTypeArguments();
+                ParameterizedType ptype = (ParameterizedType) genericType;
+                java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                 if (actualTypes.length == 2) {
                     Class<?> keyClass = (Class<?>) actualTypes[0];
                     if (!keyClass.equals(String.class)) {
@@ -343,9 +342,9 @@ final class Decoder {
     }
 
     private <T, V> Map<String, V> decodeMapIntoMap(
-            Class<T> cls,
-            int size,
-            Class<V> valueClass
+        Class<T> cls,
+        int size,
+        Class<V> valueClass
     ) throws IOException {
         Map<String, V> map;
         if (cls.equals(Map.class) || cls.equals(Object.class)) {
@@ -355,16 +354,17 @@ final class Decoder {
             try {
                 constructor = cls.getConstructor(Integer.TYPE);
             } catch (NoSuchMethodException e) {
-                throw new DeserializationException("No constructor found for the Map: " + e.getMessage(), e);
+                throw new DeserializationException(
+                    "No constructor found for the Map: " + e.getMessage(), e);
             }
             Object[] parameters = {size};
             try {
                 @SuppressWarnings("unchecked")
                 Map<String, V> map2 = (Map<String, V>) constructor.newInstance(parameters);
                 map = map2;
-            } catch (InstantiationException |
-                    IllegalAccessException |
-                    InvocationTargetException e) {
+            } catch (InstantiationException
+                     | IllegalAccessException
+                     | InvocationTargetException e) {
                 throw new DeserializationException("Error creating map: " + e.getMessage(), e);
             }
         }
@@ -379,14 +379,14 @@ final class Decoder {
     }
 
     private <T> Object decodeMapIntoObject(int size, Class<T> cls)
-            throws IOException {
+        throws IOException {
         CachedConstructor<T> cachedConstructor = this.constructors.get(cls);
         Constructor<T> constructor;
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
         Map<String, Integer> parameterIndexes;
         if (cachedConstructor == null) {
-            constructor = this.findConstructor(cls);
+            constructor = findConstructor(cls);
 
             parameterTypes = constructor.getParameterTypes();
 
@@ -395,18 +395,18 @@ final class Decoder {
             parameterIndexes = new HashMap<>();
             Annotation[][] annotations = constructor.getParameterAnnotations();
             for (int i = 0; i < constructor.getParameterCount(); i++) {
-                String parameterName = this.getParameterName(cls, i, annotations[i]);
+                String parameterName = getParameterName(cls, i, annotations[i]);
                 parameterIndexes.put(parameterName, i);
             }
 
             this.constructors.put(
-                    cls,
-                    new CachedConstructor(
-                        constructor,
-                        parameterTypes,
-                        parameterGenericTypes,
-                        parameterIndexes
-                    )
+                cls,
+                new CachedConstructor(
+                    constructor,
+                    parameterTypes,
+                    parameterGenericTypes,
+                    parameterIndexes
+                )
             );
         } else {
             constructor = cachedConstructor.getConstructor();
@@ -434,26 +434,27 @@ final class Decoder {
 
         try {
             return constructor.newInstance(parameters);
-        } catch (InstantiationException |
-                IllegalAccessException |
-                InvocationTargetException e) {
+        } catch (InstantiationException
+                 | IllegalAccessException
+                 | InvocationTargetException e) {
             throw new DeserializationException("Error creating object: " + e.getMessage(), e);
-        }
-        catch (IllegalArgumentException e){
-            StringBuilder sbErrors = new StringBuilder();  
+        } catch (IllegalArgumentException e) {
+            StringBuilder sbErrors = new StringBuilder();
             for (String key : parameterIndexes.keySet()) {
                 int index = parameterIndexes.get(key);
-                if (!parameters[index].getClass().isAssignableFrom( parameterTypes[index])) {
-                    sbErrors.append(" argument type mismatch in " + key + " MMDB Type: " + parameters[index].getClass().getCanonicalName()
-                    + " Java Type: " +parameterTypes[index].getCanonicalName());
-                }              
+                if (!parameters[index].getClass().isAssignableFrom(parameterTypes[index])) {
+                    sbErrors.append(" argument type mismatch in " + key + " MMDB Type: "
+                        + parameters[index].getClass().getCanonicalName()
+                        + " Java Type: " + parameterTypes[index].getCanonicalName());
+                }
             }
-            throw new DeserializationException("Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors.toString(), e);
+            throw new DeserializationException(
+                "Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors, e);
         }
     }
 
     private static <T> Constructor<T> findConstructor(Class<T> cls)
-            throws ConstructorNotFoundException {
+        throws ConstructorNotFoundException {
         Constructor<?>[] constructors = cls.getConstructors();
         for (Constructor<?> constructor : constructors) {
             if (constructor.getAnnotation(MaxMindDbConstructor.class) == null) {
@@ -464,13 +465,14 @@ final class Decoder {
             return constructor2;
         }
 
-        throw new ConstructorNotFoundException("No constructor on class " + cls.getName() + " with the MaxMindDbConstructor annotation was found.");
+        throw new ConstructorNotFoundException("No constructor on class " + cls.getName()
+            + " with the MaxMindDbConstructor annotation was found.");
     }
 
     private static <T> String getParameterName(
-            Class<T> cls,
-            int index,
-            Annotation[] annotations
+        Class<T> cls,
+        int index,
+        Annotation[] annotations
     ) throws ParameterNotFoundException {
         for (Annotation annotation : annotations) {
             if (!annotation.annotationType().equals(MaxMindDbParameter.class)) {
@@ -479,7 +481,9 @@ final class Decoder {
             MaxMindDbParameter paramAnnotation = (MaxMindDbParameter) annotation;
             return paramAnnotation.name();
         }
-        throw new ParameterNotFoundException("Constructor parameter " + index + " on class " + cls.getName() + " is not annotated with MaxMindDbParameter.");
+        throw new ParameterNotFoundException(
+            "Constructor parameter " + index + " on class " + cls.getName()
+                + " is not annotated with MaxMindDbParameter.");
     }
 
     private int nextValueOffset(int offset, int numberToSkip)
@@ -495,21 +499,21 @@ final class Decoder {
 
         Type type = ctrlData.getType();
         switch (type) {
-        case POINTER:
-            int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
-            offset += pointerSize;
-            break;
-        case MAP:
-            numberToSkip += 2 * size;
-            break;
-        case ARRAY:
-            numberToSkip += size;
-            break;
-        case BOOLEAN:
-            break;
-        default:
-            offset += size;
-            break;
+            case POINTER:
+                int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+                offset += pointerSize;
+                break;
+            case MAP:
+                numberToSkip += 2 * size;
+                break;
+            case ARRAY:
+                numberToSkip += size;
+                break;
+            case BOOLEAN:
+                break;
+            default:
+                offset += size;
+                break;
         }
 
         return nextValueOffset(offset, numberToSkip - 1);
@@ -519,8 +523,8 @@ final class Decoder {
         throws InvalidDatabaseException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
-                    "The MaxMind DB file's data section contains bad data: "
-                            + "pointer larger than the database.");
+                "The MaxMind DB file's data section contains bad data: "
+                    + "pointer larger than the database.");
         }
 
         this.buffer.position(offset);
@@ -536,9 +540,9 @@ final class Decoder {
 
             if (typeNum < 8) {
                 throw new InvalidDatabaseException(
-                        "Something went horribly wrong in the decoder. An extended type "
-                                + "resolved to a type number < 8 (" + typeNum
-                                + ")");
+                    "Something went horribly wrong in the decoder. An extended type "
+                        + "resolved to a type number < 8 (" + typeNum
+                        + ")");
             }
 
             type = Type.get(typeNum);

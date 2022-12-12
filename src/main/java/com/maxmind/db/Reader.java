@@ -4,12 +4,10 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.Class;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Instances of this class provide a reader for the MaxMind DB format. IP
@@ -18,8 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Reader implements Closeable {
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = {(byte) 0xAB,
-            (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
-            'c', 'o', 'm'};
+        (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
+        'c', 'o', 'm'};
 
     private final int ipV4Start;
     private final Metadata metadata;
@@ -120,7 +118,7 @@ public final class Reader implements Closeable {
 
     private Reader(BufferHolder bufferHolder, String name, NodeCache cache) throws IOException {
         this.bufferHolderReference = new AtomicReference<>(
-                bufferHolder);
+            bufferHolder);
 
         if (cache == null) {
             throw new NullPointerException("Cache cannot be null");
@@ -141,9 +139,9 @@ public final class Reader implements Closeable {
     /**
      * Looks up <code>ipAddress</code> in the MaxMind DB.
      *
-     * @param <T> the type to populate.
+     * @param <T>       the type to populate.
      * @param ipAddress the IP address to look up.
-     * @param cls the class of object to populate.
+     * @param cls       the class of object to populate.
      * @return the object.
      * @throws IOException if a file I/O error occurs.
      */
@@ -154,15 +152,15 @@ public final class Reader implements Closeable {
     /**
      * Looks up <code>ipAddress</code> in the MaxMind DB.
      *
-     * @param <T> the type to populate.
+     * @param <T>       the type to populate.
      * @param ipAddress the IP address to look up.
-     * @param cls the class of object to populate.
+     * @param cls       the class of object to populate.
      * @return the record for the IP address. If there is no data for the
      * address, the non-null {@link DatabaseRecord} will still be returned.
      * @throws IOException if a file I/O error occurs.
      */
     public <T> DatabaseRecord<T> getRecord(InetAddress ipAddress, Class<T> cls)
-            throws IOException {
+        throws IOException {
         ByteBuffer buffer = this.getBufferHolder().get();
 
         byte[] rawAddress = ipAddress.getAddress();
@@ -184,8 +182,9 @@ public final class Reader implements Closeable {
             try {
                 dataRecord = this.resolveDataPointer(buffer, record, cls);
             } catch (DeserializationException exception) {
-                String msgCause = Optional.ofNullable(exception).map(Exception::getMessage).orElse("");
-                throw new DeserializationException("Error getting record for IP " + ipAddress.toString() + " -  " + msgCause, exception);
+                throw new DeserializationException(
+                    "Error getting record for IP " + ipAddress + " -  " + exception.getMessage(),
+                    exception);
             }
         }
         return new DatabaseRecord<>(dataRecord, ipAddress, pl);
@@ -211,7 +210,7 @@ public final class Reader implements Closeable {
     }
 
     private int findIpV4StartNode(ByteBuffer buffer)
-            throws InvalidDatabaseException {
+        throws InvalidDatabaseException {
         if (this.metadata.getIpVersion() == 4) {
             return 0;
         }
@@ -224,7 +223,7 @@ public final class Reader implements Closeable {
     }
 
     private int readNode(ByteBuffer buffer, int nodeNumber, int index)
-            throws InvalidDatabaseException {
+        throws InvalidDatabaseException {
         int baseOffset = nodeNumber * this.metadata.getNodeByteSize();
 
         switch (this.metadata.getRecordSize()) {
@@ -246,31 +245,31 @@ public final class Reader implements Closeable {
                 return Decoder.decodeInteger(buffer, 0, 4);
             default:
                 throw new InvalidDatabaseException("Unknown record size: "
-                        + this.metadata.getRecordSize());
+                    + this.metadata.getRecordSize());
         }
     }
 
     private <T> T resolveDataPointer(
-            ByteBuffer buffer,
-            int pointer,
-            Class<T> cls
+        ByteBuffer buffer,
+        int pointer,
+        Class<T> cls
     ) throws IOException {
         int resolved = (pointer - this.metadata.getNodeCount())
-                + this.metadata.getSearchTreeSize();
+            + this.metadata.getSearchTreeSize();
 
         if (resolved >= buffer.capacity()) {
             throw new InvalidDatabaseException(
-                    "The MaxMind DB file's search tree is corrupt: "
-                            + "contains pointer larger than the database.");
+                "The MaxMind DB file's search tree is corrupt: "
+                    + "contains pointer larger than the database.");
         }
 
         // We only want the data from the decoder, not the offset where it was
         // found.
         Decoder decoder = new Decoder(
-                this.cache,
-                buffer,
-                this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE,
-                this.constructors
+            this.cache,
+            buffer,
+            this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE,
+            this.constructors
         );
         return decoder.decode(resolved, cls);
     }
@@ -284,7 +283,7 @@ public final class Reader implements Closeable {
      * an issue, but I suspect it won't be.
      */
     private int findMetadataStart(ByteBuffer buffer, String databaseName)
-            throws InvalidDatabaseException {
+        throws InvalidDatabaseException {
         int fileSize = buffer.capacity();
 
         FILE:
@@ -292,15 +291,15 @@ public final class Reader implements Closeable {
             for (int j = 0; j < METADATA_START_MARKER.length; j++) {
                 byte b = buffer.get(fileSize - i - j - 1);
                 if (b != METADATA_START_MARKER[METADATA_START_MARKER.length - j
-                        - 1]) {
+                    - 1]) {
                     continue FILE;
                 }
             }
             return fileSize - i;
         }
         throw new InvalidDatabaseException(
-                "Could not find a MaxMind DB metadata marker in this file ("
-                        + databaseName + "). Is this a valid MaxMind DB file?");
+            "Could not find a MaxMind DB metadata marker in this file ("
+                + databaseName + "). Is this a valid MaxMind DB file?");
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.maxmind.db;
 
+import com.maxmind.db.Reader.FileMode;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -9,23 +10,21 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-import com.maxmind.db.Reader.FileMode;
-
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
     private final ByteBuffer buffer;
 
     BufferHolder(File database, FileMode mode) throws IOException {
         try (
-                final RandomAccessFile file = new RandomAccessFile(database, "r");
-                final FileChannel channel = file.getChannel()
+            final RandomAccessFile file = new RandomAccessFile(database, "r");
+            final FileChannel channel = file.getChannel()
         ) {
             if (mode == FileMode.MEMORY) {
                 final ByteBuffer buf = ByteBuffer.wrap(new byte[(int) channel.size()]);
                 if (channel.read(buf) != buf.capacity()) {
                     throw new IOException("Unable to read "
-                            + database.getName()
-                            + " into memory. Unexpected end of stream.");
+                        + database.getName()
+                        + " into memory. Unexpected end of stream.");
                 }
                 this.buffer = buf.asReadOnlyBuffer();
             } else {
@@ -61,19 +60,21 @@ final class BufferHolder {
     ByteBuffer get() {
         // The Java API docs for buffer state:
         //
-        //     Buffers are not safe for use by multiple concurrent threads. If a buffer is to be used by more than
-        //     one thread then access to the buffer should be controlled by appropriate synchronization.
+        //     Buffers are not safe for use by multiple concurrent threads. If a buffer is to be
+        //     used by more than one thread then access to the buffer should be controlled by
+        //     appropriate synchronization.
         //
-        // As such, you may think that this should be synchronized. This used to be the case, but we had several
-        // complaints about the synchronization causing contention, e.g.:
+        // As such, you may think that this should be synchronized. This used to be the case, but
+        // we had several complaints about the synchronization causing contention, e.g.:
         //
         // * https://github.com/maxmind/MaxMind-DB-Reader-java/issues/65
         // * https://github.com/maxmind/MaxMind-DB-Reader-java/pull/69
         //
-        // Given that we are not modifying the original ByteBuffer in any way and all currently known and most
-        // reasonably imaginable implementations of duplicate() only do read operations on the original buffer object,
-        // the risk of not synchronizing this call seems relatively low and worth taking for the performance benefit
-        // when lookups are being done from many threads.
+        // Given that we are not modifying the original ByteBuffer in any way and all currently
+        // known and most reasonably imaginable implementations of duplicate() only do read
+        // operations on the original buffer object, the risk of not synchronizing this call seems
+        // relatively low and worth taking for the performance benefit when lookups are being done
+        // from many threads.
         return this.buffer.duplicate();
     }
 }
