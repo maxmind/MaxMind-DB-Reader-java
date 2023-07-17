@@ -372,7 +372,12 @@ final class Decoder {
         for (int i = 0; i < size; i++) {
             String key = (String) this.decode(String.class, null).getValue();
             Object value = this.decode(valueClass, null).getValue();
-            map.put(key, valueClass.cast(value));
+            try {
+                map.put(key, valueClass.cast(value));
+            } catch (ClassCastException e) {
+                throw new DeserializationException(
+                        "Error creating map entry for '" + key + "': " + e.getMessage(), e);
+            }
         }
 
         return map;

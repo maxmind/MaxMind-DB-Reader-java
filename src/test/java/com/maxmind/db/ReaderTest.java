@@ -1,6 +1,7 @@
 package com.maxmind.db;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -620,6 +621,17 @@ public class ReaderTest {
         assertThat(ex.getMessage(), containsString("Error getting record for IP"));
     }
 
+    @Test
+    public void testDecodeWithDataTypeMismatchInModel() throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+        DeserializationException ex = assertThrows(DeserializationException.class,
+                () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
+                        TestDataTypeMismatchInModel.class));
+        assertThat(ex.getMessage(), containsString("Error getting record for IP"));
+        assertThat(ex.getMessage(), containsString("Error creating map entry for"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(ClassCastException.class));
+    }
+
     static class TestWrongModelSubdivisions {
         List<TestWrongModelSubdivision> subdivisions;
 
@@ -641,6 +653,18 @@ public class ReaderTest {
             Integer uint16Field
         ) {
             this.uint16Field = uint16Field;
+        }
+    }
+
+    static class TestDataTypeMismatchInModel {
+        Map<String, Float> location;
+
+        @MaxMindDbConstructor
+        public TestDataTypeMismatchInModel(
+                @MaxMindDbParameter(name = "location")
+                Map<String, Float> location
+        ) {
+            this.location = location;
         }
     }
 
