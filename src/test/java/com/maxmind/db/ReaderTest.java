@@ -79,6 +79,320 @@ public class ReaderTest {
     }
 
     @Test
+    public void testNetworks() throws IOException, InvalidDatabaseException, BadVersionException {
+        for (long recordSize : new long[] {24, 28, 32}) {
+            for (int ipVersion : new int[] {4, 6}) {
+                File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
+
+                Reader reader = new Reader(file);
+                Networks networks = reader.networks(false);
+                networks.setDataClass(Map.class); // This is needed before running any next().
+
+                while(networks.hasNext()) {
+                    DatabaseRecord<Map<String, String>> iteration = networks.next();
+                    Map<String, String> data = iteration.getData();
+                    assertNull(networks.getErr());
+
+                    InetAddress actualIPInData = InetAddress.getByName(data.get("ip"));
+
+                    assertEquals("expected ip address", 
+                        iteration.getNetwork().getNetworkAddress(), 
+                        actualIPInData);
+                }
+
+                assertNull(networks.getErr());
+                reader.close();
+            }
+        }
+    }
+
+    @Test
+    public void testNetworksWithInvalidSearchTree() throws IOException, BadVersionException{
+        File file = getFile("MaxMind-DB-test-broken-search-tree-24.mmdb");
+        Reader reader = new Reader(file);
+
+        Networks networks = reader.networks(false);
+        networks.setDataClass(Map.class);
+        while(networks.hasNext()){
+            DatabaseRecord iteration = networks.next();
+        }
+
+        assertTrue(networks.getErr() instanceof InvalidDatabaseException);
+        reader.close();
+    }
+
+    private class networkTest {
+        String network;
+        String database;
+        int prefix;
+        String[] expected;
+        boolean skipAliasedNetworks;
+        public networkTest(String network,  int prefix,String database, String[] expected, boolean skipAliasedNetworks){
+            this(network, prefix, database, expected);
+            this.skipAliasedNetworks = skipAliasedNetworks;
+        }
+        public networkTest(String network,  int prefix,String database, String[] expected){
+            this.network = network;
+            this.prefix = prefix;
+            this.database = database;
+            this.expected = expected;
+        }
+    }
+
+    private networkTest[] tests = new networkTest[]{
+        new networkTest(
+            "0.0.0.0",
+            0,
+            "ipv4",
+            new String[]{
+                "1.1.1.1/32",
+                "1.1.1.2/31",
+                "1.1.1.4/30",
+                "1.1.1.8/29",
+                "1.1.1.16/28",
+                "1.1.1.32/32",
+            }
+        ),
+        new networkTest(
+            "1.1.1.1",
+            30,
+            "ipv4",
+            new String[]{
+                "1.1.1.1/32",
+                "1.1.1.2/31",
+            }
+        ),
+        new networkTest(
+            "1.1.1.1",
+            32,
+            "ipv4",
+            new String[]{
+                "1.1.1.1/32",
+            }
+        ),
+        new networkTest(
+            "255.255.255.0", 
+            24,
+            "ipv4",
+            new String[]{}
+        ),
+        new networkTest(
+            "1.1.1.1",
+            32,
+            "mixed",
+            new String[]{
+                "1.1.1.1/32",
+            }
+        ),
+        new networkTest(
+            "255.255.255.0",
+            24,
+            "mixed",
+            new String[]{}
+        ),
+        new networkTest(
+            "::1:ffff:ffff",
+            128,
+            "ipv6",
+            new String[]{
+                "0:0:0:0:0:1:ffff:ffff/128",
+            },
+            true
+        ),
+        new networkTest(
+            "::",
+            0,
+            "ipv6",
+            new String[]{
+                "0:0:0:0:0:1:ffff:ffff/128",
+                "0:0:0:0:0:2:0:0/122",
+                "0:0:0:0:0:2:0:40/124",
+                "0:0:0:0:0:2:0:50/125",
+                "0:0:0:0:0:2:0:58/127",
+            }
+        ),
+        new networkTest(
+            "::2:0:40",
+            123,
+            "ipv6",
+            new String[]{
+                "0:0:0:0:0:2:0:40/124",
+                "0:0:0:0:0:2:0:50/125",
+                "0:0:0:0:0:2:0:58/127",
+            }
+        ),
+        new networkTest(
+            "0:0:0:0:0:ffff:ffff:ff00",
+            120,
+            "ipv6",
+            new String[]{}
+        ),
+        new networkTest(
+            "0.0.0.0",
+            0,
+            "mixed",
+            new String[]{
+                "1.1.1.1/32",
+                "1.1.1.2/31",
+                "1.1.1.4/30",
+                "1.1.1.8/29",
+                "1.1.1.16/28",
+                "1.1.1.32/32",  
+            }
+        ),
+        new networkTest(
+            "0.0.0.0",
+            0,
+            "mixed",
+            new String[]{
+                "1.1.1.1/32",
+                "1.1.1.2/31",
+                "1.1.1.4/30",
+                "1.1.1.8/29",
+                "1.1.1.16/28",
+                "1.1.1.32/32",  
+            },
+            true
+        ),
+        new networkTest(
+            "::",
+            0,
+            "mixed",
+            new String[]{
+                "0:0:0:0:0:0:101:101/128",
+                "0:0:0:0:0:0:101:102/127",
+                "0:0:0:0:0:0:101:104/126",
+                "0:0:0:0:0:0:101:108/125",
+                "0:0:0:0:0:0:101:110/124",
+                "0:0:0:0:0:0:101:120/128",
+                "0:0:0:0:0:1:ffff:ffff/128",
+                "0:0:0:0:0:2:0:0/122",
+                "0:0:0:0:0:2:0:40/124",
+                "0:0:0:0:0:2:0:50/125",
+                "0:0:0:0:0:2:0:58/127",
+                "1.1.1.1/32",
+                "1.1.1.2/31",
+                "1.1.1.4/30",
+                "1.1.1.8/29",
+                "1.1.1.16/28",
+                "1.1.1.32/32",
+                "2001:0:101:101:0:0:0:0/64",
+                "2001:0:101:102:0:0:0:0/63",
+                "2001:0:101:104:0:0:0:0/62",
+                "2001:0:101:108:0:0:0:0/61",
+                "2001:0:101:110:0:0:0:0/60",
+                "2001:0:101:120:0:0:0:0/64",
+                "2002:101:101:0:0:0:0:0/48",
+                "2002:101:102:0:0:0:0:0/47",
+                "2002:101:104:0:0:0:0:0/46",
+                "2002:101:108:0:0:0:0:0/45",
+                "2002:101:110:0:0:0:0:0/44",
+                "2002:101:120:0:0:0:0:0/48",
+            }
+        ),
+        new networkTest(
+            "::",
+            0,
+            "mixed",
+            new String[]{
+                "1.1.1.1/32",
+                "1.1.1.2/31",
+                "1.1.1.4/30",
+                "1.1.1.8/29",
+                "1.1.1.16/28",
+                "1.1.1.32/32",
+                "0:0:0:0:0:1:ffff:ffff/128",
+                "0:0:0:0:0:2:0:0/122",
+                "0:0:0:0:0:2:0:40/124",
+                "0:0:0:0:0:2:0:50/125",
+                "0:0:0:0:0:2:0:58/127",
+            },
+            true
+        ),
+        new networkTest(
+            "1.1.1.16",
+            28,
+            "mixed",
+            new String[]{
+                "1.1.1.16/28"
+            }
+        ),
+        new networkTest(
+            "1.1.1.4",
+            30,
+            "ipv4",
+            new String[]{
+                "1.1.1.4/30"
+            }
+        )
+    };
+
+    @Test
+    public void testNetworksWithin() throws IOException, BadVersionException{
+        for(networkTest test : tests){
+            for(int recordSize : new int[]{24, 28, 32}){
+                File file = getFile("MaxMind-DB-test-"+test.database+"-"+recordSize+".mmdb");
+                Reader reader = new Reader(file);
+
+                InetAddress address = InetAddress.getByName(test.network);
+                Network network = new Network(address, test.prefix);
+
+                Networks networks = reader.networksWithIn(network, test.skipAliasedNetworks);
+                networks.setDataClass(Map.class);
+
+                ArrayList<String> innerIPs  = new ArrayList<String>();
+                while(networks.hasNext()){
+                    DatabaseRecord<Map<String,String>> iteration = networks.next();
+                    innerIPs.add(iteration.getNetwork().toString());
+                }
+
+                assertNull(networks.getErr());
+                assertArrayEquals(test.expected, innerIPs.toArray());
+
+                reader.close();
+            }
+        }
+    }
+
+    private networkTest[] geoipTests = new networkTest[]{
+        new networkTest(
+            "81.2.69.128",
+            26,
+            "GeoIP2-Country-Test.mmdb",
+            new String[]{
+                "81.2.69.142/31",
+                "81.2.69.144/28",
+                "81.2.69.160/27",
+            }
+        )
+    };
+
+    @Test
+    public void testGeoIPNetworksWithin() throws IOException, BadVersionException{
+        for (networkTest test : geoipTests){
+            File file = getFile(test.database);
+            Reader reader = new Reader(file);
+
+            InetAddress address = InetAddress.getByName(test.network);
+            Network network = new Network(address, test.prefix);
+
+            Networks networks = reader.networksWithIn(network, test.skipAliasedNetworks);
+            networks.setDataClass(Map.class);
+
+            ArrayList<String> innerIPs = new ArrayList<String>();
+            while(networks.hasNext()){
+                DatabaseRecord<Map<String,String>> iteration = networks.next();
+                innerIPs.add(iteration.getNetwork().toString());
+            }
+
+            assertNull(networks.getErr());
+            assertArrayEquals(test.expected, innerIPs.toArray());
+
+            reader.close();
+        }
+    }
+
+    @Test
     public void testGetRecord() throws IOException {
         GetRecordTest[] mapTests = {
             new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
