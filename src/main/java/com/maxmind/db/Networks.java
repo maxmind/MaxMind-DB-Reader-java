@@ -8,6 +8,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 
+/**
+ * Instances of this class provide an iterator over the networks in a database.
+ * The iterator will return a {@link DatabaseRecord} for each network.
+ * 
+ * @param <T> The type of data returned by the iterator.
+ */
 public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Reader reader;
     private ArrayList<NetworkNode> nodes;
