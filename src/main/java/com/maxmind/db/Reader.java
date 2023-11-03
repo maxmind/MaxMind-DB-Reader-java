@@ -202,8 +202,8 @@ public final class Reader implements Closeable {
      * Creates a Networks iterator and skips aliased networks.
      * Please note that a MaxMind DB may map IPv4 networks into several locations
      * in an IPv6 database. This iterator will iterate over all of these locations
-     * separately. To only iterate over the IPv4 networks once, use the
-     * SkipAliasedNetworks option.
+     * separately. To disable skipAliasedNetworks, which iterates over the IPv4 networks 
+     * only once, use the SkipAliasedNetworks parameter.
      * 
      * @return Networks The Networks iterator.
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
@@ -219,10 +219,10 @@ public final class Reader implements Closeable {
      * Creates a Networks iterator.
      * Please note that a MaxMind DB may map IPv4 networks into several locations
      * in an IPv6 database. This iterator will iterate over all of these locations
-     * separately. To only iterate over the IPv4 networks once, use the
+     * separately. To set the iteration over the IPv4 networks once, use the
      * SkipAliasedNetworks option.
      * 
-     * @param skipAliasedNetworks Enable skipping aliased networks.
+     * @param skipAliasedNetworks Enable or disable skipping aliased networks.
      * @return Networks The Networks iterator.
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
