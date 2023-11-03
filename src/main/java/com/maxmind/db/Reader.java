@@ -153,7 +153,7 @@ public final class Reader implements Closeable {
         return getRecord(ipAddress, cls).getData();
     }
 
-    protected int getIpv4Start() {
+    int getIpv4Start() {
         return this.ipV4Start;
     }
 
@@ -247,7 +247,7 @@ public final class Reader implements Closeable {
         }
     }
 
-    protected BufferHolder getBufferHolder() throws ClosedDatabaseException {
+    BufferHolder getBufferHolder() throws ClosedDatabaseException {
         BufferHolder bufferHolder = this.bufferHolderReference.get();
         if (bufferHolder == null) {
             throw new ClosedDatabaseException();
@@ -351,7 +351,7 @@ public final class Reader implements Closeable {
         return new int[]{node, i};
     }
 
-    protected int readNode(ByteBuffer buffer, int nodeNumber, int index)
+    int readNode(ByteBuffer buffer, int nodeNumber, int index)
             throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
@@ -384,7 +384,7 @@ public final class Reader implements Closeable {
         }
     }
 
-    protected <T> T resolveDataPointer(
+    <T> T resolveDataPointer(
         ByteBuffer buffer,
         int pointer,
         Class<T> cls

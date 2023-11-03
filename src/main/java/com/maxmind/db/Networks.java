@@ -168,7 +168,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
         return false;
     }
 
-    protected static class NetworkNode {
+    static class NetworkNode {
         public byte[] ip;
         public int prefix;
         public int pointer;
