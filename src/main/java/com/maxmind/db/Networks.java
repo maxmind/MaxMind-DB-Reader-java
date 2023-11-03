@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.Stack;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Stack;
 
 /**
  * Instances of this class provide an iterator over the networks in a database.
@@ -97,11 +97,6 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
             InetAddress ipAddr = InetAddress.getByAddress(ip);
             if (ipAddr instanceof Inet4Address && ip.length > 4 && prefixLength > 96) {
                 prefixLength -= 96;
-
-                // This is just as a safety check. This should never happen.
-                if (prefixLength < 0 ){
-                    throw new NetworksIterationException("A network" + ip +" has an invalid prefix length of " + prefixLength);
-                }
             }
 
             return new DatabaseRecord<T>(data, InetAddress.getByAddress(ip), prefixLength);

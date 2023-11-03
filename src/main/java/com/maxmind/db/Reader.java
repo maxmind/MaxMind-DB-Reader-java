@@ -237,9 +237,9 @@ public final class Reader implements Closeable {
             Network ipAllV6 = new Network(ipv6, 0); // Mask 128.
 
             if (this.getMetadata().getIpVersion() == 6) {
-                return this.networksWithIn(ipAllV6, skipAliasedNetworks);
+                return this.networksWithin(ipAllV6, skipAliasedNetworks);
             }
-            return this.networksWithIn(ipAllV4, skipAliasedNetworks);
+            return this.networksWithin(ipAllV4, skipAliasedNetworks);
         } catch (UnknownHostException e) {
             /* This is returned by getByAddress. This should never happen
             as the ipv4 and ipv6 are constants set by us. */
@@ -293,7 +293,7 @@ public final class Reader implements Closeable {
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
-    public <T> Networks<T> networksWithIn(Network network, boolean skipAliasedNetworks) 
+    public <T> Networks<T> networksWithin(Network network, boolean skipAliasedNetworks) 
         throws InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         InetAddress networkAddress = network.getNetworkAddress();
         if (this.metadata.getIpVersion() == 4 && networkAddress instanceof Inet6Address) {
@@ -306,7 +306,7 @@ public final class Reader implements Closeable {
         if (this.metadata.getIpVersion() == 6 && ipBytes.length == IPV4_LEN) {
             if (skipAliasedNetworks) {
                 ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3] };
+                    ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3] };
             } else {
                 // Convert it to the IP address (in 16-byte from) of the IPv4 address.
                 ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -333,7 +333,7 @@ public final class Reader implements Closeable {
      * @param bitCount The prefix.
      * @return int[]
      */
-    public int[] traverseTree(byte[] ip, int node, int bitCount)
+    private int[] traverseTree(byte[] ip, int node, int bitCount)
         throws ClosedDatabaseException, InvalidDatabaseException {
         int nodeCount = this.metadata.getNodeCount();
         int i = 0;

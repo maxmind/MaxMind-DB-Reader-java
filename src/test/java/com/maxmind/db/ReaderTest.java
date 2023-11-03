@@ -338,7 +338,7 @@ public class ReaderTest {
                 InetAddress address = InetAddress.getByName(test.network);
                 Network network = new Network(address, test.prefix);
 
-                Networks networks = reader.networksWithIn(network, test.skipAliasedNetworks);
+                Networks networks = reader.networksWithin(network, test.skipAliasedNetworks);
                 networks.setDataClass(Map.class);
 
                 ArrayList<String> innerIPs  = new ArrayList<String>();
@@ -376,7 +376,7 @@ public class ReaderTest {
             InetAddress address = InetAddress.getByName(test.network);
             Network network = new Network(address, test.prefix);
 
-            Networks networks = reader.networksWithIn(network, test.skipAliasedNetworks);
+            Networks networks = reader.networksWithin(network, test.skipAliasedNetworks);
             networks.setDataClass(Map.class);
 
             ArrayList<String> innerIPs = new ArrayList<String>();
