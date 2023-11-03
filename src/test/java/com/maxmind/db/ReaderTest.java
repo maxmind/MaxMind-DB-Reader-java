@@ -91,7 +91,6 @@ public class ReaderTest {
                 while(networks.hasNext()) {
                     DatabaseRecord<Map<String, String>> iteration = networks.next();
                     Map<String, String> data = iteration.getData();
-                    assertNull(networks.getErr());
 
                     InetAddress actualIPInData = InetAddress.getByName(data.get("ip"));
 
@@ -100,7 +99,6 @@ public class ReaderTest {
                         actualIPInData);
                 }
 
-                assertNull(networks.getErr());
                 reader.close();
             }
         }
@@ -113,11 +111,14 @@ public class ReaderTest {
 
         Networks networks = reader.networks(false);
         networks.setDataClass(Map.class);
-        while(networks.hasNext()){
-            DatabaseRecord iteration = networks.next();
-        }
 
-        assertTrue(networks.getErr() instanceof InvalidDatabaseException);
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            while(networks.hasNext()){
+                DatabaseRecord iteration = networks.next();
+            }
+        });
+
+        assertEquals("Invalid search tree", exception.getMessage());
         reader.close();
     }
 
@@ -346,7 +347,6 @@ public class ReaderTest {
                     innerIPs.add(iteration.getNetwork().toString());
                 }
 
-                assertNull(networks.getErr());
                 assertArrayEquals(test.expected, innerIPs.toArray());
 
                 reader.close();
@@ -385,7 +385,6 @@ public class ReaderTest {
                 innerIPs.add(iteration.getNetwork().toString());
             }
 
-            assertNull(networks.getErr());
             assertArrayEquals(test.expected, innerIPs.toArray());
 
             reader.close();

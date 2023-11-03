@@ -16,11 +16,10 @@ import java.util.Iterator;
  */
 public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Reader reader;
-    private ArrayList<NetworkNode> nodes;
+    private final ArrayList<NetworkNode> nodes;
     private NetworkNode lastNode;
-    private boolean skipAliasedNetworks;
-    private Exception err;
-    private ByteBuffer buffer; /* Stores the buffer for Next() calls */
+    private final boolean skipAliasedNetworks;
+    private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
     private Class<T> typeParameterClass;
     
     /**
@@ -58,14 +57,6 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     }
 
     /**
-     * Returns if Networks had any errors.
-     * @return Exception The exception to the Networks iteration.
-     */
-    public Exception getErr() {
-        return this.err;
-    }
-
-    /**
      * Sets the Class for the data type in DataRecord.
      * @param cls The class object. ( For example, Map.class )
      */
@@ -82,10 +73,6 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
      */
     @Override
     public DatabaseRecord<T> next() {
-        if (this.err != null) {
-            return null;
-        } 
-
         try {
             T data = this.reader.resolveDataPointer(
                 this.buffer, this.lastNode.pointer, this.typeParameterClass);
@@ -112,8 +99,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
             return new DatabaseRecord<T>(data, InetAddress.getByAddress(ip), prefixLength);
         } catch (IOException e) {
-            this.err = e;
-            return null;
+            throw new NetworksIterationException(e.getMessage());
         }
     }
 
@@ -136,9 +122,6 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     */
     @Override
     public boolean hasNext()  {
-        if (this.err != null) {
-            return false;
-        }
         while (!this.nodes.isEmpty()) {
             // Pop the last one.
             NetworkNode node = this.nodes.remove(this.nodes.size() - 1);
@@ -160,8 +143,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
                 byte[] ipRight = Arrays.copyOf(node.ip, node.ip.length);
                 if (ipRight.length <= (node.prefix >> 3)) {
-                    this.err = new InvalidDatabaseException("Invalid search tree");
-                    return false;
+                    throw new NetworksIterationException("Invalid search tree");
                 }
 
                 ipRight[node.prefix >> 3] |= 1 << (7 - (node.prefix % 8));
@@ -173,8 +155,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
                     this.nodes.add(new NetworkNode(ipRight, node.prefix, rightPointer));
                     node.pointer = this.reader.readNode(this.buffer, node.pointer, 0);
                 } catch (InvalidDatabaseException e) {
-                    this.err = e;
-                    return false;
+                    throw new NetworksIterationException(e.getMessage());
                 }
             }
         }
