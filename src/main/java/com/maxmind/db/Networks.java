@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Stack;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -16,7 +16,7 @@ import java.util.Iterator;
  */
 public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Reader reader;
-    private final ArrayList<NetworkNode> nodes;
+    private final Stack<NetworkNode> nodes;
     private NetworkNode lastNode;
     private final boolean skipAliasedNetworks;
     private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
@@ -44,8 +44,11 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
         throws ClosedDatabaseException {
         this.reader = reader;
         this.skipAliasedNetworks = skipAliasedNetworks;
-        this.nodes = new ArrayList<NetworkNode>(Arrays.asList(nodes));
         this.buffer = reader.getBufferHolder().get();
+        this.nodes = new Stack<NetworkNode>();
+        for (NetworkNode node : nodes) {
+            this.nodes.push(node);
+        }
     }
 
     /**
@@ -65,7 +68,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     }
 
     /**
-     * Returns the next NetworksItem. You need to set the class using
+     * Returns the next DataRecord. You need to set the class using
      * prepareForClass before calling next. 
      * For example,
      *  networks.prepareForClass(Map.Class);
@@ -92,9 +95,13 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
             // If the ip is in ipv6 form, drop the prefix manually
             // as InetAddress converts it to ipv4.
             InetAddress ipAddr = InetAddress.getByAddress(ip);
-            if (ipAddr instanceof Inet4Address && ip.length > 4
-                    && ip[10] == -1 && ip[11] == -1 && prefixLength > 32) {
+            if (ipAddr instanceof Inet4Address && ip.length > 4 && prefixLength > 96) {
                 prefixLength -= 96;
+
+                // This is just as a safety check. This should never happen.
+                if (prefixLength < 0 ){
+                    throw new NetworksIterationException("A network" + ip +" has an invalid prefix length of " + prefixLength);
+                }
             }
 
             return new DatabaseRecord<T>(data, InetAddress.getByAddress(ip), prefixLength);
@@ -123,8 +130,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     @Override
     public boolean hasNext()  {
         while (!this.nodes.isEmpty()) {
-            // Pop the last one.
-            NetworkNode node = this.nodes.remove(this.nodes.size() - 1);
+            NetworkNode node = this.nodes.pop();
 
             // Next until we don't have data.
             while (node.pointer != this.reader.getMetadata().getNodeCount()) {
@@ -152,7 +158,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
                     int rightPointer = this.reader.readNode(this.buffer, node.pointer, 1);
                     node.prefix++;
 
-                    this.nodes.add(new NetworkNode(ipRight, node.prefix, rightPointer));
+                    this.nodes.push(new NetworkNode(ipRight, node.prefix, rightPointer));
                     node.pointer = this.reader.readNode(this.buffer, node.pointer, 0);
                 } catch (InvalidDatabaseException e) {
                     throw new NetworksIterationException(e.getMessage());
