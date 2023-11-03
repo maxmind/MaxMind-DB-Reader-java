@@ -79,7 +79,7 @@ public class ReaderTest {
     }
 
     @Test
-    public void testNetworks() throws IOException, InvalidDatabaseException, BadVersionException {
+    public void testNetworks() throws IOException, InvalidDatabaseException, InvalidNetworkException {
         for (long recordSize : new long[] {24, 28, 32}) {
             for (int ipVersion : new int[] {4, 6}) {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
@@ -107,7 +107,7 @@ public class ReaderTest {
     }
 
     @Test
-    public void testNetworksWithInvalidSearchTree() throws IOException, BadVersionException{
+    public void testNetworksWithInvalidSearchTree() throws IOException, InvalidNetworkException{
         File file = getFile("MaxMind-DB-test-broken-search-tree-24.mmdb");
         Reader reader = new Reader(file);
 
@@ -328,7 +328,7 @@ public class ReaderTest {
     };
 
     @Test
-    public void testNetworksWithin() throws IOException, BadVersionException{
+    public void testNetworksWithin() throws IOException, InvalidNetworkException{
         for(networkTest test : tests){
             for(int recordSize : new int[]{24, 28, 32}){
                 File file = getFile("MaxMind-DB-test-"+test.database+"-"+recordSize+".mmdb");
@@ -368,7 +368,7 @@ public class ReaderTest {
     };
 
     @Test
-    public void testGeoIPNetworksWithin() throws IOException, BadVersionException{
+    public void testGeoIPNetworksWithin() throws IOException, InvalidNetworkException{
         for (networkTest test : geoipTests){
             File file = getFile(test.database);
             Reader reader = new Reader(file);

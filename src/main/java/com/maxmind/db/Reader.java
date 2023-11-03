@@ -206,12 +206,12 @@ public final class Reader implements Closeable {
      * SkipAliasedNetworks option.
      * 
      * @return Networks The Networks iterator.
-     * @throws BadVersionException Exception for using an IPv6 network in ipv4-only database.
+     * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public Networks networks() throws 
-        BadVersionException, ClosedDatabaseException, InvalidDatabaseException {
+        InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         return this.networks(true);
     }
 
@@ -224,12 +224,12 @@ public final class Reader implements Closeable {
      * 
      * @param skipAliasedNetworks Enable skipping aliased networks.
      * @return Networks The Networks iterator.
-     * @throws BadVersionException Exception for using an IPv6 network in ipv4-only database.
+     * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public Networks networks(boolean skipAliasedNetworks) throws 
-        BadVersionException, ClosedDatabaseException, InvalidDatabaseException {
+        InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         try {
             InetAddress ipv4 = InetAddress.getByAddress(new byte[4]);
             InetAddress ipv6 = InetAddress.getByAddress(new byte[16]);
@@ -289,15 +289,15 @@ public final class Reader implements Closeable {
      * @param network Specifies the network to be iterated.
      * @param skipAliasedNetworks Boolean for skipping aliased networks.
      * @return Networks
-     * @throws BadVersionException Exception for using an IPv6 network in ipv4-only database.
+     * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public <T> Networks<T> networksWithIn(Network network, boolean skipAliasedNetworks) 
-        throws BadVersionException, ClosedDatabaseException, InvalidDatabaseException {
+        throws InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         InetAddress networkAddress = network.getNetworkAddress();
         if (this.metadata.getIpVersion() == 4 && networkAddress instanceof Inet6Address) {
-            throw new BadVersionException(networkAddress);
+            throw new InvalidNetworkException(networkAddress);
         }
 
         byte[] ipBytes = networkAddress.getAddress();
