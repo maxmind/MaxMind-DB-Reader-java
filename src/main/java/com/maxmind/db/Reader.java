@@ -205,14 +205,16 @@ public final class Reader implements Closeable {
      * separately. To disable skipAliasedNetworks, which iterates over the IPv4 networks 
      * only once, use the SkipAliasedNetworks parameter.
      * 
+     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
+     * @param typeParameterClass The type of data returned by the iterator.
      * @return Networks The Networks iterator.
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
-    public Networks networks() throws 
+    public <T> Networks<T> networks(Class<T> typeParameterClass) throws 
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
-        return this.networks(true);
+        return this.networks(true, typeParameterClass);
     }
 
     /**
@@ -222,13 +224,16 @@ public final class Reader implements Closeable {
      * separately. To set the iteration over the IPv4 networks once, use the
      * SkipAliasedNetworks option.
      * 
+     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
      * @param skipAliasedNetworks Enable or disable skipping aliased networks.
      * @return Networks The Networks iterator.
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
-    public Networks networks(boolean skipAliasedNetworks) throws 
+    public <T> Networks<T> networks(
+            boolean skipAliasedNetworks,
+            Class<T> typeParameterClass) throws
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         try {
             InetAddress ipv4 = InetAddress.getByAddress(new byte[4]);
@@ -237,9 +242,9 @@ public final class Reader implements Closeable {
             Network ipAllV6 = new Network(ipv6, 0); // Mask 128.
 
             if (this.getMetadata().getIpVersion() == 6) {
-                return this.networksWithin(ipAllV6, skipAliasedNetworks);
+                return this.networksWithin(ipAllV6, skipAliasedNetworks, typeParameterClass);
             }
-            return this.networksWithin(ipAllV4, skipAliasedNetworks);
+            return this.networksWithin(ipAllV4, skipAliasedNetworks, typeParameterClass);
         } catch (UnknownHostException e) {
             /* This is returned by getByAddress. This should never happen
             as the ipv4 and ipv6 are constants set by us. */
@@ -288,12 +293,16 @@ public final class Reader implements Closeable {
      * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
      * @param network Specifies the network to be iterated.
      * @param skipAliasedNetworks Boolean for skipping aliased networks.
+     * @param typeParameterClass The type of data returned by the iterator.
      * @return Networks
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
-    public <T> Networks<T> networksWithin(Network network, boolean skipAliasedNetworks) 
+    public <T> Networks<T> networksWithin(
+            Network network,
+            boolean skipAliasedNetworks,
+            Class<T> typeParameterClass)
         throws InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         InetAddress networkAddress = network.getNetworkAddress();
         if (this.metadata.getIpVersion() == 4 && networkAddress instanceof Inet6Address) {
@@ -321,7 +330,8 @@ public final class Reader implements Closeable {
         int prefix = traverseResult[1];
 
         Networks<T> networks = new Networks<T>(this, skipAliasedNetworks,
-            new Networks.NetworkNode[]{ new Networks.NetworkNode(ipBytes, prefix, node) });
+            new Networks.NetworkNode[]{new Networks.NetworkNode(ipBytes, prefix, node)},
+                typeParameterClass);
 
         return networks;
     }

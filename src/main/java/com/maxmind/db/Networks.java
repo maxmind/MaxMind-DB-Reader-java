@@ -20,17 +20,18 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private NetworkNode lastNode;
     private final boolean skipAliasedNetworks;
     private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
-    private Class<T> typeParameterClass;
+    private final Class<T> typeParameterClass;
     
     /**
      * Constructs a Networks instance.
      * @param reader The reader object.
      * @param skipAliasedNetworks The boolean to skip aliased networks.
+     * @param typeParameterClass The type of data returned by the iterator.
      * @throws ClosedDatabaseException Exception for a closed database.
      */
-    Networks(Reader reader, boolean skipAliasedNetworks) 
+    Networks(Reader reader, boolean skipAliasedNetworks, Class<T> typeParameterClass) 
         throws ClosedDatabaseException {
-        this(reader, skipAliasedNetworks, new NetworkNode[]{});
+        this(reader, skipAliasedNetworks, new NetworkNode[]{}, typeParameterClass);
     }
 
     /**
@@ -38,14 +39,20 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
      * @param reader The reader object.
      * @param skipAliasedNetworks The boolean to skip aliased networks.
      * @param nodes The initial nodes array to start Networks iterator with.
+     * @param typeParameterClass The type of data returned by the iterator.
      * @throws ClosedDatabaseException Exception for a closed database.
      */
-    Networks(Reader reader, boolean skipAliasedNetworks, NetworkNode[] nodes) 
+    Networks(
+            Reader reader,
+            boolean skipAliasedNetworks,
+            NetworkNode[] nodes,
+            Class<T> typeParameterClass)
         throws ClosedDatabaseException {
         this.reader = reader;
         this.skipAliasedNetworks = skipAliasedNetworks;
         this.buffer = reader.getBufferHolder().get();
         this.nodes = new Stack<NetworkNode>();
+        this.typeParameterClass = typeParameterClass;
         for (NetworkNode node : nodes) {
             this.nodes.push(node);
         }
@@ -54,17 +61,10 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
     /**
      * Constructs a Networks instance with skipAliasedNetworks set to false by default.
      * @param reader The reader object.
+     * @param typeParameterClass The type of data returned by the iterator.
      */
-    Networks(Reader reader) throws ClosedDatabaseException {
-        this(reader, false);
-    }
-
-    /**
-     * Sets the Class for the data type in DataRecord.
-     * @param cls The class object. ( For example, Map.class )
-     */
-    public void setDataClass(Class<T> cls) {
-        this.typeParameterClass = cls;
+    Networks(Reader reader, Class<T> typeParameterClass) throws ClosedDatabaseException {
+        this(reader, false, typeParameterClass);
     }
 
     /**
@@ -101,7 +101,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
             return new DatabaseRecord<T>(data, InetAddress.getByAddress(ip), prefixLength);
         } catch (IOException e) {
-            throw new NetworksIterationException(e.getMessage());
+            throw new NetworksIterationException(e);
         }
     }
 
@@ -156,7 +156,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
                     this.nodes.push(new NetworkNode(ipRight, node.prefix, rightPointer));
                     node.pointer = this.reader.readNode(this.buffer, node.pointer, 0);
                 } catch (InvalidDatabaseException e) {
-                    throw new NetworksIterationException(e.getMessage());
+                    throw new NetworksIterationException(e);
                 }
             }
         }

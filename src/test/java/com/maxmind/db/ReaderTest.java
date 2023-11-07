@@ -85,8 +85,7 @@ public class ReaderTest {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
 
                 Reader reader = new Reader(file);
-                Networks networks = reader.networks(false);
-                networks.setDataClass(Map.class); // This is needed before running any next().
+                Networks networks = reader.networks(false, Map.class);
 
                 while(networks.hasNext()) {
                     DatabaseRecord<Map<String, String>> iteration = networks.next();
@@ -109,8 +108,7 @@ public class ReaderTest {
         File file = getFile("MaxMind-DB-test-broken-search-tree-24.mmdb");
         Reader reader = new Reader(file);
 
-        Networks networks = reader.networks(false);
-        networks.setDataClass(Map.class);
+        Networks networks = reader.networks(false, Map.class);
 
         Exception exception = assertThrows(RuntimeException.class, () -> {
             while(networks.hasNext()){
@@ -338,8 +336,7 @@ public class ReaderTest {
                 InetAddress address = InetAddress.getByName(test.network);
                 Network network = new Network(address, test.prefix);
 
-                Networks networks = reader.networksWithin(network, test.skipAliasedNetworks);
-                networks.setDataClass(Map.class);
+                Networks networks = reader.networksWithin(network, test.skipAliasedNetworks, Map.class);
 
                 ArrayList<String> innerIPs  = new ArrayList<String>();
                 while(networks.hasNext()){
@@ -376,8 +373,7 @@ public class ReaderTest {
             InetAddress address = InetAddress.getByName(test.network);
             Network network = new Network(address, test.prefix);
 
-            Networks networks = reader.networksWithin(network, test.skipAliasedNetworks);
-            networks.setDataClass(Map.class);
+            Networks networks = reader.networksWithin(network, test.skipAliasedNetworks, Map.class);
 
             ArrayList<String> innerIPs = new ArrayList<String>();
             while(networks.hasNext()){
