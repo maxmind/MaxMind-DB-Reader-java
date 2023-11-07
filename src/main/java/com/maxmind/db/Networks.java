@@ -14,7 +14,7 @@ import java.util.Stack;
  * 
  * @param <T> The type of data returned by the iterator.
  */
-public class Networks<T> implements Iterator<DatabaseRecord<T>> {
+public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Reader reader;
     private final Stack<NetworkNode> nodes;
     private NetworkNode lastNode;
@@ -105,7 +105,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
         }
     }
 
-    public boolean isInIpv4Subtree(byte[] ip) {
+    private boolean isInIpv4Subtree(byte[] ip) {
         if (ip.length != 16) {
             return false;
         }
@@ -174,7 +174,7 @@ public class Networks<T> implements Iterator<DatabaseRecord<T>> {
          * @param prefix The prefix of the node.
          * @param pointer The node number
          */
-        public NetworkNode(byte[] ip, int prefix, int pointer) {
+        NetworkNode(byte[] ip, int prefix, int pointer) {
             this.ip = ip;
             this.prefix = prefix;
             this.pointer = pointer;
