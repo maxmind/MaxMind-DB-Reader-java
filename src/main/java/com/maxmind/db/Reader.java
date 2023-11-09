@@ -235,14 +235,14 @@ public final class Reader implements Closeable {
             Class<T> typeParameterClass) throws
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         try {
-            InetAddress ipv4 = InetAddress.getByAddress(new byte[4]);
-            InetAddress ipv6 = InetAddress.getByAddress(new byte[16]);
-            Network ipAllV4 = new Network(ipv4, 0); // Mask 32.
-            Network ipAllV6 = new Network(ipv6, 0); // Mask 128.
-
             if (this.getMetadata().getIpVersion() == 6) {
+                InetAddress ipv6 = InetAddress.getByAddress(new byte[16]);
+                Network ipAllV6 = new Network(ipv6, 0); // Mask 128.
                 return this.networksWithin(ipAllV6, includeAliasedNetworks, typeParameterClass);
             }
+
+            InetAddress ipv4 = InetAddress.getByAddress(new byte[4]);
+            Network ipAllV4 = new Network(ipv4, 0); // Mask 32.
             return this.networksWithin(ipAllV4, includeAliasedNetworks, typeParameterClass);
         } catch (UnknownHostException e) {
             /* This is returned by getByAddress. This should never happen
