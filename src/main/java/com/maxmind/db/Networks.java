@@ -84,7 +84,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
             // We do this because uses of includeAliasedNetworks will get IPv4 networks
             // from the ::FFFF:0:0/96. We want to return the IPv4 form of the address
             // in that case.
-            if (!this.includeAliasedNetworks && isInIpv4Subtree(ip)) {
+            if (isInIpv4Subtree(ip)) {
                 ip = Arrays.copyOfRange(ip, 12, ip.length);
                 prefixLength -= 96;
             }

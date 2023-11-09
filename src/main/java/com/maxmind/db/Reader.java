@@ -312,15 +312,8 @@ public final class Reader implements Closeable {
         int prefixLength = network.getPrefixLength();
 
         if (this.metadata.getIpVersion() == 6 && ipBytes.length == IPV4_LEN) {
-            if (includeAliasedNetworks) {
-                // Convert it to the IP address (in 16-byte from) of the IPv4 address.
-                ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    -1, -1, // -1 is for 0xff.
-                    ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3]};
-            } else {
-                ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3] };
-            }
+            ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3] };
             prefixLength += 96;
         }
 
