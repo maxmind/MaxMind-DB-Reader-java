@@ -18,38 +18,38 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Reader reader;
     private final Stack<NetworkNode> nodes;
     private NetworkNode lastNode;
-    private final boolean skipAliasedNetworks;
+    private final boolean includeAliasedNetworks;
     private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
     private final Class<T> typeParameterClass;
     
     /**
      * Constructs a Networks instance.
      * @param reader The reader object.
-     * @param skipAliasedNetworks The boolean to skip aliased networks.
+     * @param includeAliasedNetworks The boolean to include aliased networks.
      * @param typeParameterClass The type of data returned by the iterator.
      * @throws ClosedDatabaseException Exception for a closed database.
      */
-    Networks(Reader reader, boolean skipAliasedNetworks, Class<T> typeParameterClass) 
+    Networks(Reader reader, boolean includeAliasedNetworks, Class<T> typeParameterClass) 
         throws ClosedDatabaseException {
-        this(reader, skipAliasedNetworks, new NetworkNode[]{}, typeParameterClass);
+        this(reader, includeAliasedNetworks, new NetworkNode[]{}, typeParameterClass);
     }
 
     /**
      * Constructs a Networks instance.
      * @param reader The reader object.
-     * @param skipAliasedNetworks The boolean to skip aliased networks.
+     * @param includeAliasedNetworks The boolean to include aliased networks.
      * @param nodes The initial nodes array to start Networks iterator with.
      * @param typeParameterClass The type of data returned by the iterator.
      * @throws ClosedDatabaseException Exception for a closed database.
      */
     Networks(
             Reader reader,
-            boolean skipAliasedNetworks,
+            boolean includeAliasedNetworks,
             NetworkNode[] nodes,
             Class<T> typeParameterClass)
         throws ClosedDatabaseException {
         this.reader = reader;
-        this.skipAliasedNetworks = skipAliasedNetworks;
+        this.includeAliasedNetworks = includeAliasedNetworks;
         this.buffer = reader.getBufferHolder().get();
         this.nodes = new Stack<NetworkNode>();
         this.typeParameterClass = typeParameterClass;
@@ -59,7 +59,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     }
 
     /**
-     * Constructs a Networks instance with skipAliasedNetworks set to false by default.
+     * Constructs a Networks instance with includeAliasedNetworks set to false by default.
      * @param reader The reader object.
      * @param typeParameterClass The type of data returned by the iterator.
      */
@@ -68,11 +68,9 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     }
 
     /**
-     * Returns the next DataRecord. You need to set the class using
-     * prepareForClass before calling next. 
-     * For example,
-     *  networks.prepareForClass(Map.Class);
-     *  Map test = networks.next();
+     * Returns the next DataRecord.
+     * @return The next DataRecord.
+     * @throws NetworksIterationException An exception when iterating over the networks.
      */
     @Override
     public DatabaseRecord<T> next() {
@@ -83,11 +81,10 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
             byte[] ip = this.lastNode.ip;
             int prefixLength = this.lastNode.prefix;
 
-            // We do this because uses of SkipAliasedNetworks expect the IPv4 networks
-            // to be returned as IPv4 networks. If we are not skipping aliased
-            // networks, then the user will get IPv4 networks from the ::FFFF:0:0/96
-            // network.
-            if (this.skipAliasedNetworks && isInIpv4Subtree(ip)) {
+            // We do this because uses of includeAliasedNetworks will get IPv4 networks
+            // from the ::FFFF:0:0/96. We want to return the IPv4 form of the address
+            // in that case.
+            if (!this.includeAliasedNetworks && isInIpv4Subtree(ip)) {
                 ip = Arrays.copyOfRange(ip, 12, ip.length);
                 prefixLength -= 96;
             }
@@ -117,10 +114,12 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         return true;
     }
     
-    /*
-    * Next prepares the next network for reading with the Network method. It
+    /**
+    * hasNext prepares the next network for reading with the Network method. It
     * returns true if there is another network to be processed and false if there
-    * are no more networks or if there is an error.
+    * are no more networks.
+    * @return boolean True if there is another network to be processed.
+    * @throws NetworksIterationException Exception while iterating over the networks.
     */
     @Override
     public boolean hasNext()  {
@@ -131,7 +130,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
             while (node.pointer != this.reader.getMetadata().getNodeCount()) {
                 // This skips IPv4 aliases without hardcoding the networks that the writer
                 // currently aliases.
-                if (this.skipAliasedNetworks && this.reader.getIpv4Start() != 0
+                if (!this.includeAliasedNetworks && this.reader.getIpv4Start() != 0
                         && node.pointer == this.reader.getIpv4Start()
                         && !isInIpv4Subtree(node.ip)) {
                     break;

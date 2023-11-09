@@ -201,9 +201,8 @@ public final class Reader implements Closeable {
     /**
      * Creates a Networks iterator and skips aliased networks.
      * Please note that a MaxMind DB may map IPv4 networks into several locations
-     * in an IPv6 database. This iterator will iterate over all of these locations
-     * separately. To disable skipAliasedNetworks, which iterates over the IPv4 networks 
-     * only once, use the SkipAliasedNetworks parameter.
+     * in an IPv6 database. networks() iterates over the canonical locations and
+     * not the aliases. To include the aliases, you can set includeAliasedNetworks to true.
      * 
      * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
      * @param typeParameterClass The type of data returned by the iterator.
@@ -214,7 +213,7 @@ public final class Reader implements Closeable {
      */
     public <T> Networks<T> networks(Class<T> typeParameterClass) throws 
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
-        return this.networks(true, typeParameterClass);
+        return this.networks(false, typeParameterClass);
     }
 
     /**
@@ -222,17 +221,17 @@ public final class Reader implements Closeable {
      * Please note that a MaxMind DB may map IPv4 networks into several locations
      * in an IPv6 database. This iterator will iterate over all of these locations
      * separately. To set the iteration over the IPv4 networks once, use the
-     * SkipAliasedNetworks option.
+     * includeAliasedNetworks option.
      * 
      * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
-     * @param skipAliasedNetworks Enable or disable skipping aliased networks.
+     * @param includeAliasedNetworks Enable including aliased networks.
      * @return Networks The Networks iterator.
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public <T> Networks<T> networks(
-            boolean skipAliasedNetworks,
+            boolean includeAliasedNetworks,
             Class<T> typeParameterClass) throws
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         try {
@@ -242,9 +241,9 @@ public final class Reader implements Closeable {
             Network ipAllV6 = new Network(ipv6, 0); // Mask 128.
 
             if (this.getMetadata().getIpVersion() == 6) {
-                return this.networksWithin(ipAllV6, skipAliasedNetworks, typeParameterClass);
+                return this.networksWithin(ipAllV6, includeAliasedNetworks, typeParameterClass);
             }
-            return this.networksWithin(ipAllV4, skipAliasedNetworks, typeParameterClass);
+            return this.networksWithin(ipAllV4, includeAliasedNetworks, typeParameterClass);
         } catch (UnknownHostException e) {
             /* This is returned by getByAddress. This should never happen
             as the ipv4 and ipv6 are constants set by us. */
@@ -289,10 +288,10 @@ public final class Reader implements Closeable {
      * Please note that a MaxMind DB may map IPv4 networks into several locations
      * in an IPv6 database. This iterator will iterate over all of these locations
      * separately. To only iterate over the IPv4 networks once, use the
-     * SkipAliasedNetworks option.
+     * includeAliasedNetworks option.
      * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
      * @param network Specifies the network to be iterated.
-     * @param skipAliasedNetworks Boolean for skipping aliased networks.
+     * @param includeAliasedNetworks Boolean for including aliased networks.
      * @param typeParameterClass The type of data returned by the iterator.
      * @return Networks
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
@@ -301,7 +300,7 @@ public final class Reader implements Closeable {
      */
     public <T> Networks<T> networksWithin(
             Network network,
-            boolean skipAliasedNetworks,
+            boolean includeAliasedNetworks,
             Class<T> typeParameterClass)
         throws InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         InetAddress networkAddress = network.getNetworkAddress();
@@ -313,14 +312,14 @@ public final class Reader implements Closeable {
         int prefixLength = network.getPrefixLength();
 
         if (this.metadata.getIpVersion() == 6 && ipBytes.length == IPV4_LEN) {
-            if (skipAliasedNetworks) {
-                ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3] };
-            } else {
+            if (includeAliasedNetworks) {
                 // Convert it to the IP address (in 16-byte from) of the IPv4 address.
                 ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     -1, -1, // -1 is for 0xff.
                     ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3]};
+            } else {
+                ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3] };
             }
             prefixLength += 96;
         }
@@ -329,7 +328,7 @@ public final class Reader implements Closeable {
         int node = traverseResult[0];
         int prefix = traverseResult[1];
 
-        Networks<T> networks = new Networks<T>(this, skipAliasedNetworks,
+        Networks<T> networks = new Networks<T>(this, includeAliasedNetworks,
             new Networks.NetworkNode[]{new Networks.NetworkNode(ipBytes, prefix, node)},
                 typeParameterClass);
 
