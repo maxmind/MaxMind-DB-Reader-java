@@ -169,21 +169,16 @@ public final class Reader implements Closeable {
      */
     public <T> DatabaseRecord<T> getRecord(InetAddress ipAddress, Class<T> cls)
         throws IOException {
-        ByteBuffer buffer = this.getBufferHolder().get();
 
         byte[] rawAddress = ipAddress.getAddress();
 
-        int bitLength = rawAddress.length * 8;
-        int record = this.startNode(bitLength);
+        int[] traverseResult = traverseTree(rawAddress, rawAddress.length * 8);
+
+        int pl = traverseResult[1];
+        int record = traverseResult[0];
+
         int nodeCount = this.metadata.getNodeCount();
-
-        int pl = 0;
-        for (; pl < bitLength && record < nodeCount; pl++) {
-            int b = 0xFF & rawAddress[pl / 8];
-            int bit = 1 & (b >> 7 - (pl % 8));
-            record = this.readNode(buffer, record, bit);
-        }
-
+        ByteBuffer buffer = this.getBufferHolder().get();
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
@@ -317,7 +312,7 @@ public final class Reader implements Closeable {
             prefixLength += 96;
         }
 
-        int[] traverseResult = this.traverseTree(ipBytes, 0, prefixLength);
+        int[] traverseResult = this.traverseTree(ipBytes, prefixLength);
         int node = traverseResult[0];
         int prefix = traverseResult[1];
 
@@ -335,22 +330,24 @@ public final class Reader implements Closeable {
      * @param bitCount The prefix.
      * @return int[]
      */
-    private int[] traverseTree(byte[] ip, int node, int bitCount)
+    private int[] traverseTree(byte[] ip, int bitCount)
         throws ClosedDatabaseException, InvalidDatabaseException {
-        int nodeCount = this.metadata.getNodeCount();
-        int i = 0;
-
         ByteBuffer buffer = this.getBufferHolder().get();
+        int bitLength = ip.length * 8;
+        int record = this.startNode(bitLength);
+        int nodeCount = this.metadata.getNodeCount();
 
-        for (; i < bitCount && node < nodeCount; i++) {
-            int bit = 1 & (ip[i >> 3] >> (7 - (i % 8)));
+        int i = 0;
+        for (; i < bitCount && record < nodeCount; i++) {
+            int b = 0xFF & ip[i / 8];
+            int bit = 1 & (b >> 7 - (i % 8));
 
             // bit:0 -> left record.
             // bit:1 -> right record.
-            node = this.readNode(buffer, node, bit);
+            record = this.readNode(buffer, record, bit);
         }
 
-        return new int[]{node, i};
+        return new int[]{record, i};
     }
 
     int readNode(ByteBuffer buffer, int nodeNumber, int index)
