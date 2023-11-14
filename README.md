@@ -126,7 +126,7 @@ be used for this purpose.
 
 ```java
 Reader reader = new Reader(file);
-Networks networks = reader.networks(false, Map.class);
+Networks networks = reader.networks(Map.class);
 
 while(networks.hasNext()) {
     DatabaseRecord<Map<String, String>> iteration = networks.next();
