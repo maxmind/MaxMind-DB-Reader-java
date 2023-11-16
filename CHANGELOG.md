@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+3.1.0
+------------------
+* Reader supports iterating over the whole database or within a network.
+
 3.0.0 (2022-12-12)
 ------------------
 

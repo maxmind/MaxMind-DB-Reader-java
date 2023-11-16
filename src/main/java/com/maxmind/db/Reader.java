@@ -4,7 +4,9 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -14,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * addresses can be looked up using the <code>get</code> method.
  */
 public final class Reader implements Closeable {
+    private static final int IPV4_LEN = 4;
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = {(byte) 0xAB,
         (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
@@ -149,6 +152,10 @@ public final class Reader implements Closeable {
         return getRecord(ipAddress, cls).getData();
     }
 
+    int getIpv4Start() {
+        return this.ipV4Start;
+    }
+
     /**
      * Looks up <code>ipAddress</code> in the MaxMind DB.
      *
@@ -161,21 +168,16 @@ public final class Reader implements Closeable {
      */
     public <T> DatabaseRecord<T> getRecord(InetAddress ipAddress, Class<T> cls)
         throws IOException {
-        ByteBuffer buffer = this.getBufferHolder().get();
 
         byte[] rawAddress = ipAddress.getAddress();
 
-        int bitLength = rawAddress.length * 8;
-        int record = this.startNode(bitLength);
+        int[] traverseResult = traverseTree(rawAddress, rawAddress.length * 8);
+
+        int pl = traverseResult[1];
+        int record = traverseResult[0];
+
         int nodeCount = this.metadata.getNodeCount();
-
-        int pl = 0;
-        for (; pl < bitLength && record < nodeCount; pl++) {
-            int b = 0xFF & rawAddress[pl / 8];
-            int bit = 1 & (b >> 7 - (pl % 8));
-            record = this.readNode(buffer, record, bit);
-        }
-
+        ByteBuffer buffer = this.getBufferHolder().get();
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
@@ -190,7 +192,60 @@ public final class Reader implements Closeable {
         return new DatabaseRecord<>(dataRecord, ipAddress, pl);
     }
 
-    private BufferHolder getBufferHolder() throws ClosedDatabaseException {
+    /**
+     * Creates a Networks iterator and skips aliased networks.
+     * Please note that a MaxMind DB may map IPv4 networks into several locations
+     * in an IPv6 database. networks() iterates over the canonical locations and
+     * not the aliases. To include the aliases, you can set includeAliasedNetworks to true.
+     * 
+     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
+     * @param typeParameterClass The type of data returned by the iterator.
+     * @return Networks The Networks iterator.
+     * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
+     * @throws ClosedDatabaseException Exception for a closed databased.
+     * @throws InvalidDatabaseException Exception for an invalid database.
+     */
+    public <T> Networks<T> networks(Class<T> typeParameterClass) throws 
+        InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
+        return this.networks(false, typeParameterClass);
+    }
+
+    /**
+     * Creates a Networks iterator.
+     * Please note that a MaxMind DB may map IPv4 networks into several locations
+     * in an IPv6 database. This iterator will iterate over all of these locations
+     * separately. To set the iteration over the IPv4 networks once, use the
+     * includeAliasedNetworks option.
+     * 
+     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
+     * @param includeAliasedNetworks Enable including aliased networks.
+     * @return Networks The Networks iterator.
+     * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
+     * @throws ClosedDatabaseException Exception for a closed databased.
+     * @throws InvalidDatabaseException Exception for an invalid database.
+     */
+    public <T> Networks<T> networks(
+            boolean includeAliasedNetworks,
+            Class<T> typeParameterClass) throws
+        InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
+        try {
+            if (this.getMetadata().getIpVersion() == 6) {
+                InetAddress ipv6 = InetAddress.getByAddress(new byte[16]);
+                Network ipAllV6 = new Network(ipv6, 0); // Mask 128.
+                return this.networksWithin(ipAllV6, includeAliasedNetworks, typeParameterClass);
+            }
+
+            InetAddress ipv4 = InetAddress.getByAddress(new byte[4]);
+            Network ipAllV4 = new Network(ipv4, 0); // Mask 32.
+            return this.networksWithin(ipAllV4, includeAliasedNetworks, typeParameterClass);
+        } catch (UnknownHostException e) {
+            /* This is returned by getByAddress. This should never happen
+            as the ipv4 and ipv6 are constants set by us. */
+            return null;
+        }
+    }
+
+    BufferHolder getBufferHolder() throws ClosedDatabaseException {
         BufferHolder bufferHolder = this.bufferHolderReference.get();
         if (bufferHolder == null) {
             throw new ClosedDatabaseException();
@@ -222,20 +277,102 @@ public final class Reader implements Closeable {
         return node;
     }
 
-    private int readNode(ByteBuffer buffer, int nodeNumber, int index)
-        throws InvalidDatabaseException {
+    /**
+     * Returns an iterator within the specified network.
+     * Please note that a MaxMind DB may map IPv4 networks into several locations
+     * in an IPv6 database. This iterator will iterate over all of these locations
+     * separately. To only iterate over the IPv4 networks once, use the
+     * includeAliasedNetworks option.
+     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
+     * @param network Specifies the network to be iterated.
+     * @param includeAliasedNetworks Boolean for including aliased networks.
+     * @param typeParameterClass The type of data returned by the iterator.
+     * @return Networks
+     * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
+     * @throws ClosedDatabaseException Exception for a closed databased.
+     * @throws InvalidDatabaseException Exception for an invalid database.
+     */
+    public <T> Networks<T> networksWithin(
+            Network network,
+            boolean includeAliasedNetworks,
+            Class<T> typeParameterClass)
+        throws InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
+        InetAddress networkAddress = network.getNetworkAddress();
+        if (this.metadata.getIpVersion() == 4 && networkAddress instanceof Inet6Address) {
+            throw new InvalidNetworkException(networkAddress);
+        }
+
+        byte[] ipBytes = networkAddress.getAddress();
+        int prefixLength = network.getPrefixLength();
+
+        if (this.metadata.getIpVersion() == 6 && ipBytes.length == IPV4_LEN) {
+            if (includeAliasedNetworks) {
+                // Convert it to the IP address (in 16-byte from) of the IPv4 address.
+                ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    -1, -1, // -1 is for 0xff.
+                    ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3]};
+            } else {
+                ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3] };
+            }
+            prefixLength += 96;
+        }
+
+        int[] traverseResult = this.traverseTree(ipBytes, prefixLength);
+        int node = traverseResult[0];
+        int prefix = traverseResult[1];
+
+        return new Networks<T>(this, includeAliasedNetworks,
+            new Networks.NetworkNode[]{new Networks.NetworkNode(ipBytes, prefix, node)},
+                typeParameterClass);
+    }
+
+    /**
+     * Returns the node number and the prefix for the network.
+     * @param ip The ip address to traverse.
+     * @param bitCount The prefix.
+     * @return int[]
+     */
+    private int[] traverseTree(byte[] ip, int bitCount)
+        throws ClosedDatabaseException, InvalidDatabaseException {
+        ByteBuffer buffer = this.getBufferHolder().get();
+        int bitLength = ip.length * 8;
+        int record = this.startNode(bitLength);
+        int nodeCount = this.metadata.getNodeCount();
+
+        int i = 0;
+        for (; i < bitCount && record < nodeCount; i++) {
+            int b = 0xFF & ip[i / 8];
+            int bit = 1 & (b >> 7 - (i % 8));
+
+            // bit:0 -> left record.
+            // bit:1 -> right record.
+            record = this.readNode(buffer, record, bit);
+        }
+
+        return new int[]{record, i};
+    }
+
+    int readNode(ByteBuffer buffer, int nodeNumber, int index)
+            throws InvalidDatabaseException {
+        // index is the index of the record within the node, which
+        // can either be 0 or 1.
         int baseOffset = nodeNumber * this.metadata.getNodeByteSize();
 
         switch (this.metadata.getRecordSize()) {
             case 24:
+                // For a 24 bit record, each record is 3 bytes.
                 buffer.position(baseOffset + index * 3);
                 return Decoder.decodeInteger(buffer, 0, 3);
             case 28:
                 int middle = buffer.get(baseOffset + 3);
 
                 if (index == 0) {
+                    // We get the most significant from the first half
+                    // of the byte. It belongs to the first record.
                     middle = (0xF0 & middle) >>> 4;
                 } else {
+                    // We get the most significant byte of the second record.
                     middle = 0x0F & middle;
                 }
                 buffer.position(baseOffset + index * 4);
@@ -249,7 +386,7 @@ public final class Reader implements Closeable {
         }
     }
 
-    private <T> T resolveDataPointer(
+    <T> T resolveDataPointer(
         ByteBuffer buffer,
         int pointer,
         Class<T> cls

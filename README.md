@@ -120,6 +120,28 @@ public class Lookup {
 }
 ```
 
+You can also use the reader object to iterate over the database. 
+The `reader.networks()` and `reader.networksWithin()` methods can 
+be used for this purpose.
+
+```java
+Reader reader = new Reader(file);
+Networks networks = reader.networks(Map.class);
+
+while(networks.hasNext()) {
+    DatabaseRecord<Map<String, String>> iteration = networks.next();
+
+    // Get the data.
+    Map<String, String> data = iteration.getData();
+
+    // The IP Address
+    InetAddress ipAddress = InetAddress.getByName(data.get("ip"));
+
+    // ...
+}
+```
+
+
 ## Caching ##
 
 The database API supports pluggable caching (by default, no caching is
