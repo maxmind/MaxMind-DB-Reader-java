@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class Reader implements Closeable {
     private static final int IPV4_LEN = 4;
-    private static final int IPV6_LEN = 6;
     private static final int DATA_SECTION_SEPARATOR_SIZE = 16;
     private static final byte[] METADATA_START_MARKER = {(byte) 0xAB,
         (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
@@ -323,17 +322,14 @@ public final class Reader implements Closeable {
         int node = traverseResult[0];
         int prefix = traverseResult[1];
 
-        Networks<T> networks = new Networks<T>(this, includeAliasedNetworks,
+        return new Networks<T>(this, includeAliasedNetworks,
             new Networks.NetworkNode[]{new Networks.NetworkNode(ipBytes, prefix, node)},
                 typeParameterClass);
-
-        return networks;
     }
 
     /**
      * Returns the node number and the prefix for the network.
-     * @param ip The ip address to travese.
-     * @param node The number of the node.
+     * @param ip The ip address to traverse.
      * @param bitCount The prefix.
      * @return int[]
      */

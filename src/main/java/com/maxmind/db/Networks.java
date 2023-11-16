@@ -51,7 +51,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         this.reader = reader;
         this.includeAliasedNetworks = includeAliasedNetworks;
         this.buffer = reader.getBufferHolder().get();
-        this.nodes = new Stack<NetworkNode>();
+        this.nodes = new Stack<>();
         this.typeParameterClass = typeParameterClass;
         for (NetworkNode node : nodes) {
             this.nodes.push(node);
@@ -96,7 +96,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                 prefixLength -= 96;
             }
 
-            return new DatabaseRecord<T>(data, InetAddress.getByAddress(ip), prefixLength);
+            return new DatabaseRecord<T>(data, ipAddr, prefixLength);
         } catch (IOException e) {
             throw new NetworksIterationException(e);
         }
