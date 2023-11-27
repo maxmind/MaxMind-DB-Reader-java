@@ -3,14 +3,14 @@ package com.maxmind.db;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,19 +27,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ReaderTest {
     private Reader testReader;
 
-    @Before
+    @BeforeEach
     public void setupReader() {
         this.testReader = null;
     }
 
-    @After
+    @AfterEach
     public void teardownReader() throws IOException {
         if (this.testReader != null) {
             this.testReader.close();
@@ -93,9 +93,11 @@ public class ReaderTest {
 
                     InetAddress actualIPInData = InetAddress.getByName(data.get("ip"));
 
-                    assertEquals("expected ip address", 
+                    assertEquals(
                         iteration.getNetwork().getNetworkAddress(), 
-                        actualIPInData);
+                        actualIPInData,
+                        "expected ip address"
+                    );
                 }
 
                 reader.close();
@@ -1208,7 +1210,7 @@ public class ReaderTest {
 
         Metadata metadata = reader.getMetadata();
 
-        assertEquals("major version", 2, metadata.getBinaryFormatMajorVersion());
+        assertEquals(2, metadata.getBinaryFormatMajorVersion(), "major version");
         assertEquals(0, metadata.getBinaryFormatMinorVersion());
         assertEquals(ipVersion, metadata.getIpVersion());
         assertEquals("Test", metadata.getDatabaseType());
@@ -1237,8 +1239,11 @@ public class ReaderTest {
             Map<String, String> data = new HashMap<>();
             data.put("ip", address);
 
-            assertEquals("found expected data record for " + address + " in "
-                + file, data, reader.get(InetAddress.getByName(address), Map.class));
+            assertEquals(
+                data,
+                reader.get(InetAddress.getByName(address), Map.class),
+                "found expected data record for " + address + " in " + file
+            );
         }
 
         Map<String, String> pairs = new HashMap<>();
@@ -1253,8 +1258,11 @@ public class ReaderTest {
             Map<String, String> data = new HashMap<>();
             data.put("ip", pairs.get(address));
 
-            assertEquals("found expected data record for " + address + " in "
-                + file, data, reader.get(InetAddress.getByName(address), Map.class));
+            assertEquals(
+                data,
+                reader.get(InetAddress.getByName(address), Map.class),
+                "found expected data record for " + address + " in " + file
+            );
         }
 
         for (String ip : new String[] {"1.1.1.33", "255.254.253.123"}) {
@@ -1271,8 +1279,11 @@ public class ReaderTest {
             Map<String, String> data = new HashMap<>();
             data.put("ip", address);
 
-            assertEquals("found expected data record for " + address + " in "
-                + file, data, reader.get(InetAddress.getByName(address), Map.class));
+            assertEquals(
+                data,
+                reader.get(InetAddress.getByName(address), Map.class),
+                "found expected data record for " + address + " in " + file
+            );
         }
 
         Map<String, String> pairs = new HashMap<>();
@@ -1289,8 +1300,11 @@ public class ReaderTest {
             Map<String, String> data = new HashMap<>();
             data.put("ip", pairs.get(address));
 
-            assertEquals("found expected data record for " + address + " in "
-                + file, data, reader.get(InetAddress.getByName(address), Map.class));
+            assertEquals(
+                data,
+                reader.get(InetAddress.getByName(address), Map.class),
+                "found expected data record for " + address + " in " + file
+            );
         }
 
         for (String ip : new String[] {"1.1.1.33", "255.254.253.123", "89fa::"}) {

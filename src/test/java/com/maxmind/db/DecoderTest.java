@@ -2,9 +2,9 @@ package com.maxmind.db;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"boxing", "static-method"})
 public class DecoderTest {
@@ -434,42 +434,42 @@ public class DecoderTest {
 
                 // XXX - this could be streamlined
                 if (type.equals(Type.BYTES)) {
-                    assertArrayEquals(desc, (byte[]) expect, decoder.decode(0, byte[].class));
+                    assertArrayEquals((byte[]) expect, decoder.decode(0, byte[].class), desc);
                 } else if (type.equals(Type.ARRAY)) {
-                    assertEquals(desc, expect, decoder.decode(0, List.class));
+                    assertEquals(expect, decoder.decode(0, List.class), desc);
                 } else if (type.equals(Type.UINT16)
                     || type.equals(Type.INT32)) {
-                    assertEquals(desc, expect, decoder.decode(0, Integer.class));
+                    assertEquals(expect, decoder.decode(0, Integer.class), desc);
                 } else if (type.equals(Type.UINT32)
                     || type.equals(Type.POINTER)) {
-                    assertEquals(desc, expect, decoder.decode(0, Long.class));
+                    assertEquals(expect, decoder.decode(0, Long.class), desc);
                 } else if (type.equals(Type.UINT64)
                     || type.equals(Type.UINT128)) {
-                    assertEquals(desc, expect, decoder.decode(0, BigInteger.class));
+                    assertEquals(expect, decoder.decode(0, BigInteger.class), desc);
                 } else if (type.equals(Type.DOUBLE)) {
-                    assertEquals(desc, expect, decoder.decode(0, Double.class));
+                    assertEquals(expect, decoder.decode(0, Double.class), desc);
                 } else if (type.equals(Type.FLOAT)) {
-                    assertEquals(desc, expect, decoder.decode(0, Float.class));
+                    assertEquals(expect, decoder.decode(0, Float.class), desc);
                 } else if (type.equals(Type.UTF8_STRING)) {
-                    assertEquals(desc, expect, decoder.decode(0, String.class));
+                    assertEquals(expect, decoder.decode(0, String.class), desc);
                 } else if (type.equals(Type.BOOLEAN)) {
-                    assertEquals(desc, expect, decoder.decode(0, Boolean.class));
+                    assertEquals(expect, decoder.decode(0, Boolean.class), desc);
                 } else {
                     // We hit this for Type.MAP.
 
                     Map got = decoder.decode(0, Map.class);
                     Map expectMap = (Map) expect;
 
-                    assertEquals(desc, expectMap.size(), got.size());
+                    assertEquals(expectMap.size(), got.size(), desc);
 
                     for (Object keyObject : expectMap.keySet()) {
                         String key = (String) keyObject;
                         Object value = expectMap.get(key);
 
                         if (value instanceof Object[]) {
-                            assertArrayEquals(desc, (Object[]) value, (Object[]) got.get(key));
+                            assertArrayEquals((Object[]) value, (Object[]) got.get(key), desc);
                         } else {
-                            assertEquals(desc, value, got.get(key));
+                            assertEquals(value, got.get(key), desc);
                         }
                     }
                 }

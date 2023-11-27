@@ -1,6 +1,6 @@
 package com.maxmind.db;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -12,7 +12,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class MultiThreadedTest {
 
