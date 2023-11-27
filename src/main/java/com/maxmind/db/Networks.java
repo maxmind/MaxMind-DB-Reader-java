@@ -96,7 +96,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                 prefixLength -= 96;
             }
 
-            return new DatabaseRecord<T>(data, ipAddr, prefixLength);
+            return new DatabaseRecord<>(data, ipAddr, prefixLength);
         } catch (IOException e) {
             throw new NetworksIterationException(e);
         }

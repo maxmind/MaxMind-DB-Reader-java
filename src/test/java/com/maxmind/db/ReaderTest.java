@@ -339,7 +339,7 @@ public class ReaderTest {
                 boolean includeAliasedNetworks = !test.skipAliasedNetworks;
                 Networks networks = reader.networksWithin(network, includeAliasedNetworks, Map.class);
 
-                ArrayList<String> innerIPs  = new ArrayList<String>();
+                ArrayList<String> innerIPs  = new ArrayList<>();
                 while(networks.hasNext()){
                     DatabaseRecord<Map<String,String>> iteration = networks.next();
                     innerIPs.add(iteration.getNetwork().toString());
@@ -376,7 +376,7 @@ public class ReaderTest {
 
             Networks networks = reader.networksWithin(network, test.skipAliasedNetworks, Map.class);
 
-            ArrayList<String> innerIPs = new ArrayList<String>();
+            ArrayList<String> innerIPs = new ArrayList<>();
             while(networks.hasNext()){
                 DatabaseRecord<Map<String,String>> iteration = networks.next();
                 innerIPs.add(iteration.getNetwork().toString());
