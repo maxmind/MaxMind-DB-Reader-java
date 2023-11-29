@@ -1,10 +1,10 @@
 package com.maxmind.db;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class NetworkTest {
     @Test

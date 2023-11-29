@@ -322,9 +322,9 @@ public final class Reader implements Closeable {
         int node = traverseResult[0];
         int prefix = traverseResult[1];
 
-        return new Networks<T>(this, includeAliasedNetworks,
-            new Networks.NetworkNode[]{new Networks.NetworkNode(ipBytes, prefix, node)},
-                typeParameterClass);
+        return new Networks<>(this, includeAliasedNetworks,
+            new Networks.NetworkNode[] {new Networks.NetworkNode(ipBytes, prefix, node)},
+            typeParameterClass);
     }
 
     /**
