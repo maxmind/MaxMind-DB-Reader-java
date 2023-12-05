@@ -154,14 +154,6 @@
                 <version>3.2.2</version>
             </plugin>
             <plugin>
-                <groupId>org.eluder.coveralls</groupId>
-                <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.3.0</version>
-                <configuration>
-                    <serviceName>travis-ci</serviceName>
-                </configuration>
-            </plugin>
-            <plugin>
                 <!--
                     We need this for updating the submodule during release. Maven SCM
                     doesn't support this itself apparently. See
