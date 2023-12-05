@@ -2,7 +2,7 @@
 layout: default
 title: MaxMind DB Java API
 language: java
-version: v3.0.0
+version: v3.1.0
 ---
 
 # MaxMind DB Reader #
@@ -23,7 +23,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.0</version>
     </dependency>
 ```
 
@@ -36,7 +36,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:3.0.0'
+    compile 'com.maxmind.db:maxmind-db:3.1.0'
 }
 ```
 
@@ -126,6 +126,28 @@ public class Lookup {
     }
 }
 ```
+
+You can also use the reader object to iterate over the database. 
+The `reader.networks()` and `reader.networksWithin()` methods can 
+be used for this purpose.
+
+```java
+Reader reader = new Reader(file);
+Networks networks = reader.networks(Map.class);
+
+while(networks.hasNext()) {
+    DatabaseRecord<Map<String, String>> iteration = networks.next();
+
+    // Get the data.
+    Map<String, String> data = iteration.getData();
+
+    // The IP Address
+    InetAddress ipAddress = InetAddress.getByName(data.get("ip"));
+
+    // ...
+}
+```
+
 
 ## Caching ##
 
