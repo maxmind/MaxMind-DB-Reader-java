@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.maxmind.db</groupId>
     <artifactId>maxmind-db</artifactId>
-    <version>3.0.1-SNAPSHOT</version>
+    <version>3.1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>MaxMind DB Reader</name>
     <description>Reader for MaxMind DB</description>
@@ -23,7 +23,8 @@
         <url>https://github.com/maxmind/MaxMind-DB-Reader-java</url>
         <connection>scm:git:git://github.com:maxmind/MaxMind-DB-Reader-java.git</connection>
         <developerConnection>scm:git:git@github.com:maxmind/MaxMind-DB-Reader-java.git</developerConnection>
-    </scm>
+      <tag>HEAD</tag>
+  </scm>
     <issueManagement>
         <url>https://github.com/maxmind/MaxMind-DB-Reader-java/issues</url>
         <system>GitHub</system>
@@ -121,7 +122,7 @@
                         <id>attach-sources</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>jar</goal>
+                            <goal>jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -158,6 +159,33 @@
                 <version>4.3.0</version>
                 <configuration>
                     <serviceName>travis-ci</serviceName>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!--
+                    We need this for updating the submodule during release. Maven SCM
+                    doesn't support this itself apparently. See
+                    https://github.com/apache/maven-scm/pull/179
+                -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <!--
+                    We are using 3.0.0 as 3.1.1 fails due to this issue:
+                    https://github.com/mojohaus/exec-maven-plugin/issues/373
+                -->
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <id>invoke build</id>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>git</executable>
+                    <commandlineArgs>submodule update --init --recursive</commandlineArgs>
                 </configuration>
             </plugin>
             <plugin>
@@ -200,6 +228,7 @@
                 <plugins>
                     <plugin>
                         <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.11.0</version>
                         <configuration>
                             <release>11</release>
                         </configuration>
