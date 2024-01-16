@@ -1,5 +1,10 @@
 package com.maxmind.db;
 
+/**
+ * CacheKey is used as a key in the node cache. It contains the offset of the
+ * node in the database file, the class of the data at that node, and the type
+ * of the data at that node.
+ */
 public final class CacheKey<T> {
     private final int offset;
     private final Class<T> cls;

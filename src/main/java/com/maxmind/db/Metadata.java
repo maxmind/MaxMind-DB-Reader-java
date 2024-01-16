@@ -5,6 +5,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Metadata holds data associated with the database itself.
+ */
 public final class Metadata {
     private final int binaryFormatMajorVersion;
     private final int binaryFormatMinorVersion;
