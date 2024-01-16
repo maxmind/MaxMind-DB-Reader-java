@@ -32,7 +32,7 @@ public final class Metadata {
 
     /**
      * Constructs a Metadata object.
-     * 
+     *
      * @param binaryFormatMajorVersion The major version number for the database's
      *                                 binary format.
      * @param binaryFormatMinorVersion The minor version number for the database's

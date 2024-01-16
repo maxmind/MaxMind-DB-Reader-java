@@ -197,7 +197,7 @@ public final class Reader implements Closeable {
      * Please note that a MaxMind DB may map IPv4 networks into several locations
      * in an IPv6 database. networks() iterates over the canonical locations and
      * not the aliases. To include the aliases, you can set includeAliasedNetworks to true.
-     * 
+     *
      * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
      * @param typeParameterClass The type of data returned by the iterator.
      * @return Networks The Networks iterator.
@@ -216,7 +216,7 @@ public final class Reader implements Closeable {
      * in an IPv6 database. This iterator will iterate over all of these locations
      * separately. To set the iteration over the IPv4 networks once, use the
      * includeAliasedNetworks option.
-     * 
+     *
      * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
      * @param includeAliasedNetworks Enable including aliased networks.
      * @return Networks The Networks iterator.
@@ -283,6 +283,7 @@ public final class Reader implements Closeable {
      * in an IPv6 database. This iterator will iterate over all of these locations
      * separately. To only iterate over the IPv4 networks once, use the
      * includeAliasedNetworks option.
+     *
      * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
      * @param network Specifies the network to be iterated.
      * @param includeAliasedNetworks Boolean for including aliased networks.
@@ -329,6 +330,7 @@ public final class Reader implements Closeable {
 
     /**
      * Returns the node number and the prefix for the network.
+     *
      * @param ip The ip address to traverse.
      * @param bitCount The prefix.
      * @return int[]

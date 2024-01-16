@@ -60,7 +60,7 @@ public final class Network {
         return prefixLength;
     }
 
-    /***
+    /**
      * @return A string representation of the network in CIDR notation, e.g.,
      * <code>1.2.3.0/24</code> or <code>2001::/8</code>.
      */
