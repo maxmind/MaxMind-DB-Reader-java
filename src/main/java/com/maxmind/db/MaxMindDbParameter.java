@@ -10,5 +10,8 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MaxMindDbParameter {
+    /**
+     * @return the name of the parameter in the MaxMind DB file
+     */
     String name();
 }
