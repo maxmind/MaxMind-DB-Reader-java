@@ -341,6 +341,10 @@
                                    COMPACT_CTOR_DEF"/>
         </module>
         <module name="JavadocType"/>
+        <module name="JavadocVariable">
+            <property name="tokens" value="VARIABLE_DEF"/>
+            <property name="scope" value="public"/>
+        </module>
         <module name="MissingJavadocType">
             <property name="scope" value="protected"/>
             <property name="tokens"
