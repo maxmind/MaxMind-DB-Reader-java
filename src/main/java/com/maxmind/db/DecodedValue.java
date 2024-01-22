@@ -1,7 +1,7 @@
 package com.maxmind.db;
 
 /**
- * DecodedValue is a wrapper for the decoded value and the number of bytes used
+ * {@code DecodedValue} is a wrapper for the decoded value and the number of bytes used
  * to decode it.
  */
 public final class DecodedValue {

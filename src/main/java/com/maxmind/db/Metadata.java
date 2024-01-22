@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Metadata holds data associated with the database itself.
+ * {@code Metadata} holds data associated with the database itself.
  */
 public final class Metadata {
     private final int binaryFormatMajorVersion;
@@ -31,7 +31,7 @@ public final class Metadata {
     private final int searchTreeSize;
 
     /**
-     * Constructs a Metadata object.
+     * Constructs a {@code Metadata} object.
      *
      * @param binaryFormatMajorVersion The major version number for the database's
      *                                 binary format.
