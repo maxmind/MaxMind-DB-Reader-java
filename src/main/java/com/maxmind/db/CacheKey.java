@@ -1,11 +1,11 @@
 package com.maxmind.db;
 
 /**
- * {@code CacheKey} is used as a key in the node cache. It contains the offset of the
- * node in the database file, the class of the data at that node, and the type
- * of the data at that node.
+ * {@code CacheKey} is used as a key in the data-section cache. It contains the offset of the
+ * value in the database file, the class of the value, and the type
+ * of the value.
  *
- * @param <T> the type of data stored at the node
+ * @param <T> the type of value
  */
 public final class CacheKey<T> {
     private final int offset;

@@ -6,7 +6,7 @@ import java.net.InetAddress;
  * DatabaseRecord represents the data and metadata associated with a database
  * lookup.
  *
- * @param <T> the type of data stored at the node
+ * @param <T> the type to deserialize the returned value to
  */
 public final class DatabaseRecord<T> {
     private final T data;

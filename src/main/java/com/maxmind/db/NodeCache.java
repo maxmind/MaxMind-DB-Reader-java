@@ -3,7 +3,8 @@ package com.maxmind.db;
 import java.io.IOException;
 
 /**
- * NodeCache is an interface for a cache that stores decoded nodes.
+ * NodeCache is an interface for a cache that stores decoded values from the
+ * data section of the database.
  */
 public interface NodeCache {
     /**
