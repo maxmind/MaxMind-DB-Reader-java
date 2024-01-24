@@ -5,6 +5,8 @@ import java.net.InetAddress;
 /**
  * DatabaseRecord represents the data and metadata associated with a database
  * lookup.
+ *
+ * @param <T> the type to deserialize the returned value to
  */
 public final class DatabaseRecord<T> {
     private final T data;
@@ -23,8 +25,9 @@ public final class DatabaseRecord<T> {
     }
 
     /**
-     * @return the data for the record in the database. The record  will be
-     * <code>null</code> if there was no data for the address in the database.
+     * @return the data for the record in the database. The record will be
+     *         <code>null</code> if there was no data for the address in the
+     *         database.
      */
     public T getData() {
         return data;
@@ -32,8 +35,8 @@ public final class DatabaseRecord<T> {
 
     /**
      * @return the network associated with the record in the database. This is
-     * the largest network where all of the IPs in the network have the same
-     * data.
+     *         the largest network where all of the IPs in the network have the same
+     *         data.
      */
     public Network getNetwork() {
         return network;

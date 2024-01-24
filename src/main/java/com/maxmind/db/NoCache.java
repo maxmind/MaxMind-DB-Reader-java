@@ -16,7 +16,10 @@ public final class NoCache implements NodeCache {
     public DecodedValue get(CacheKey key, Loader loader) throws IOException {
         return loader.load(key);
     }
-
+    
+    /**
+     * @return the singleton instance of the NoCache class
+     */
     public static NoCache getInstance() {
         return INSTANCE;
     }

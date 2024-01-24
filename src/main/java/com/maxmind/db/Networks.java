@@ -11,7 +11,7 @@ import java.util.Stack;
 /**
  * Instances of this class provide an iterator over the networks in a database.
  * The iterator will return a {@link DatabaseRecord} for each network.
- * 
+ *
  * @param <T> The type of data returned by the iterator.
  */
 public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
@@ -24,6 +24,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     
     /**
      * Constructs a Networks instance.
+     *
      * @param reader The reader object.
      * @param includeAliasedNetworks The boolean to include aliased networks.
      * @param typeParameterClass The type of data returned by the iterator.
@@ -36,6 +37,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
     /**
      * Constructs a Networks instance.
+     *
      * @param reader The reader object.
      * @param includeAliasedNetworks The boolean to include aliased networks.
      * @param nodes The initial nodes array to start Networks iterator with.
@@ -60,6 +62,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
     /**
      * Constructs a Networks instance with includeAliasedNetworks set to false by default.
+     *
      * @param reader The reader object.
      * @param typeParameterClass The type of data returned by the iterator.
      */
@@ -69,6 +72,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
     /**
      * Returns the next DataRecord.
+     *
      * @return The next DataRecord.
      * @throws NetworksIterationException An exception when iterating over the networks.
      */
@@ -118,6 +122,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     * hasNext prepares the next network for reading with the Network method. It
     * returns true if there is another network to be processed and false if there
     * are no more networks.
+    *
     * @return boolean True if there is another network to be processed.
     * @throws NetworksIterationException Exception while iterating over the networks.
     */
@@ -169,6 +174,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
         /**
          * Constructs a network node for internal use.
+         *
          * @param ip The ip address of the node.
          * @param prefix The prefix of the node.
          * @param pointer The node number

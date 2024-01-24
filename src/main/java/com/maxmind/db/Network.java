@@ -54,15 +54,15 @@ public final class Network {
 
     /**
      * @return The prefix length is the number of leading 1 bits in the subnet
-     * mask. Sometimes also known as netmask length.
+     *         mask. Sometimes also known as netmask length.
      */
     public int getPrefixLength() {
         return prefixLength;
     }
 
-    /***
+    /**
      * @return A string representation of the network in CIDR notation, e.g.,
-     * <code>1.2.3.0/24</code> or <code>2001::/8</code>.
+     *         <code>1.2.3.0/24</code> or <code>2001::/8</code>.
      */
     public String toString() {
         return getNetworkAddress().getHostAddress() + "/" + prefixLength;

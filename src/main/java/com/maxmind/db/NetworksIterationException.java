@@ -9,7 +9,7 @@ package com.maxmind.db;
  * This exception extends RuntimeException because it is thrown by the iterator
  * methods in {@link Networks}.
  * </p>
- * 
+ *
  * @see Networks
  */
 public class NetworksIterationException extends RuntimeException { 
