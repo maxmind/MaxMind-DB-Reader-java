@@ -1,0 +1,9 @@
+[
+  {
+    "name": "com.maxmind.db.Metadata",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  }
+]
