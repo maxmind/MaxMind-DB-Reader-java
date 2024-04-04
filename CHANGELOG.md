@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+3.1.1
+------------------
+
+* When handling a deserialization exception, the decoder now avoids
+  throwing a `NullPointerException` when one of the constructor arguments
+  is `null`. Reported by Keith Massey. GitHub #164.
+
 3.1.0 (2023-12-05)
 ------------------
 

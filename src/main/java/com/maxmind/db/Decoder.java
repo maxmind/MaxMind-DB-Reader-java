@@ -447,7 +447,8 @@ final class Decoder {
             StringBuilder sbErrors = new StringBuilder();
             for (String key : parameterIndexes.keySet()) {
                 int index = parameterIndexes.get(key);
-                if (!parameters[index].getClass().isAssignableFrom(parameterTypes[index])) {
+                if (parameters[index] != null
+                    && !parameters[index].getClass().isAssignableFrom(parameterTypes[index])) {
                     sbErrors.append(" argument type mismatch in " + key + " MMDB Type: "
                         + parameters[index].getClass().getCanonicalName()
                         + " Java Type: " + parameterTypes[index].getCanonicalName());

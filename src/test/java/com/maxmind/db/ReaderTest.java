@@ -944,6 +944,31 @@ public class ReaderTest {
         assertThat(ex.getCause().getCause().getClass(), equalTo(ClassCastException.class));
     }
 
+
+    static class TestConstructorMismatchModel {
+        @MaxMindDbConstructor
+        public TestConstructorMismatchModel(
+            @MaxMindDbParameter(name = "other")
+            String other,
+            @MaxMindDbParameter(name = "utf8_string")
+            double utf8StringField
+        ) {
+        }
+    }
+
+    @Test
+    public void testDecodeWithDataTypeMismatchInModelAndNullValue() throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+
+        DeserializationException ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(
+                InetAddress.getByName("::1.1.1.0"),
+                TestConstructorMismatchModel.class));
+
+        assertThat(ex.getMessage(), containsString("Error creating object of type"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
     static class TestWrongModelSubdivisions {
         List<TestWrongModelSubdivision> subdivisions;
 
