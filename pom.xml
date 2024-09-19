@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.maxmind.db</groupId>
     <artifactId>maxmind-db</artifactId>
-    <version>3.1.1-SNAPSHOT</version>
+    <version>3.1.1</version>
     <packaging>jar</packaging>
     <name>MaxMind DB Reader</name>
     <description>Reader for MaxMind DB</description>
@@ -23,7 +23,7 @@
         <url>https://github.com/maxmind/MaxMind-DB-Reader-java</url>
         <connection>scm:git:git://github.com:maxmind/MaxMind-DB-Reader-java.git</connection>
         <developerConnection>scm:git:git@github.com:maxmind/MaxMind-DB-Reader-java.git</developerConnection>
-      <tag>HEAD</tag>
+      <tag>v3.1.1</tag>
   </scm>
     <issueManagement>
         <url>https://github.com/maxmind/MaxMind-DB-Reader-java/issues</url>
