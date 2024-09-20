@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.maxmind.db</groupId>
     <artifactId>maxmind-db</artifactId>
-    <version>3.1.1-SNAPSHOT</version>
+    <version>3.1.2-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>MaxMind DB Reader</name>
     <description>Reader for MaxMind DB</description>
@@ -65,7 +65,7 @@
                     <configuration>
                       <rules>
                         <requireMavenVersion>
-                          <version>3.2.5</version>
+                          <version>3.6.3</version>
                         </requireMavenVersion>
                       </rules>
                     </configuration>

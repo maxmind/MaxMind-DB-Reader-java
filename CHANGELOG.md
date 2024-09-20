@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-3.1.1
+3.1.1 (2024-09-19)
 ------------------
 
 * When handling a deserialization exception, the decoder now avoids
