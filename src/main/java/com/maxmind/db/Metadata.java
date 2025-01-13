@@ -24,11 +24,11 @@ public final class Metadata {
 
     private final int nodeByteSize;
 
-    private final int nodeCount;
+    private final long nodeCount;
 
     private final int recordSize;
 
-    private final int searchTreeSize;
+    private final long searchTreeSize;
 
     /**
      * Constructs a {@code Metadata} object.
@@ -71,7 +71,7 @@ public final class Metadata {
         this.languages = languages;
         this.description = description;
         this.ipVersion = ipVersion;
-        this.nodeCount = (int) nodeCount;
+        this.nodeCount = nodeCount;
         this.recordSize = recordSize;
 
         this.nodeByteSize = this.recordSize / 4;
@@ -140,7 +140,7 @@ public final class Metadata {
     /**
      * @return the number of nodes in the search tree.
      */
-    int getNodeCount() {
+    long getNodeCount() {
         return this.nodeCount;
     }
 
@@ -155,7 +155,7 @@ public final class Metadata {
     /**
      * @return the searchTreeSize
      */
-    int getSearchTreeSize() {
+    long getSearchTreeSize() {
         return this.searchTreeSize;
     }
 

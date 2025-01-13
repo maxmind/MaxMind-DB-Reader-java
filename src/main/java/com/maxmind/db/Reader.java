@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -128,8 +127,8 @@ public final class Reader implements Closeable {
         }
         this.cache = cache;
 
-        ByteBuffer buffer = bufferHolder.get();
-        int start = this.findMetadataStart(buffer, name);
+        BigByteBuffer buffer = bufferHolder.get();
+        long start = this.findMetadataStart(buffer, name);
 
         Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
         this.metadata = metadataDecoder.decode(start, Metadata.class);
@@ -176,8 +175,8 @@ public final class Reader implements Closeable {
         int pl = traverseResult[1];
         int record = traverseResult[0];
 
-        int nodeCount = this.metadata.getNodeCount();
-        ByteBuffer buffer = this.getBufferHolder().get();
+        long nodeCount = this.metadata.getNodeCount();
+        BigByteBuffer buffer = this.getBufferHolder().get();
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
@@ -264,7 +263,7 @@ public final class Reader implements Closeable {
         return 0;
     }
 
-    private int findIpV4StartNode(ByteBuffer buffer)
+    private int findIpV4StartNode(BigByteBuffer buffer)
         throws InvalidDatabaseException {
         if (this.metadata.getIpVersion() == 4) {
             return 0;
@@ -337,10 +336,10 @@ public final class Reader implements Closeable {
      */
     private int[] traverseTree(byte[] ip, int bitCount)
         throws ClosedDatabaseException, InvalidDatabaseException {
-        ByteBuffer buffer = this.getBufferHolder().get();
+        BigByteBuffer buffer = this.getBufferHolder().get();
         int bitLength = ip.length * 8;
         int record = this.startNode(bitLength);
-        int nodeCount = this.metadata.getNodeCount();
+        long nodeCount = this.metadata.getNodeCount();
 
         int i = 0;
         for (; i < bitCount && record < nodeCount; i++) {
@@ -355,11 +354,11 @@ public final class Reader implements Closeable {
         return new int[]{record, i};
     }
 
-    int readNode(ByteBuffer buffer, int nodeNumber, int index)
+    int readNode(BigByteBuffer buffer, int nodeNumber, int index)
             throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
-        int baseOffset = nodeNumber * this.metadata.getNodeByteSize();
+        long baseOffset = ((long) nodeNumber) * this.metadata.getNodeByteSize();
 
         switch (this.metadata.getRecordSize()) {
             case 24:
@@ -389,11 +388,11 @@ public final class Reader implements Closeable {
     }
 
     <T> T resolveDataPointer(
-        ByteBuffer buffer,
+        BigByteBuffer buffer,
         int pointer,
         Class<T> cls
     ) throws IOException {
-        int resolved = (pointer - this.metadata.getNodeCount())
+        long resolved = (pointer - this.metadata.getNodeCount())
             + this.metadata.getSearchTreeSize();
 
         if (resolved >= buffer.capacity()) {
@@ -421,9 +420,9 @@ public final class Reader implements Closeable {
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private int findMetadataStart(ByteBuffer buffer, String databaseName)
+    private long findMetadataStart(BigByteBuffer buffer, String databaseName)
         throws InvalidDatabaseException {
-        int fileSize = buffer.capacity();
+        long fileSize = buffer.capacity();
 
         FILE:
         for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
@@ -455,7 +454,7 @@ public final class Reader implements Closeable {
      * <p>
      * If you are using <code>FileMode.MEMORY_MAPPED</code>, this will
      * <em>not</em> unmap the underlying file due to a limitation in Java's
-     * <code>MappedByteBuffer</code>. It will however set the reference to
+     * <code>MappedBigByteBuffer</code>. It will however set the reference to
      * the buffer to <code>null</code>, allowing the garbage collector to
      * collect it.
      * </p>

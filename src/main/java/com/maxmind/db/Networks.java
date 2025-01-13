@@ -3,7 +3,6 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Stack;
@@ -19,7 +18,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Stack<NetworkNode> nodes;
     private NetworkNode lastNode;
     private final boolean includeAliasedNetworks;
-    private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
+    private final BigByteBuffer buffer; /* Stores the buffer for Next() calls */
     private final Class<T> typeParameterClass;
     
     /**

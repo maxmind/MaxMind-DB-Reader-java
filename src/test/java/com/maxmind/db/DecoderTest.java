@@ -6,14 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import it.unimi.dsi.fastutil.bytes.ByteMappedBigList;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -204,7 +203,7 @@ public class DecoderTest {
         tests.put(str, bytes);
     }
 
-    private static Map<Double, byte[]> doubles() {
+    static Map<Double, byte[]> doubles() {
         Map<Double, byte[]> doubles = new HashMap<>();
         doubles.put(0.0, new byte[] {0x68, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0});
@@ -226,7 +225,7 @@ public class DecoderTest {
         return doubles;
     }
 
-    private static Map<Float, byte[]> floats() {
+    static Map<Float, byte[]> floats() {
         Map<Float, byte[]> floats = new HashMap<>();
         floats.put((float) 0.0, new byte[] {0x4, 0x8, 0x0, 0x0, 0x0, 0x0});
         floats.put((float) 1.0, new byte[] {0x4, 0x8, 0x3F, (byte) 0x80, 0x0,
@@ -406,7 +405,7 @@ public class DecoderTest {
     @Test
     public void testInvalidControlByte() throws IOException {
         try (FileChannel fc = DecoderTest.getFileChannel(new byte[] {0x0, 0xF})) {
-            MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
+            BigByteBuffer mmap = BigByteBuffer.wrap(ByteMappedBigList.map(fc));
 
             Decoder decoder = new Decoder(new CHMCache(), mmap, 0);
             InvalidDatabaseException ex = assertThrows(
@@ -427,7 +426,7 @@ public class DecoderTest {
 
             String desc = "decoded " + type.name() + " - " + expect;
             try (FileChannel fc = DecoderTest.getFileChannel(input)) {
-                MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
+                BigByteBuffer mmap = BigByteBuffer.wrap(ByteMappedBigList.map(fc));
 
                 Decoder decoder = new Decoder(cache, mmap, 0);
                 decoder.pointerTestHack = true;
