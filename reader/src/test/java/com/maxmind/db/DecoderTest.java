@@ -407,8 +407,9 @@ public class DecoderTest {
     public void testInvalidControlByte() throws IOException {
         try (FileChannel fc = DecoderTest.getFileChannel(new byte[] {0x0, 0xF})) {
             MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
+            ByteReader byteReader = new ByteBufferByteReader(mmap);
 
-            Decoder decoder = new Decoder(new CHMCache(), mmap, 0);
+            Decoder decoder = new Decoder(new CHMCache(), byteReader, 0);
             InvalidDatabaseException ex = assertThrows(
                 InvalidDatabaseException.class,
                 () -> decoder.decode(0, String.class));
@@ -428,8 +429,9 @@ public class DecoderTest {
             String desc = "decoded " + type.name() + " - " + expect;
             try (FileChannel fc = DecoderTest.getFileChannel(input)) {
                 MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
+                ByteReader byteReader = new ByteBufferByteReader(mmap);
 
-                Decoder decoder = new Decoder(cache, mmap, 0);
+                Decoder decoder = new Decoder(cache, byteReader, 0);
                 decoder.pointerTestHack = true;
 
                 // XXX - this could be streamlined

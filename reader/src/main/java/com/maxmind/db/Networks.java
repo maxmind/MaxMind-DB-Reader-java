@@ -19,9 +19,9 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Stack<NetworkNode> nodes;
     private NetworkNode lastNode;
     private final boolean includeAliasedNetworks;
-    private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
+    private final ByteReader buffer; /* Stores the buffer for Next() calls */
     private final Class<T> typeParameterClass;
-    
+
     /**
      * Constructs a Networks instance.
      *

@@ -3,10 +3,10 @@ package com.maxmind.db;
 final class CtrlData {
     private final Type type;
     private final int ctrlByte;
-    private final int offset;
-    private final int size;
+    private final long offset;
+    private final long size;
 
-    CtrlData(Type type, int ctrlByte, int offset, int size) {
+    CtrlData(Type type, int ctrlByte, long offset, long size) {
         this.type = type;
         this.ctrlByte = ctrlByte;
         this.offset = offset;
@@ -21,11 +21,11 @@ final class CtrlData {
         return this.ctrlByte;
     }
 
-    public int getOffset() {
+    public long getOffset() {
         return this.offset;
     }
 
-    public int getSize() {
+    public long getSize() {
         return this.size;
     }
 }

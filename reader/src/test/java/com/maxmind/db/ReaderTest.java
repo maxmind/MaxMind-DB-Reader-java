@@ -94,7 +94,7 @@ public class ReaderTest {
                     InetAddress actualIPInData = InetAddress.getByName(data.get("ip"));
 
                     assertEquals(
-                        iteration.getNetwork().getNetworkAddress(), 
+                        iteration.getNetwork().getNetworkAddress(),
                         actualIPInData,
                         "expected ip address"
                     );
@@ -172,7 +172,7 @@ public class ReaderTest {
             }
         ),
         new networkTest(
-            "255.255.255.0", 
+            "255.255.255.0",
             24,
             "ipv4",
             new String[]{}
@@ -238,7 +238,7 @@ public class ReaderTest {
                 "1.1.1.4/30",
                 "1.1.1.8/29",
                 "1.1.1.16/28",
-                "1.1.1.32/32",  
+                "1.1.1.32/32",
             }
         ),
         new networkTest(
@@ -251,7 +251,7 @@ public class ReaderTest {
                 "1.1.1.4/30",
                 "1.1.1.8/29",
                 "1.1.1.16/28",
-                "1.1.1.32/32",  
+                "1.1.1.32/32",
             },
             true
         ),
@@ -937,8 +937,8 @@ public class ReaderTest {
     public void testDecodeWithDataTypeMismatchInModel() throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
         DeserializationException ex = assertThrows(DeserializationException.class,
-                () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
-                        TestDataTypeMismatchInModel.class));
+            () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
+                TestDataTypeMismatchInModel.class));
         assertThat(ex.getMessage(), containsString("Error getting record for IP"));
         assertThat(ex.getMessage(), containsString("Error creating map entry for"));
         assertThat(ex.getCause().getCause().getClass(), equalTo(ClassCastException.class));
@@ -998,8 +998,8 @@ public class ReaderTest {
 
         @MaxMindDbConstructor
         public TestDataTypeMismatchInModel(
-                @MaxMindDbParameter(name = "location")
-                Map<String, Float> location
+            @MaxMindDbParameter(name = "location")
+            Map<String, Float> location
         ) {
             this.location = location;
         }

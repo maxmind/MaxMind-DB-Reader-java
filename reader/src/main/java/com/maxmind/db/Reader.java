@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -24,7 +23,7 @@ public final class Reader implements Closeable {
 
     private final int ipV4Start;
     private final Metadata metadata;
-    private final AtomicReference<BufferHolder> bufferHolderReference;
+    private volatile ByteReaderHolder bufferHolderReference;
     private final NodeCache cache;
     private final ConcurrentHashMap<Class, CachedConstructor> constructors;
 
@@ -42,6 +41,13 @@ public final class Reader implements Closeable {
          * Loads the database into memory when the reader is constructed.
          */
         MEMORY
+    }
+
+    /**
+     * Create a Reader using your own implementation of {@link ByteReader}.
+     */
+    public Reader(final ByteReader reader, String name, NodeCache cache) throws IOException {
+        this(new ByteReaderHolder(reader), name, cache);
     }
 
     /**
@@ -89,7 +95,7 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source, NodeCache cache) throws IOException {
-        this(new BufferHolder(source), "<InputStream>", cache);
+        this(new ByteReaderHolder(source), "<InputStream>", cache);
     }
 
     /**
@@ -116,20 +122,23 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error opening or reading from the file.
      */
     public Reader(File database, FileMode fileMode, NodeCache cache) throws IOException {
-        this(new BufferHolder(database, fileMode), database.getName(), cache);
+        this(new ByteReaderHolder(database, fileMode), database.getName(), cache);
     }
 
-    private Reader(BufferHolder bufferHolder, String name, NodeCache cache) throws IOException {
-        this.bufferHolderReference = new AtomicReference<>(
-            bufferHolder);
+    private Reader(
+        ByteReaderHolder byteReaderHolder,
+        String name,
+        NodeCache cache
+    ) throws IOException {
+        this.bufferHolderReference = byteReaderHolder;
 
         if (cache == null) {
             throw new NullPointerException("Cache cannot be null");
         }
         this.cache = cache;
 
-        ByteBuffer buffer = bufferHolder.get();
-        int start = this.findMetadataStart(buffer, name);
+        ByteReader buffer = byteReaderHolder.get();
+        long start = this.findMetadataStart(buffer, name);
 
         Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
         this.metadata = metadataDecoder.decode(start, Metadata.class);
@@ -176,8 +185,8 @@ public final class Reader implements Closeable {
         int pl = traverseResult[1];
         int record = traverseResult[0];
 
-        int nodeCount = this.metadata.getNodeCount();
-        ByteBuffer buffer = this.getBufferHolder().get();
+        long nodeCount = this.metadata.getNodeCount();
+        ByteReader buffer = this.getBufferHolder().get();
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
@@ -205,7 +214,7 @@ public final class Reader implements Closeable {
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
-    public <T> Networks<T> networks(Class<T> typeParameterClass) throws 
+    public <T> Networks<T> networks(Class<T> typeParameterClass) throws
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         return this.networks(false, typeParameterClass);
     }
@@ -225,8 +234,8 @@ public final class Reader implements Closeable {
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public <T> Networks<T> networks(
-            boolean includeAliasedNetworks,
-            Class<T> typeParameterClass) throws
+        boolean includeAliasedNetworks,
+        Class<T> typeParameterClass) throws
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         try {
             if (this.getMetadata().getIpVersion() == 6) {
@@ -245,12 +254,12 @@ public final class Reader implements Closeable {
         }
     }
 
-    BufferHolder getBufferHolder() throws ClosedDatabaseException {
-        BufferHolder bufferHolder = this.bufferHolderReference.get();
-        if (bufferHolder == null) {
+    ByteReaderHolder getBufferHolder() throws ClosedDatabaseException {
+        ByteReaderHolder byteReaderHolder = this.bufferHolderReference;
+        if (byteReaderHolder == null) {
             throw new ClosedDatabaseException();
         }
-        return bufferHolder;
+        return byteReaderHolder;
     }
 
     private int startNode(int bitLength) {
@@ -264,7 +273,7 @@ public final class Reader implements Closeable {
         return 0;
     }
 
-    private int findIpV4StartNode(ByteBuffer buffer)
+    private int findIpV4StartNode(ByteReader buffer)
         throws InvalidDatabaseException {
         if (this.metadata.getIpVersion() == 4) {
             return 0;
@@ -294,9 +303,9 @@ public final class Reader implements Closeable {
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public <T> Networks<T> networksWithin(
-            Network network,
-            boolean includeAliasedNetworks,
-            Class<T> typeParameterClass)
+        Network network,
+        boolean includeAliasedNetworks,
+        Class<T> typeParameterClass)
         throws InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         InetAddress networkAddress = network.getNetworkAddress();
         if (this.metadata.getIpVersion() == 4 && networkAddress instanceof Inet6Address) {
@@ -337,10 +346,10 @@ public final class Reader implements Closeable {
      */
     private int[] traverseTree(byte[] ip, int bitCount)
         throws ClosedDatabaseException, InvalidDatabaseException {
-        ByteBuffer buffer = this.getBufferHolder().get();
+        ByteReader buffer = this.getBufferHolder().get();
         int bitLength = ip.length * 8;
         int record = this.startNode(bitLength);
-        int nodeCount = this.metadata.getNodeCount();
+        long nodeCount = this.metadata.getNodeCount();
 
         int i = 0;
         for (; i < bitCount && record < nodeCount; i++) {
@@ -355,11 +364,11 @@ public final class Reader implements Closeable {
         return new int[]{record, i};
     }
 
-    int readNode(ByteBuffer buffer, int nodeNumber, int index)
-            throws InvalidDatabaseException {
+    int readNode(ByteReader buffer, int nodeNumber, int index)
+        throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
-        int baseOffset = nodeNumber * this.metadata.getNodeByteSize();
+        long baseOffset = ((long) nodeNumber) * this.metadata.getNodeByteSize();
 
         switch (this.metadata.getRecordSize()) {
             case 24:
@@ -389,11 +398,11 @@ public final class Reader implements Closeable {
     }
 
     <T> T resolveDataPointer(
-        ByteBuffer buffer,
+        ByteReader buffer,
         int pointer,
         Class<T> cls
     ) throws IOException {
-        int resolved = (pointer - this.metadata.getNodeCount())
+        long resolved = (pointer - this.metadata.getNodeCount())
             + this.metadata.getSearchTreeSize();
 
         if (resolved >= buffer.capacity()) {
@@ -421,9 +430,9 @@ public final class Reader implements Closeable {
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private int findMetadataStart(ByteBuffer buffer, String databaseName)
+    private long findMetadataStart(ByteReader buffer, String databaseName)
         throws InvalidDatabaseException {
-        int fileSize = buffer.capacity();
+        long fileSize = buffer.capacity();
 
         FILE:
         for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
@@ -455,7 +464,7 @@ public final class Reader implements Closeable {
      * <p>
      * If you are using <code>FileMode.MEMORY_MAPPED</code>, this will
      * <em>not</em> unmap the underlying file due to a limitation in Java's
-     * <code>MappedByteBuffer</code>. It will however set the reference to
+     * <code>MappedBigByteBuffer</code>. It will however set the reference to
      * the buffer to <code>null</code>, allowing the garbage collector to
      * collect it.
      * </p>
@@ -464,6 +473,6 @@ public final class Reader implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        this.bufferHolderReference.set(null);
+        this.bufferHolderReference = null;
     }
 }

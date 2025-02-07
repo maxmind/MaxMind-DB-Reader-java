@@ -6,8 +6,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
@@ -38,11 +36,11 @@ final class Decoder {
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
 
-    private final ByteBuffer buffer;
+    private final ByteReader buffer;
 
     private final ConcurrentHashMap<Class, CachedConstructor> constructors;
 
-    Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
+    Decoder(NodeCache cache, ByteReader buffer, long pointerBase) {
         this(
             cache,
             buffer,
@@ -53,7 +51,7 @@ final class Decoder {
 
     Decoder(
         NodeCache cache,
-        ByteBuffer buffer,
+        ByteReader buffer,
         long pointerBase,
         ConcurrentHashMap<Class, CachedConstructor> constructors
     ) {
@@ -65,7 +63,7 @@ final class Decoder {
 
     private final NodeCache.Loader cacheLoader = this::decode;
 
-    public <T> T decode(int offset, Class<T> cls) throws IOException {
+    public <T> T decode(long offset, Class<T> cls) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
@@ -77,7 +75,7 @@ final class Decoder {
     }
 
     private <T> DecodedValue decode(CacheKey<T> key) throws IOException {
-        int offset = key.getOffset();
+        long offset = key.getOffset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
@@ -110,7 +108,7 @@ final class Decoder {
             }
 
             int targetOffset = (int) pointer;
-            int position = buffer.position();
+            long position = buffer.position();
 
             CacheKey key = new CacheKey(targetOffset, cls, genericType);
             DecodedValue o = cache.get(key, cacheLoader);
@@ -195,12 +193,8 @@ final class Decoder {
         }
     }
 
-    private String decodeString(int size) throws CharacterCodingException {
-        int oldLimit = buffer.limit();
-        buffer.limit(buffer.position() + size);
-        String s = utfDecoder.decode(buffer).toString();
-        buffer.limit(oldLimit);
-        return s;
+    private String decodeString(int size) {
+        return new String(buffer.getBytes(size), UTF_8);
     }
 
     private int decodeUint16(int size) {
@@ -231,7 +225,7 @@ final class Decoder {
         return Decoder.decodeInteger(this.buffer, base, size);
     }
 
-    static int decodeInteger(ByteBuffer buffer, int base, int size) {
+    static int decodeInteger(ByteReader buffer, int base, int size) {
         int integer = base;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (buffer.get() & 0xFF);
@@ -250,7 +244,7 @@ final class Decoder {
                 "The MaxMind DB file's data section contains bad data: "
                     + "invalid size of double.");
         }
-        return this.buffer.getDouble();
+        return Double.longBitsToDouble(decodeLong(size));
     }
 
     private float decodeFloat(int size) throws InvalidDatabaseException {
@@ -259,7 +253,7 @@ final class Decoder {
                 "The MaxMind DB file's data section contains bad data: "
                     + "invalid size of float.");
         }
-        return this.buffer.getFloat();
+        return Float.intBitsToFloat(decodeInteger(size));
     }
 
     private static boolean decodeBoolean(int size)
@@ -376,7 +370,7 @@ final class Decoder {
                 map.put(key, valueClass.cast(value));
             } catch (ClassCastException e) {
                 throw new DeserializationException(
-                        "Error creating map entry for '" + key + "': " + e.getMessage(), e);
+                    "Error creating map entry for '" + key + "': " + e.getMessage(), e);
             }
         }
 
@@ -426,7 +420,7 @@ final class Decoder {
 
             Integer parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
-                int offset = this.nextValueOffset(this.buffer.position(), 1);
+                long offset = this.nextValueOffset(this.buffer.position(), 1);
                 this.buffer.position(offset);
                 continue;
             }
@@ -492,7 +486,7 @@ final class Decoder {
                 + " is not annotated with MaxMindDbParameter.");
     }
 
-    private int nextValueOffset(int offset, int numberToSkip)
+    private long nextValueOffset(long offset, long numberToSkip)
         throws InvalidDatabaseException {
         if (numberToSkip == 0) {
             return offset;
@@ -500,7 +494,7 @@ final class Decoder {
 
         CtrlData ctrlData = this.getCtrlData(offset);
         int ctrlByte = ctrlData.getCtrlByte();
-        int size = ctrlData.getSize();
+        long size = ctrlData.getSize();
         offset = ctrlData.getOffset();
 
         Type type = ctrlData.getType();
@@ -525,7 +519,7 @@ final class Decoder {
         return nextValueOffset(offset, numberToSkip - 1);
     }
 
-    private CtrlData getCtrlData(int offset)
+    private CtrlData getCtrlData(long offset)
         throws InvalidDatabaseException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -575,12 +569,6 @@ final class Decoder {
     }
 
     private byte[] getByteArray(int length) {
-        return Decoder.getByteArray(this.buffer, length);
-    }
-
-    private static byte[] getByteArray(ByteBuffer buffer, int length) {
-        byte[] bytes = new byte[length];
-        buffer.get(bytes);
-        return bytes;
+        return buffer.getBytes(length);
     }
 }

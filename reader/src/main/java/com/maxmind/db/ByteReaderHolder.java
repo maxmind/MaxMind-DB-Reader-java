@@ -10,11 +10,15 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-final class BufferHolder {
+final class ByteReaderHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
-    private final ByteBuffer buffer;
+    private final ByteReader reader;
 
-    BufferHolder(File database, FileMode mode) throws IOException {
+    ByteReaderHolder(ByteReader reader) {
+        this.reader = reader;
+    }
+
+    ByteReaderHolder(File database, FileMode mode) throws IOException {
         try (
             final RandomAccessFile file = new RandomAccessFile(database, "r");
             final FileChannel channel = file.getChannel()
@@ -26,21 +30,23 @@ final class BufferHolder {
                         + database.getName()
                         + " into memory. Unexpected end of stream.");
                 }
-                this.buffer = buf.asReadOnlyBuffer();
+                this.reader = new ByteBufferByteReader(buf.asReadOnlyBuffer());
             } else {
-                this.buffer = channel.map(MapMode.READ_ONLY, 0, channel.size()).asReadOnlyBuffer();
+                final ByteBuffer mappedBuffer =
+                    channel.map(MapMode.READ_ONLY, 0, channel.size()).asReadOnlyBuffer();
+                this.reader = new ByteBufferByteReader(mappedBuffer);
             }
         }
     }
 
     /**
-     * Construct a ThreadBuffer from the provided URL.
+     * Construct a {@link ByteReaderHolder} from the provided {@link InputStream}.
      *
      * @param stream the source of my bytes.
      * @throws IOException          if unable to read from your source.
-     * @throws NullPointerException if you provide a NULL InputStream
+     * @throws NullPointerException if you provide a {@code null} InputStream
      */
-    BufferHolder(InputStream stream) throws IOException {
+    ByteReaderHolder(InputStream stream) throws IOException {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
@@ -50,14 +56,15 @@ final class BufferHolder {
         while (-1 != (br = stream.read(bytes))) {
             baos.write(bytes, 0, br);
         }
-        this.buffer = ByteBuffer.wrap(baos.toByteArray()).asReadOnlyBuffer();
+        final ByteBuffer readOnlyBuffer = ByteBuffer.wrap(baos.toByteArray()).asReadOnlyBuffer();
+        this.reader = new ByteBufferByteReader(readOnlyBuffer);
     }
 
     /*
      * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
      * should not be shared between threads.
      */
-    ByteBuffer get() {
+    public ByteReader get() {
         // The Java API docs for buffer state:
         //
         //     Buffers are not safe for use by multiple concurrent threads. If a buffer is to be
@@ -75,6 +82,6 @@ final class BufferHolder {
         // operations on the original buffer object, the risk of not synchronizing this call seems
         // relatively low and worth taking for the performance benefit when lookups are being done
         // from many threads.
-        return this.buffer.duplicate();
+        return reader.duplicate();
     }
 }

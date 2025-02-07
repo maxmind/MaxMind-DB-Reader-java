@@ -8,17 +8,17 @@ package com.maxmind.db;
  * @param <T> the type of value
  */
 public final class CacheKey<T> {
-    private final int offset;
+    private final long offset;
     private final Class<T> cls;
     private final java.lang.reflect.Type type;
 
-    CacheKey(int offset, Class<T> cls, java.lang.reflect.Type type) {
+    CacheKey(long offset, Class<T> cls, java.lang.reflect.Type type) {
         this.offset = offset;
         this.cls = cls;
         this.type = type;
     }
 
-    int getOffset() {
+    long getOffset() {
         return this.offset;
     }
 
@@ -58,7 +58,7 @@ public final class CacheKey<T> {
 
     @Override
     public int hashCode() {
-        int result = offset;
+        int result = Long.hashCode(offset);
         result = 31 * result + (cls == null ? 0 : cls.hashCode());
         result = 31 * result + (type == null ? 0 : type.hashCode());
         return result;
