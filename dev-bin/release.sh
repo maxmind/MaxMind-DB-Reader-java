@@ -97,11 +97,11 @@ fi
 
 
 # could be combined with the primary build
-mvn release:clean
-mvn release:prepare -DreleaseVersion="$version" -Dtag="$tag"
-mvn release:perform
+mvn -pl reader release:clean
+mvn -pl reader release:prepare -DreleaseVersion="$version" -Dtag="$tag"
+mvn -pl reader release:perform
 rm -fr ".gh-pages/doc/$tag"
-cp -r target/checkout/target/reports/apidocs ".gh-pages/doc/$tag"
+cp -r reader/target/checkout/target/reports/apidocs ".gh-pages/doc/$tag"
 rm .gh-pages/doc/latest
 ln -fs "$tag" .gh-pages/doc/latest
 

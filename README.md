@@ -188,6 +188,18 @@ Maven, you must
 Failure to do so will result in `InvalidDatabaseException` exceptions being
 thrown when querying the database.
 
+## Benchmarking ##
+
+Set an environment variable `GEO_LITE` with the path to `GeoLite2-City.mmdb`.
+
+```shell
+mvn -Dcheckstyle.skip -DskipTests clean package
+GEO_LITE=/.../GeoLite2-City.mmdb java -jar benchmarks/target/microbenchmarks.jar
+```
+
+For more, see [https://github.com/openjdk/jmh](https://github.com/openjdk/jmh) or
+`java -jar benchmarks/target/microbenchmarks.jar -h`.
+
 ## Format ##
 
 The MaxMind DB format is an open format for quickly mapping IP addresses to
