@@ -6,8 +6,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,8 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class Decoder {
 
-    private static final Charset UTF_8 = StandardCharsets.UTF_8;
-
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + (1 << 11), 0};
 
     // XXX - This is only for unit testings. We should possibly make a
@@ -33,8 +29,6 @@ final class Decoder {
     private final NodeCache cache;
 
     private final long pointerBase;
-
-    private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
 
     private final ByteReader buffer;
 
@@ -194,7 +188,7 @@ final class Decoder {
     }
 
     private String decodeString(int size) {
-        return new String(buffer.getBytes(size), UTF_8);
+        return new String(buffer.getBytes(size), StandardCharsets.UTF_8);
     }
 
     private int decodeUint16(int size) {
