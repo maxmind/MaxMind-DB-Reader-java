@@ -168,8 +168,11 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     }
 
     static class NetworkNode {
+        /** The IP address of the node. */
         public byte[] ip;
+        /** The prefix of the node. */
         public int prefix;
+        /** The node number. */
         public int pointer;
 
         /**
