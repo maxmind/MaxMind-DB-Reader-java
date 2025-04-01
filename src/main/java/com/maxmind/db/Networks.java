@@ -21,7 +21,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final boolean includeAliasedNetworks;
     private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
     private final Class<T> typeParameterClass;
-    
+
     /**
      * Constructs a Networks instance.
      *
@@ -30,7 +30,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
      * @param typeParameterClass The type of data returned by the iterator.
      * @throws ClosedDatabaseException Exception for a closed database.
      */
-    Networks(Reader reader, boolean includeAliasedNetworks, Class<T> typeParameterClass) 
+    Networks(Reader reader, boolean includeAliasedNetworks, Class<T> typeParameterClass)
         throws ClosedDatabaseException {
         this(reader, includeAliasedNetworks, new NetworkNode[]{}, typeParameterClass);
     }
@@ -117,7 +117,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         }
         return true;
     }
-    
+
     /**
     * hasNext prepares the next network for reading with the Network method. It
     * returns true if there is another network to be processed and false if there
@@ -168,8 +168,11 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     }
 
     static class NetworkNode {
+        /** The IP address of the node. */
         public byte[] ip;
+        /** The prefix of the node. */
         public int prefix;
+        /** The node number. */
         public int pointer;
 
         /**

@@ -205,7 +205,7 @@ public final class Reader implements Closeable {
      * @throws ClosedDatabaseException Exception for a closed databased.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
-    public <T> Networks<T> networks(Class<T> typeParameterClass) throws 
+    public <T> Networks<T> networks(Class<T> typeParameterClass) throws
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         return this.networks(false, typeParameterClass);
     }
