@@ -22,15 +22,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * This class CANNOT be shared between threads
  */
-final class Decoder {
+class Decoder {
 
     private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + (1 << 11), 0};
-
-    // XXX - This is only for unit testings. We should possibly make a
-    // constructor to set this
-    boolean pointerTestHack = false;
 
     private final NodeCache cache;
 
@@ -65,7 +61,7 @@ final class Decoder {
 
     private final NodeCache.Loader cacheLoader = this::decode;
 
-    public <T> T decode(int offset, Class<T> cls) throws IOException {
+    <T> T decode(int offset, Class<T> cls) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
@@ -104,19 +100,7 @@ final class Decoder {
             int packed = this.decodeInteger(base, pointerSize);
             long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
 
-            // for unit testing
-            if (this.pointerTestHack) {
-                return new DecodedValue(pointer);
-            }
-
-            int targetOffset = (int) pointer;
-            int position = buffer.position();
-
-            CacheKey key = new CacheKey(targetOffset, cls, genericType);
-            DecodedValue o = cache.get(key, cacheLoader);
-
-            buffer.position(position);
-            return o;
+            return decodePointer(pointer, cls, genericType);
         }
 
         if (type.equals(Type.EXTENDED)) {
@@ -150,6 +134,18 @@ final class Decoder {
 
         return new DecodedValue(this.decodeByType(type, size, cls, genericType));
     }
+
+    DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
+            throws IOException {
+        int targetOffset = (int) pointer;
+        int position = buffer.position();
+
+        CacheKey key = new CacheKey(targetOffset, cls, genericType);
+        DecodedValue o = cache.get(key, cacheLoader);
+
+        buffer.position(position);
+        return o;
+    } 
 
     private <T> Object decodeByType(
         Type type,

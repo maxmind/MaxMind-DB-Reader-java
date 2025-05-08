@@ -429,8 +429,7 @@ public class DecoderTest {
             try (FileChannel fc = DecoderTest.getFileChannel(input)) {
                 MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
 
-                Decoder decoder = new Decoder(cache, mmap, 0);
-                decoder.pointerTestHack = true;
+                Decoder decoder = new TestDecoder(cache, mmap, 0);
 
                 // XXX - this could be streamlined
                 if (type.equals(Type.BYTES)) {
