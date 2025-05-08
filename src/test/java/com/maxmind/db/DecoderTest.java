@@ -6,20 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"boxing", "static-method"})
@@ -404,21 +398,19 @@ public class DecoderTest {
     }
 
     @Test
-    public void testInvalidControlByte() throws IOException {
-        try (FileChannel fc = DecoderTest.getFileChannel(new byte[] {0x0, 0xF})) {
-            MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
+    public void testInvalidControlByte() {
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[] {0x0, 0xF});
 
-            Decoder decoder = new Decoder(new CHMCache(), mmap, 0);
-            InvalidDatabaseException ex = assertThrows(
+        Decoder decoder = new Decoder(new CHMCache(), buffer, 0);
+        InvalidDatabaseException ex = assertThrows(
                 InvalidDatabaseException.class,
                 () -> decoder.decode(0, String.class));
-            assertThat(ex.getMessage(),
+        assertThat(ex.getMessage(),
                 containsString("The MaxMind DB file's data section contains bad data"));
-        }
     }
 
     private static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
-        throws IOException {
+            throws IOException {
         NodeCache cache = new CHMCache();
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
@@ -426,81 +418,62 @@ public class DecoderTest {
             byte[] input = entry.getValue();
 
             String desc = "decoded " + type.name() + " - " + expect;
-            try (FileChannel fc = DecoderTest.getFileChannel(input)) {
-                MappedByteBuffer mmap = fc.map(MapMode.READ_ONLY, 0, fc.size());
+            ByteBuffer buffer = ByteBuffer.wrap(input);
 
-                Decoder decoder = new TestDecoder(cache, mmap, 0);
+            Decoder decoder = new TestDecoder(cache, buffer, 0);
 
-                switch (type) {
-                    case BYTES:
-                        assertArrayEquals((byte[]) expect, decoder.decode(0, byte[].class), desc);
-                        break;
-                    case ARRAY:
-                        assertEquals(expect, decoder.decode(0, List.class), desc);
-                        break;
-                    case UINT16:
-                    case INT32:
-                        assertEquals(expect, decoder.decode(0, Integer.class), desc);
-                        break;
-                    case UINT32:
-                    case POINTER:
-                        assertEquals(expect, decoder.decode(0, Long.class), desc);
-                        break;
-                    case UINT64:
-                    case UINT128:
-                        assertEquals(expect, decoder.decode(0, BigInteger.class), desc);
-                        break;
-                    case DOUBLE:
-                        assertEquals(expect, decoder.decode(0, Double.class), desc);
-                        break;
-                    case FLOAT:
-                        assertEquals(expect, decoder.decode(0, Float.class), desc);
-                        break;
-                    case UTF8_STRING:
-                        assertEquals(expect, decoder.decode(0, String.class), desc);
-                        break;
-                    case BOOLEAN:
-                        assertEquals(expect, decoder.decode(0, Boolean.class), desc);
-                        break;
-                    default: {
-                        // We hit this for Type.MAP.
+            switch (type) {
+                case BYTES:
+                    assertArrayEquals((byte[]) expect, decoder.decode(0, byte[].class), desc);
+                    break;
+                case ARRAY:
+                    assertEquals(expect, decoder.decode(0, List.class), desc);
+                    break;
+                case UINT16:
+                case INT32:
+                    assertEquals(expect, decoder.decode(0, Integer.class), desc);
+                    break;
+                case UINT32:
+                case POINTER:
+                    assertEquals(expect, decoder.decode(0, Long.class), desc);
+                    break;
+                case UINT64:
+                case UINT128:
+                    assertEquals(expect, decoder.decode(0, BigInteger.class), desc);
+                    break;
+                case DOUBLE:
+                    assertEquals(expect, decoder.decode(0, Double.class), desc);
+                    break;
+                case FLOAT:
+                    assertEquals(expect, decoder.decode(0, Float.class), desc);
+                    break;
+                case UTF8_STRING:
+                    assertEquals(expect, decoder.decode(0, String.class), desc);
+                    break;
+                case BOOLEAN:
+                    assertEquals(expect, decoder.decode(0, Boolean.class), desc);
+                    break;
+                default: {
+                    // We hit this for Type.MAP.
 
-                        Map<?, ?> got = decoder.decode(0, Map.class);
-                        Map<?, ?> expectMap = (Map<?, ?>) expect;
+                    Map<?, ?> got = decoder.decode(0, Map.class);
+                    Map<?, ?> expectMap = (Map<?, ?>) expect;
 
-                        assertEquals(expectMap.size(), got.size(), desc);
+                    assertEquals(expectMap.size(), got.size(), desc);
 
-                        for (Object keyObject : expectMap.keySet()) {
-                            String key = (String) keyObject;
-                            Object value = expectMap.get(key);
+                    for (Object keyObject : expectMap.keySet()) {
+                        String key = (String) keyObject;
+                        Object value = expectMap.get(key);
 
-                            if (value instanceof Object[]) {
-                                assertArrayEquals((Object[]) value, (Object[]) got.get(key), desc);
-                            } else {
-                                assertEquals(value, got.get(key), desc);
-                            }
+                        if (value instanceof Object[]) {
+                            assertArrayEquals((Object[]) value, (Object[]) got.get(key), desc);
+                        } else {
+                            assertEquals(value, got.get(key), desc);
                         }
                     }
                 }
             }
         }
-    }
-
-    /*
-     * I really didn't want to create temporary files for these tests, but it is
-     * pretty hard to abstract away from the file io system in a way that is
-     * Java 6 compatible
-     */
-    private static FileChannel getFileChannel(byte[] data) throws IOException {
-        File file = File.createTempFile(UUID.randomUUID().toString(), "tmp");
-        file.deleteOnExit();
-        RandomAccessFile raf = new RandomAccessFile(file, "rw");
-        FileChannel fc = raf.getChannel();
-        fc.write(ByteBuffer.wrap(data));
-        raf.close();
-        fc.close();
-        raf = new RandomAccessFile(file, "r");
-        return raf.getChannel();
     }
 
 }
