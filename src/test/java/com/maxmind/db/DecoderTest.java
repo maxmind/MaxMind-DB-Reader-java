@@ -257,10 +257,10 @@ public class DecoderTest {
         return booleans;
     }
 
-    private static Map<Map, byte[]> maps() {
-        Map<Map, byte[]> maps = new HashMap<>();
+    private static Map<Map<String, ?>, byte[]> maps() {
+        Map<Map<String, ?>, byte[]> maps = new HashMap<>();
 
-        Map empty = new HashMap();
+        Map<String, Object> empty = Map.of();
         maps.put(empty, new byte[] {(byte) 0xe0});
 
         Map<String, String> one = new HashMap<>();
