@@ -432,44 +432,54 @@ public class DecoderTest {
                 Decoder decoder = new Decoder(cache, mmap, 0);
                 decoder.pointerTestHack = true;
 
-                // XXX - this could be streamlined
-                if (type.equals(Type.BYTES)) {
-                    assertArrayEquals((byte[]) expect, decoder.decode(0, byte[].class), desc);
-                } else if (type.equals(Type.ARRAY)) {
-                    assertEquals(expect, decoder.decode(0, List.class), desc);
-                } else if (type.equals(Type.UINT16)
-                    || type.equals(Type.INT32)) {
-                    assertEquals(expect, decoder.decode(0, Integer.class), desc);
-                } else if (type.equals(Type.UINT32)
-                    || type.equals(Type.POINTER)) {
-                    assertEquals(expect, decoder.decode(0, Long.class), desc);
-                } else if (type.equals(Type.UINT64)
-                    || type.equals(Type.UINT128)) {
-                    assertEquals(expect, decoder.decode(0, BigInteger.class), desc);
-                } else if (type.equals(Type.DOUBLE)) {
-                    assertEquals(expect, decoder.decode(0, Double.class), desc);
-                } else if (type.equals(Type.FLOAT)) {
-                    assertEquals(expect, decoder.decode(0, Float.class), desc);
-                } else if (type.equals(Type.UTF8_STRING)) {
-                    assertEquals(expect, decoder.decode(0, String.class), desc);
-                } else if (type.equals(Type.BOOLEAN)) {
-                    assertEquals(expect, decoder.decode(0, Boolean.class), desc);
-                } else {
-                    // We hit this for Type.MAP.
+                switch (type) {
+                    case BYTES:
+                        assertArrayEquals((byte[]) expect, decoder.decode(0, byte[].class), desc);
+                        break;
+                    case ARRAY:
+                        assertEquals(expect, decoder.decode(0, List.class), desc);
+                        break;
+                    case UINT16:
+                    case INT32:
+                        assertEquals(expect, decoder.decode(0, Integer.class), desc);
+                        break;
+                    case UINT32:
+                    case POINTER:
+                        assertEquals(expect, decoder.decode(0, Long.class), desc);
+                        break;
+                    case UINT64:
+                    case UINT128:
+                        assertEquals(expect, decoder.decode(0, BigInteger.class), desc);
+                        break;
+                    case DOUBLE:
+                        assertEquals(expect, decoder.decode(0, Double.class), desc);
+                        break;
+                    case FLOAT:
+                        assertEquals(expect, decoder.decode(0, Float.class), desc);
+                        break;
+                    case UTF8_STRING:
+                        assertEquals(expect, decoder.decode(0, String.class), desc);
+                        break;
+                    case BOOLEAN:
+                        assertEquals(expect, decoder.decode(0, Boolean.class), desc);
+                        break;
+                    default: {
+                        // We hit this for Type.MAP.
 
-                    Map got = decoder.decode(0, Map.class);
-                    Map expectMap = (Map) expect;
+                        Map<?, ?> got = decoder.decode(0, Map.class);
+                        Map<?, ?> expectMap = (Map<?, ?>) expect;
 
-                    assertEquals(expectMap.size(), got.size(), desc);
+                        assertEquals(expectMap.size(), got.size(), desc);
 
-                    for (Object keyObject : expectMap.keySet()) {
-                        String key = (String) keyObject;
-                        Object value = expectMap.get(key);
+                        for (Object keyObject : expectMap.keySet()) {
+                            String key = (String) keyObject;
+                            Object value = expectMap.get(key);
 
-                        if (value instanceof Object[]) {
-                            assertArrayEquals((Object[]) value, (Object[]) got.get(key), desc);
-                        } else {
-                            assertEquals(value, got.get(key), desc);
+                            if (value instanceof Object[]) {
+                                assertArrayEquals((Object[]) value, (Object[]) got.get(key), desc);
+                            } else {
+                                assertEquals(value, got.get(key), desc);
+                            }
                         }
                     }
                 }
