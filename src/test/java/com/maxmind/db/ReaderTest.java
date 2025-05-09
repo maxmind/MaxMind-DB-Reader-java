@@ -85,13 +85,13 @@ public class ReaderTest {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
 
                 Reader reader = new Reader(file);
-                Networks networks = reader.networks(false, Map.class);
+                var networks = reader.networks(false, Map.class);
 
                 while(networks.hasNext()) {
-                    DatabaseRecord<Map<String, String>> iteration = networks.next();
-                    Map<String, String> data = iteration.getData();
+                    var iteration = networks.next();
+                    var data = (Map<?, ?>) iteration.getData();
 
-                    InetAddress actualIPInData = InetAddress.getByName(data.get("ip"));
+                    InetAddress actualIPInData = InetAddress.getByName((String) data.get("ip"));
 
                     assertEquals(
                         iteration.getNetwork().getNetworkAddress(), 
@@ -110,11 +110,11 @@ public class ReaderTest {
         File file = getFile("MaxMind-DB-test-broken-search-tree-24.mmdb");
         Reader reader = new Reader(file);
 
-        Networks networks = reader.networks(false, Map.class);
+        var networks = reader.networks(false, Map.class);
 
         Exception exception = assertThrows(RuntimeException.class, () -> {
             while(networks.hasNext()){
-                DatabaseRecord iteration = networks.next();
+                assertNotNull(networks.next());
             }
         });
 
@@ -339,11 +339,11 @@ public class ReaderTest {
                 Network network = new Network(address, test.prefix);
 
                 boolean includeAliasedNetworks = !test.skipAliasedNetworks;
-                Networks networks = reader.networksWithin(network, includeAliasedNetworks, Map.class);
+                var networks = reader.networksWithin(network, includeAliasedNetworks, Map.class);
 
-                ArrayList<String> innerIPs  = new ArrayList<>();
+                List<String> innerIPs  = new ArrayList<>();
                 while(networks.hasNext()){
-                    DatabaseRecord<Map<String,String>> iteration = networks.next();
+                    var iteration = networks.next();
                     innerIPs.add(iteration.getNetwork().toString());
                 }
 
@@ -376,11 +376,11 @@ public class ReaderTest {
             InetAddress address = InetAddress.getByName(test.network);
             Network network = new Network(address, test.prefix);
 
-            Networks networks = reader.networksWithin(network, test.skipAliasedNetworks, Map.class);
+            var networks = reader.networksWithin(network, test.skipAliasedNetworks, Map.class);
 
             ArrayList<String> innerIPs = new ArrayList<>();
             while(networks.hasNext()){
-                DatabaseRecord<Map<String,String>> iteration = networks.next();
+                var iteration = networks.next();
                 innerIPs.add(iteration.getNetwork().toString());
             }
 
@@ -408,7 +408,7 @@ public class ReaderTest {
         };
         for (GetRecordTest test : mapTests) {
             try (Reader reader = new Reader(test.db)) {
-                DatabaseRecord record = reader.getRecord(test.ip, Map.class);
+                DatabaseRecord<?> record = reader.getRecord(test.ip, Map.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
 
@@ -432,7 +432,7 @@ public class ReaderTest {
         };
         for (GetRecordTest test : stringTests) {
             try (Reader reader = new Reader(test.db)) {
-                DatabaseRecord record = reader.getRecord(test.ip, String.class);
+                var record = reader.getRecord(test.ip, String.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
 
@@ -497,7 +497,7 @@ public class ReaderTest {
     }
 
     private void testDecodingTypes(Reader reader, boolean booleanValue) throws IOException {
-        Map record = reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
+        var record = reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
 
         if (booleanValue) {
             assertTrue((boolean) record.get("boolean"));
@@ -510,21 +510,19 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", record.get("utf8_string"));
 
-        @SuppressWarnings("unchecked")
-        List<Object> array = (List<Object>) record.get("array");
+        var array = (List<?>) record.get("array");
         assertEquals(3, array.size());
         assertEquals(1, (long) array.get(0));
         assertEquals(2, (long) array.get(1));
         assertEquals(3, (long) array.get(2));
 
-        Map map = (Map) record.get("map");
+        var map = (Map<?, ?>) record.get("map");
         assertEquals(1, map.size());
 
-        Map mapX = (Map) map.get("mapX");
+        var mapX = (Map<?, ?>) map.get("mapX");
         assertEquals(2, mapX.size());
 
-        @SuppressWarnings("unchecked")
-        List<Object> arrayX = (List<Object>) mapX.get("arrayX");
+        var arrayX = (List<?>) mapX.get("arrayX");
         assertEquals(3, arrayX.size());
         assertEquals(7, (long) arrayX.get(0));
         assertEquals(8, (long) arrayX.get(1));
@@ -816,7 +814,7 @@ public class ReaderTest {
     }
 
     private void testZeros(Reader reader) throws IOException {
-        Map record = reader.get(InetAddress.getByName("::"), Map.class);
+        var record = reader.get(InetAddress.getByName("::"), Map.class);
 
         assertFalse((boolean) record.get("boolean"));
 
@@ -824,11 +822,10 @@ public class ReaderTest {
 
         assertEquals("", record.get("utf8_string"));
 
-        @SuppressWarnings("unchecked")
-        List<Object> array = (List<Object>) record.get("array");
+        var array = (List<?>) record.get("array");
         assertEquals(0, array.size());
 
-        Map map = (Map) record.get("map");
+        var map = (Map<?, ?>) record.get("map");
         assertEquals(0, map.size());
 
         assertEquals(0, (double) record.get("double"), 0.000000001);
@@ -1009,16 +1006,14 @@ public class ReaderTest {
     public void testDecodeConcurrentHashMap() throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
 
-        @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, Object> m = this.testReader.get(
+        var m = this.testReader.get(
             InetAddress.getByName("2.125.160.216"),
             ConcurrentHashMap.class
         );
 
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> subdivisions = (List) m.get("subdivisions");
+        var subdivisions = (List<?>) m.get("subdivisions");
 
-        Map<String, Object> eng = subdivisions.get(0);
+        var eng = (Map<?, ?>) subdivisions.get(0);
 
         String isoCode = (String) eng.get("iso_code");
         assertEquals("ENG", isoCode);
@@ -1100,17 +1095,17 @@ public class ReaderTest {
     public void testCacheKey() {
         Class<TestModelCacheKey> cls = TestModelCacheKey.class;
 
-        CacheKey a = new CacheKey(1, cls, getType(cls, 0));
-        CacheKey b = new CacheKey(1, cls, getType(cls, 0));
+        CacheKey<TestModelCacheKey> a = new CacheKey<>(1, cls, getType(cls, 0));
+        CacheKey<TestModelCacheKey> b = new CacheKey<>(1, cls, getType(cls, 0));
         assertEquals(a, b);
 
-        CacheKey c = new CacheKey(2, cls, getType(cls, 0));
+        CacheKey<TestModelCacheKey> c = new CacheKey<>(2, cls, getType(cls, 0));
         assertNotEquals(a, c);
 
-        CacheKey d = new CacheKey(1, String.class, getType(cls, 0));
+        CacheKey<String> d = new CacheKey<>(1, String.class, getType(cls, 0));
         assertNotEquals(a, d);
 
-        CacheKey e = new CacheKey(1, cls, getType(cls, 1));
+        CacheKey<TestModelCacheKey> e = new CacheKey<>(1, cls, getType(cls, 1));
         assertNotEquals(a, e);
     }
 
