@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -52,10 +51,10 @@ public class MultiThreadedTest {
     private static void runThreads(Callable<Map<?, ?>> task)
         throws InterruptedException, ExecutionException {
         int threadCount = 256;
-        List<Callable<Map<?, ?>>> tasks = Collections.nCopies(threadCount, task);
+        var tasks = Collections.nCopies(threadCount, task);
         ExecutorService executorService = Executors
             .newFixedThreadPool(threadCount);
-        List<Future<Map<?, ?>>> futures = executorService.invokeAll(tasks);
+        var futures = executorService.invokeAll(tasks);
 
         for (Future<Map<?, ?>> future : futures) {
             Map<?, ?> record = future.get();
