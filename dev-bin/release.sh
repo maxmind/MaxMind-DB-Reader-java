@@ -97,11 +97,10 @@ fi
 git add README.md pom.xml
 git commit -m "Preparing for $version"
 
-
 mvn clean deploy
 
 rm -fr ".gh-pages/doc/$tag"
-cp -r target/checkout/target/reports/apidocs ".gh-pages/doc/$tag"
+cp -r target/reports/apidocs ".gh-pages/doc/$tag"
 rm .gh-pages/doc/latest
 ln -fs "$tag" .gh-pages/doc/latest
 
