@@ -60,6 +60,15 @@ if [ "$should_continue" != "y" ]; then
     exit 1
 fi
 
+mvn test
+
+read -r -n 1 -p "Continue given above tests? (y/n) " should_continue
+
+if [ "$should_continue" != "y" ]; then
+    echo "Aborting"
+    exit 1
+fi
+
 page=.gh-pages/index.md
 cat <<EOF > $page
 ---
@@ -71,35 +80,26 @@ version: $tag
 
 EOF
 
-read -r -n 1 -p "Continue given above dependencies? (y/n) " should_continue
-
-if [ "$should_continue" != "y" ]; then
-    echo "Aborting"
-    exit 1
-fi
+mvn versions:set -DnewVersion="$version"
 
 perl -pi -e "s/(?<=<version>)[^<]*/$version/" README.md
 perl -pi -e "s/(?<=com\.maxmind\.db\:maxmind-db\:)\d+\.\d+\.\d+([\w\-]+)?/$version/" README.md
 
 cat README.md >> $page
 
-if [ -n "$(git status --porcelain)" ]; then
-    git diff
+git diff
 
-    read -r -n 1 -p "Commit README.md changes? " should_commit
-    if [ "$should_commit" != "y" ]; then
-        echo "Aborting"
-        exit 1
-    fi
-    git add README.md
-    git commit -m 'update version number in README.md'
+read -r -n 1 -p "Commit changes? " should_commit
+if [ "$should_commit" != "y" ]; then
+    echo "Aborting"
+    exit 1
 fi
+git add README.md pom.xml
+git commit -m "Preparing for $version"
 
 
-# could be combined with the primary build
-mvn release:clean
-mvn release:prepare -DreleaseVersion="$version" -Dtag="$tag"
-mvn release:perform
+mvn clean deploy
+
 rm -fr ".gh-pages/doc/$tag"
 cp -r target/checkout/target/reports/apidocs ".gh-pages/doc/$tag"
 rm .gh-pages/doc/latest
@@ -127,6 +127,5 @@ git push
 popd
 
 git push
-git push --tags
 
 gh release create --target "$(git branch --show-current)" -t "$version" -n "$notes" "$tag"

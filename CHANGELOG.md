@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+3.2.0 (2025-05-28)
+------------------
+
+* First release using Central Portal instead of Legacy OSSRH.
+
 3.1.1 (2024-09-19)
 ------------------
 
