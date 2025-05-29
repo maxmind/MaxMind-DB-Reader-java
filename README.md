@@ -16,7 +16,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>3.1.1</version>
+        <version>3.2.0</version>
     </dependency>
 ```
 
@@ -29,7 +29,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:3.1.1'
+    compile 'com.maxmind.db:maxmind-db:3.2.0'
 }
 ```
 
@@ -220,6 +220,6 @@ The MaxMind DB Reader API uses [Semantic Versioning](https://semver.org/).
 
 ## Copyright and License ##
 
-This software is Copyright (c) 2014-2022 by MaxMind, Inc.
+This software is Copyright (c) 2014-2025 by MaxMind, Inc.
 
 This is free software, licensed under the Apache License, Version 2.0.
