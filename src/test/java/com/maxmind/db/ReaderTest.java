@@ -172,7 +172,7 @@ public class ReaderTest {
             }
         ),
         new networkTest(
-            "255.255.255.0", 
+            "255.255.255.0",
             24,
             "ipv4",
             new String[]{}
@@ -238,7 +238,7 @@ public class ReaderTest {
                 "1.1.1.4/30",
                 "1.1.1.8/29",
                 "1.1.1.16/28",
-                "1.1.1.32/32",  
+                "1.1.1.32/32",
             }
         ),
         new networkTest(
@@ -251,7 +251,7 @@ public class ReaderTest {
                 "1.1.1.4/30",
                 "1.1.1.8/29",
                 "1.1.1.16/28",
-                "1.1.1.32/32",  
+                "1.1.1.32/32",
             },
             true
         ),

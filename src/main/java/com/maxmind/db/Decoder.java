@@ -140,7 +140,7 @@ class Decoder {
 
         buffer.position(position);
         return o;
-    } 
+    }
 
     private <T> Object decodeByType(
         Type type,

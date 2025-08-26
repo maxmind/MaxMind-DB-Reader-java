@@ -120,8 +120,8 @@ public class Lookup {
 }
 ```
 
-You can also use the reader object to iterate over the database. 
-The `reader.networks()` and `reader.networksWithin()` methods can 
+You can also use the reader object to iterate over the database.
+The `reader.networks()` and `reader.networksWithin()` methods can
 be used for this purpose.
 
 ```java

@@ -23,7 +23,7 @@ public interface NodeCache {
 
     /**
      * This method returns the value for the key. If the key is not in the cache
-     * then the loader is called to load the value. 
+     * then the loader is called to load the value.
      *
      * @param key
      *            the key to look up
