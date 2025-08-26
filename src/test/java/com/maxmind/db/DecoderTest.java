@@ -465,8 +465,8 @@ public class DecoderTest {
                         String key = (String) keyObject;
                         Object value = expectMap.get(key);
 
-                        if (value instanceof Object[]) {
-                            assertArrayEquals((Object[]) value, (Object[]) got.get(key), desc);
+                        if (value instanceof Object[] arrayValue) {
+                            assertArrayEquals(arrayValue, (Object[]) got.get(key), desc);
                         } else {
                             assertEquals(value, got.get(key), desc);
                         }

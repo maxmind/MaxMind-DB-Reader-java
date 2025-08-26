@@ -158,8 +158,7 @@ class Decoder {
                 return this.decodeMap(size, cls, genericType);
             case ARRAY:
                 Class<?> elementClass = Object.class;
-                if (genericType instanceof ParameterizedType) {
-                    ParameterizedType ptype = (ParameterizedType) genericType;
+                if (genericType instanceof ParameterizedType ptype) {
                     java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                     if (actualTypes.length == 1) {
                         elementClass = (Class<?>) actualTypes[0];
@@ -319,8 +318,7 @@ class Decoder {
     ) throws IOException {
         if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
             Class<?> valueClass = Object.class;
-            if (genericType instanceof ParameterizedType) {
-                ParameterizedType ptype = (ParameterizedType) genericType;
+            if (genericType instanceof ParameterizedType ptype) {
                 java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                 if (actualTypes.length == 2) {
                     Class<?> keyClass = (Class<?>) actualTypes[0];
