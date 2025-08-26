@@ -410,10 +410,10 @@ class Decoder {
                 )
             );
         } else {
-            constructor = cachedConstructor.getConstructor();
-            parameterTypes = cachedConstructor.getParameterTypes();
-            parameterGenericTypes = cachedConstructor.getParameterGenericTypes();
-            parameterIndexes = cachedConstructor.getParameterIndexes();
+            constructor = cachedConstructor.constructor();
+            parameterTypes = cachedConstructor.parameterTypes();
+            parameterGenericTypes = cachedConstructor.parameterGenericTypes();
+            parameterIndexes = cachedConstructor.parameterIndexes();
         }
 
         Object[] parameters = new Object[parameterTypes.length];
