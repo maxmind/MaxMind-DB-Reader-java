@@ -207,7 +207,7 @@ specific to this reader, please [contact MaxMind support](https://www.maxmind.co
 
 ## Requirements  ##
 
-This API requires Java 11 or greater.
+This API requires Java 17 or greater.
 
 ## Contributing ##
 
