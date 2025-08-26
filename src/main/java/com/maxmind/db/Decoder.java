@@ -120,16 +120,11 @@ class Decoder {
 
         int size = ctrlByte & 0x1f;
         if (size >= 29) {
-            switch (size) {
-                case 29:
-                    size = 29 + (0xFF & buffer.get());
-                    break;
-                case 30:
-                    size = 285 + decodeInteger(2);
-                    break;
-                default:
-                    size = 65821 + decodeInteger(3);
-            }
+            size = switch (size) {
+                case 29 -> 29 + (0xFF & buffer.get());
+                case 30 -> 285 + decodeInteger(2);
+                default -> 65821 + decodeInteger(3);
+            };
         }
 
         return new DecodedValue(this.decodeByType(type, size, cls, genericType));
@@ -259,16 +254,13 @@ class Decoder {
 
     private static boolean decodeBoolean(int size)
         throws InvalidDatabaseException {
-        switch (size) {
-            case 0:
-                return false;
-            case 1:
-                return true;
-            default:
-                throw new InvalidDatabaseException(
-                    "The MaxMind DB file's data section contains bad data: "
-                        + "invalid size of boolean.");
-        }
+        return switch (size) {
+            case 0 -> false;
+            case 1 -> true;
+            default -> throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "invalid size of boolean.");
+        };
     }
 
     private <T, V> List<V> decodeArray(
@@ -553,16 +545,11 @@ class Decoder {
         if (size >= 29) {
             int bytesToRead = size - 28;
             offset += bytesToRead;
-            switch (size) {
-                case 29:
-                    size = 29 + (0xFF & buffer.get());
-                    break;
-                case 30:
-                    size = 285 + decodeInteger(2);
-                    break;
-                default:
-                    size = 65821 + decodeInteger(3);
-            }
+            size = switch (size) {
+                case 29 -> 29 + (0xFF & buffer.get());
+                case 30 -> 285 + decodeInteger(2);
+                default -> 65821 + decodeInteger(3);
+            };
         }
 
         return new CtrlData(type, ctrlByte, offset, size);
