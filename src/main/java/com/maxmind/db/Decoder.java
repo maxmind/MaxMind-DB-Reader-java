@@ -73,7 +73,7 @@ class Decoder {
     }
 
     private <T> DecodedValue decode(CacheKey<T> key) throws IOException {
-        int offset = key.getOffset();
+        int offset = key.offset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
@@ -81,8 +81,8 @@ class Decoder {
         }
 
         this.buffer.position(offset);
-        Class<T> cls = key.getCls();
-        return decode(cls, key.getType());
+        Class<T> cls = key.cls();
+        return decode(cls, key.type());
     }
 
     private <T> DecodedValue decode(Class<T> cls, java.lang.reflect.Type genericType)
