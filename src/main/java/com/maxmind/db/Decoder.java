@@ -495,11 +495,11 @@ class Decoder {
         }
 
         CtrlData ctrlData = this.getCtrlData(offset);
-        int ctrlByte = ctrlData.getCtrlByte();
-        int size = ctrlData.getSize();
-        offset = ctrlData.getOffset();
+        int ctrlByte = ctrlData.ctrlByte();
+        int size = ctrlData.size();
+        offset = ctrlData.offset();
 
-        Type type = ctrlData.getType();
+        Type type = ctrlData.type();
         switch (type) {
             case POINTER:
                 int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
