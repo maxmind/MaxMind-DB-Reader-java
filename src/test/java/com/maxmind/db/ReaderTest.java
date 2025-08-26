@@ -555,12 +555,12 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
-        List<Long> expectedArray = new ArrayList<>(Arrays.asList(
+        List<Long> expectedArray = new ArrayList<>(List.of(
             (long) 1, (long) 2, (long) 3
         ));
         assertEquals(expectedArray, model.arrayField);
 
-        List<Long> expectedArray2 = new ArrayList<>(Arrays.asList(
+        List<Long> expectedArray2 = new ArrayList<>(List.of(
             (long) 7, (long) 8, (long) 9
         ));
         assertEquals(expectedArray2, model.mapField.mapXField.arrayXField);
@@ -675,12 +675,12 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
-        List<Long> expectedArray = new ArrayList<>(Arrays.asList(
+        List<Long> expectedArray = new ArrayList<>(List.of(
             (long) 1, (long) 2, (long) 3
         ));
         assertEquals(expectedArray, model.arrayField);
 
-        List<Long> expectedArray2 = new ArrayList<>(Arrays.asList(
+        List<Long> expectedArray2 = new ArrayList<>(List.of(
             (long) 7, (long) 8, (long) 9
         ));
         assertEquals(expectedArray2, model.mapField.mapXField.arrayXField);
@@ -785,7 +785,7 @@ public class ReaderTest {
         throws IOException {
         TestModelList model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelList.class);
 
-        assertEquals(Arrays.asList((long) 1, (long) 2, (long) 3), model.arrayField);
+        assertEquals(List.of((long) 1, (long) 2, (long) 3), model.arrayField);
     }
 
     static class TestModelList {
@@ -1235,7 +1235,7 @@ public class ReaderTest {
         assertEquals(ipVersion, metadata.getIpVersion());
         assertEquals("Test", metadata.getDatabaseType());
 
-        List<String> languages = new ArrayList<>(Arrays.asList("en", "zh"));
+        List<String> languages = new ArrayList<>(List.of("en", "zh"));
 
         assertEquals(languages, metadata.getLanguages());
 
