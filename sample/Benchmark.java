@@ -45,7 +45,7 @@ public class Benchmark {
         for (int i = 0; i < count; i++) {
             random.nextBytes(address);
             InetAddress ip = InetAddress.getByAddress(address);
-            Map t = r.get(ip, Map.class);
+            Map<String, Object> t = r.get(ip, Map.class);
             if (TRACE) {
                 if (i % 50000 == 0) {
                     System.out.println(i + " " + ip);

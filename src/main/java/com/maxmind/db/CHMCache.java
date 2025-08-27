@@ -13,7 +13,7 @@ public class CHMCache implements NodeCache {
     private static final int DEFAULT_CAPACITY = 4096;
 
     private final int capacity;
-    private final ConcurrentHashMap<CacheKey, DecodedValue> cache;
+    private final ConcurrentHashMap<CacheKey<?>, DecodedValue> cache;
     private boolean cacheFull = false;
 
     /**
@@ -36,7 +36,7 @@ public class CHMCache implements NodeCache {
     }
 
     @Override
-    public DecodedValue get(CacheKey key, Loader loader) throws IOException {
+    public DecodedValue get(CacheKey<?> key, Loader loader) throws IOException {
         DecodedValue value = cache.get(key);
         if (value == null) {
             value = loader.load(key);

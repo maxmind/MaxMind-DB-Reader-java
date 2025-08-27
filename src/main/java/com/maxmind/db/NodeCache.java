@@ -18,7 +18,7 @@ public interface NodeCache {
          * @throws IOException
          *             if there is an error loading the value
          */
-        DecodedValue load(CacheKey key) throws IOException;
+        DecodedValue load(CacheKey<?> key) throws IOException;
     }
 
     /**
@@ -33,6 +33,6 @@ public interface NodeCache {
      * @throws IOException
      *             if there is an error loading the value
      */
-    DecodedValue get(CacheKey key, Loader loader) throws IOException;
+    DecodedValue get(CacheKey<?> key, Loader loader) throws IOException;
 
 }

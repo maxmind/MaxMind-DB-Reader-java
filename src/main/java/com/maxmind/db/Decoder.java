@@ -36,7 +36,7 @@ class Decoder {
 
     private final ByteBuffer buffer;
 
-    private final ConcurrentHashMap<Class, CachedConstructor> constructors;
+    private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
 
     Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
         this(
@@ -51,7 +51,7 @@ class Decoder {
         NodeCache cache,
         ByteBuffer buffer,
         long pointerBase,
-        ConcurrentHashMap<Class, CachedConstructor> constructors
+        ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors
     ) {
         this.cache = cache;
         this.pointerBase = pointerBase;
@@ -135,7 +135,7 @@ class Decoder {
         int targetOffset = (int) pointer;
         int position = buffer.position();
 
-        CacheKey key = new CacheKey(targetOffset, cls, genericType);
+        CacheKey<?> key = new CacheKey<>(targetOffset, cls, genericType);
         DecodedValue o = cache.get(key, cacheLoader);
 
         buffer.position(position);
@@ -371,7 +371,7 @@ class Decoder {
 
     private <T> Object decodeMapIntoObject(int size, Class<T> cls)
         throws IOException {
-        CachedConstructor<T> cachedConstructor = this.constructors.get(cls);
+        CachedConstructor<T> cachedConstructor = getCachedConstructor(cls);
         Constructor<T> constructor;
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
@@ -392,7 +392,7 @@ class Decoder {
 
             this.constructors.put(
                 cls,
-                new CachedConstructor(
+                new CachedConstructor<>(
                     constructor,
                     parameterTypes,
                     parameterGenericTypes,
@@ -443,6 +443,13 @@ class Decoder {
             throw new DeserializationException(
                 "Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors, e);
         }
+    }
+
+    private <T> CachedConstructor<T> getCachedConstructor(Class<T> cls) {
+        // This cast is safe because we only put CachedConstructor<T> for Class<T> as the key
+        @SuppressWarnings("unchecked")
+        CachedConstructor<T> result = (CachedConstructor<T>) this.constructors.get(cls);
+        return result;
     }
 
     private static <T> Constructor<T> findConstructor(Class<T> cls)
