@@ -26,7 +26,7 @@ public final class Reader implements Closeable {
     private final Metadata metadata;
     private final AtomicReference<BufferHolder> bufferHolderReference;
     private final NodeCache cache;
-    private final ConcurrentHashMap<Class, CachedConstructor> constructors;
+    private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
 
     /**
      * The file mode to use when opening a MaxMind DB.

@@ -36,7 +36,7 @@ class Decoder {
 
     private final ByteBuffer buffer;
 
-    private final ConcurrentHashMap<Class, CachedConstructor> constructors;
+    private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
 
     Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
         this(
@@ -51,7 +51,7 @@ class Decoder {
         NodeCache cache,
         ByteBuffer buffer,
         long pointerBase,
-        ConcurrentHashMap<Class, CachedConstructor> constructors
+        ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors
     ) {
         this.cache = cache;
         this.pointerBase = pointerBase;
@@ -73,7 +73,7 @@ class Decoder {
     }
 
     private <T> DecodedValue decode(CacheKey<T> key) throws IOException {
-        int offset = key.getOffset();
+        int offset = key.offset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
@@ -81,8 +81,8 @@ class Decoder {
         }
 
         this.buffer.position(offset);
-        Class<T> cls = key.getCls();
-        return decode(cls, key.getType());
+        Class<T> cls = key.cls();
+        return decode(cls, key.type());
     }
 
     private <T> DecodedValue decode(Class<T> cls, java.lang.reflect.Type genericType)
@@ -120,16 +120,11 @@ class Decoder {
 
         int size = ctrlByte & 0x1f;
         if (size >= 29) {
-            switch (size) {
-                case 29:
-                    size = 29 + (0xFF & buffer.get());
-                    break;
-                case 30:
-                    size = 285 + decodeInteger(2);
-                    break;
-                default:
-                    size = 65821 + decodeInteger(3);
-            }
+            size = switch (size) {
+                case 29 -> 29 + (0xFF & buffer.get());
+                case 30 -> 285 + decodeInteger(2);
+                default -> 65821 + decodeInteger(3);
+            };
         }
 
         return new DecodedValue(this.decodeByType(type, size, cls, genericType));
@@ -140,12 +135,12 @@ class Decoder {
         int targetOffset = (int) pointer;
         int position = buffer.position();
 
-        CacheKey key = new CacheKey(targetOffset, cls, genericType);
+        CacheKey<?> key = new CacheKey<>(targetOffset, cls, genericType);
         DecodedValue o = cache.get(key, cacheLoader);
 
         buffer.position(position);
         return o;
-    } 
+    }
 
     private <T> Object decodeByType(
         Type type,
@@ -158,8 +153,7 @@ class Decoder {
                 return this.decodeMap(size, cls, genericType);
             case ARRAY:
                 Class<?> elementClass = Object.class;
-                if (genericType instanceof ParameterizedType) {
-                    ParameterizedType ptype = (ParameterizedType) genericType;
+                if (genericType instanceof ParameterizedType ptype) {
                     java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                     if (actualTypes.length == 1) {
                         elementClass = (Class<?>) actualTypes[0];
@@ -260,16 +254,13 @@ class Decoder {
 
     private static boolean decodeBoolean(int size)
         throws InvalidDatabaseException {
-        switch (size) {
-            case 0:
-                return false;
-            case 1:
-                return true;
-            default:
-                throw new InvalidDatabaseException(
-                    "The MaxMind DB file's data section contains bad data: "
-                        + "invalid size of boolean.");
-        }
+        return switch (size) {
+            case 0 -> false;
+            case 1 -> true;
+            default -> throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "invalid size of boolean.");
+        };
     }
 
     private <T, V> List<V> decodeArray(
@@ -319,8 +310,7 @@ class Decoder {
     ) throws IOException {
         if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
             Class<?> valueClass = Object.class;
-            if (genericType instanceof ParameterizedType) {
-                ParameterizedType ptype = (ParameterizedType) genericType;
+            if (genericType instanceof ParameterizedType ptype) {
                 java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
                 if (actualTypes.length == 2) {
                     Class<?> keyClass = (Class<?>) actualTypes[0];
@@ -381,7 +371,7 @@ class Decoder {
 
     private <T> Object decodeMapIntoObject(int size, Class<T> cls)
         throws IOException {
-        CachedConstructor<T> cachedConstructor = this.constructors.get(cls);
+        CachedConstructor<T> cachedConstructor = getCachedConstructor(cls);
         Constructor<T> constructor;
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
@@ -402,7 +392,7 @@ class Decoder {
 
             this.constructors.put(
                 cls,
-                new CachedConstructor(
+                new CachedConstructor<>(
                     constructor,
                     parameterTypes,
                     parameterGenericTypes,
@@ -410,10 +400,10 @@ class Decoder {
                 )
             );
         } else {
-            constructor = cachedConstructor.getConstructor();
-            parameterTypes = cachedConstructor.getParameterTypes();
-            parameterGenericTypes = cachedConstructor.getParameterGenericTypes();
-            parameterIndexes = cachedConstructor.getParameterIndexes();
+            constructor = cachedConstructor.constructor();
+            parameterTypes = cachedConstructor.parameterTypes();
+            parameterGenericTypes = cachedConstructor.parameterGenericTypes();
+            parameterIndexes = cachedConstructor.parameterIndexes();
         }
 
         Object[] parameters = new Object[parameterTypes.length];
@@ -453,6 +443,13 @@ class Decoder {
             throw new DeserializationException(
                 "Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors, e);
         }
+    }
+
+    private <T> CachedConstructor<T> getCachedConstructor(Class<T> cls) {
+        // This cast is safe because we only put CachedConstructor<T> for Class<T> as the key
+        @SuppressWarnings("unchecked")
+        CachedConstructor<T> result = (CachedConstructor<T>) this.constructors.get(cls);
+        return result;
     }
 
     private static <T> Constructor<T> findConstructor(Class<T> cls)
@@ -495,11 +492,11 @@ class Decoder {
         }
 
         CtrlData ctrlData = this.getCtrlData(offset);
-        int ctrlByte = ctrlData.getCtrlByte();
-        int size = ctrlData.getSize();
-        offset = ctrlData.getOffset();
+        int ctrlByte = ctrlData.ctrlByte();
+        int size = ctrlData.size();
+        offset = ctrlData.offset();
 
-        Type type = ctrlData.getType();
+        Type type = ctrlData.type();
         switch (type) {
             case POINTER:
                 int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
@@ -555,16 +552,11 @@ class Decoder {
         if (size >= 29) {
             int bytesToRead = size - 28;
             offset += bytesToRead;
-            switch (size) {
-                case 29:
-                    size = 29 + (0xFF & buffer.get());
-                    break;
-                case 30:
-                    size = 285 + decodeInteger(2);
-                    break;
-                default:
-                    size = 65821 + decodeInteger(3);
-            }
+            size = switch (size) {
+                case 29 -> 29 + (0xFF & buffer.get());
+                case 30 -> 285 + decodeInteger(2);
+                default -> 65821 + decodeInteger(3);
+            };
         }
 
         return new CtrlData(type, ctrlByte, offset, size);

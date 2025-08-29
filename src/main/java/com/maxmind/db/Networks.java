@@ -32,7 +32,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
      */
     Networks(Reader reader, boolean includeAliasedNetworks, Class<T> typeParameterClass)
         throws ClosedDatabaseException {
-        this(reader, includeAliasedNetworks, new NetworkNode[]{}, typeParameterClass);
+        this(reader, includeAliasedNetworks, new NetworkNode[0], typeParameterClass);
     }
 
     /**
