@@ -10,5 +10,5 @@ package com.maxmind.db;
  * @param cls the class of the value
  * @param type the type of the value
  */
-public record CacheKey<T>(int offset, Class<T> cls, java.lang.reflect.Type type) {
+public record CacheKey<T>(long offset, Class<T> cls, java.lang.reflect.Type type) {
 }
