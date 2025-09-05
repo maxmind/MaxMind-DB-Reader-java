@@ -6,13 +6,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.FileChannel.MapMode;
 
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
-    private final ByteBuffer buffer;
+    private final Buffer buffer;
 
     BufferHolder(File database, FileMode mode) throws IOException {
         try (
@@ -20,15 +18,15 @@ final class BufferHolder {
             final FileChannel channel = file.getChannel()
         ) {
             if (mode == FileMode.MEMORY) {
-                final ByteBuffer buf = ByteBuffer.wrap(new byte[(int) channel.size()]);
-                if (channel.read(buf) != buf.capacity()) {
+                final SingleBuffer buf = SingleBuffer.wrap(new byte[(int) channel.size()]);
+                if (buf.readFrom(channel) != buf.capacity()) {
                     throw new IOException("Unable to read "
                         + database.getName()
                         + " into memory. Unexpected end of stream.");
                 }
                 this.buffer = buf.asReadOnlyBuffer();
             } else {
-                this.buffer = channel.map(MapMode.READ_ONLY, 0, channel.size()).asReadOnlyBuffer();
+                this.buffer = SingleBuffer.mapFromChannel(channel);
             }
         }
     }
@@ -50,14 +48,14 @@ final class BufferHolder {
         while (-1 != (br = stream.read(bytes))) {
             baos.write(bytes, 0, br);
         }
-        this.buffer = ByteBuffer.wrap(baos.toByteArray()).asReadOnlyBuffer();
+        this.buffer = SingleBuffer.wrap(baos.toByteArray()).asReadOnlyBuffer();
     }
 
     /*
-     * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
+     * Returns a duplicate of the underlying Buffer. The returned Buffer
      * should not be shared between threads.
      */
-    ByteBuffer get() {
+    Buffer get() {
         // The Java API docs for buffer state:
         //
         //     Buffers are not safe for use by multiple concurrent threads. If a buffer is to be
@@ -70,7 +68,7 @@ final class BufferHolder {
         // * https://github.com/maxmind/MaxMind-DB-Reader-java/issues/65
         // * https://github.com/maxmind/MaxMind-DB-Reader-java/pull/69
         //
-        // Given that we are not modifying the original ByteBuffer in any way and all currently
+        // Given that we are not modifying the original Buffer in any way and all currently
         // known and most reasonably imaginable implementations of duplicate() only do read
         // operations on the original buffer object, the risk of not synchronizing this call seems
         // relatively low and worth taking for the performance benefit when lookups are being done
