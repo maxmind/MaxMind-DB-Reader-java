@@ -128,8 +128,8 @@ public final class Reader implements Closeable {
         }
         this.cache = cache;
 
-        ByteBuffer buffer = bufferHolder.get();
-        int start = this.findMetadataStart(buffer, name);
+        Buffer buffer = bufferHolder.get();
+        long start = this.findMetadataStart(buffer, name);
 
         Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
         this.metadata = metadataDecoder.decode(start, Metadata.class);
@@ -177,7 +177,7 @@ public final class Reader implements Closeable {
         int record = traverseResult[0];
 
         int nodeCount = this.metadata.getNodeCount();
-        ByteBuffer buffer = this.getBufferHolder().get();
+        Buffer buffer = this.getBufferHolder().get();
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
@@ -264,7 +264,7 @@ public final class Reader implements Closeable {
         return 0;
     }
 
-    private int findIpV4StartNode(ByteBuffer buffer)
+    private int findIpV4StartNode(Buffer buffer)
         throws InvalidDatabaseException {
         if (this.metadata.getIpVersion() == 4) {
             return 0;
@@ -337,7 +337,7 @@ public final class Reader implements Closeable {
      */
     private int[] traverseTree(byte[] ip, int bitCount)
         throws ClosedDatabaseException, InvalidDatabaseException {
-        ByteBuffer buffer = this.getBufferHolder().get();
+        Buffer buffer = this.getBufferHolder().get();
         int bitLength = ip.length * 8;
         int record = this.startNode(bitLength);
         int nodeCount = this.metadata.getNodeCount();
@@ -355,7 +355,7 @@ public final class Reader implements Closeable {
         return new int[]{record, i};
     }
 
-    int readNode(ByteBuffer buffer, int nodeNumber, int index)
+    int readNode(Buffer buffer, int nodeNumber, int index)
             throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
@@ -389,7 +389,7 @@ public final class Reader implements Closeable {
     }
 
     <T> T resolveDataPointer(
-        ByteBuffer buffer,
+        Buffer buffer,
         int pointer,
         Class<T> cls
     ) throws IOException {
@@ -421,12 +421,12 @@ public final class Reader implements Closeable {
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private int findMetadataStart(ByteBuffer buffer, String databaseName)
+    private long findMetadataStart(Buffer buffer, String databaseName)
         throws InvalidDatabaseException {
-        int fileSize = buffer.capacity();
+        long fileSize = buffer.capacity();
 
         FILE:
-        for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
+        for (long i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
             for (int j = 0; j < METADATA_START_MARKER.length; j++) {
                 byte b = buffer.get(fileSize - i - j - 1);
                 if (b != METADATA_START_MARKER[METADATA_START_MARKER.length - j
