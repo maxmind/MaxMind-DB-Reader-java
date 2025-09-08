@@ -42,24 +42,6 @@ public class SingleBuffer implements Buffer {
         this.buffer = buffer;
     }
 
-    /**
-     * Validates and converts a long index to an int for use with
-     * {@link ByteBuffer}.
-     *
-     * @param index the index to check
-     * @return the index as an int
-     * @throws IndexOutOfBoundsException if the index is negative or exceeds
-     *                                   {@link Integer#MAX_VALUE}
-     */
-    private int checkIndex(long index) {
-        if (index < 0 || index > Integer.MAX_VALUE) {
-            throw new IndexOutOfBoundsException(
-                "Index out of bounds for SingleBuffer: " + index
-            );
-        }
-        return (int) index;
-    }
-
     /** {@inheritDoc} */
     @Override
     public long capacity() {
@@ -75,7 +57,7 @@ public class SingleBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public SingleBuffer position(long newPosition) {
-        buffer.position(checkIndex(newPosition));
+        buffer.position((int) newPosition);
         return this;
     }
 
@@ -88,7 +70,7 @@ public class SingleBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public SingleBuffer limit(long newLimit) {
-        buffer.limit(checkIndex(newLimit));
+        buffer.limit((int) newLimit);
         return this;
     }
 
@@ -108,7 +90,7 @@ public class SingleBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public byte get(long index) {
-        return buffer.get(checkIndex(index));
+        return buffer.get((int) index);
     }
 
     /** {@inheritDoc} */
