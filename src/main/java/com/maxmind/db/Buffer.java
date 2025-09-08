@@ -114,11 +114,4 @@ interface Buffer {
      * @throws CharacterCodingException if decoding fails
      */
     String decode(CharsetDecoder decoder) throws CharacterCodingException;
-
-    /**
-     * Creates a read-only view of this buffer.
-     *
-     * @return a read-only buffer
-     */
-    Buffer asReadOnlyBuffer();
 }
