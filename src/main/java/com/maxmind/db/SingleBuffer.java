@@ -13,7 +13,7 @@ import java.nio.charset.CharsetDecoder;
  * <p>This implementation is limited to capacities up to
  * {@link Integer#MAX_VALUE}, as {@link ByteBuffer} cannot exceed that size.
  */
-public class SingleBuffer implements Buffer {
+class SingleBuffer implements Buffer {
 
     private final ByteBuffer buffer;
 
