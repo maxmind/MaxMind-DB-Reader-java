@@ -124,12 +124,6 @@ class SingleBuffer implements Buffer {
         return decoder.decode(buffer).toString();
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public SingleBuffer asReadOnlyBuffer() {
-        return new SingleBuffer(buffer.asReadOnlyBuffer());
-    }
-
     /**
      * Wraps the given byte array in a new {@code SingleBuffer}.
      *
