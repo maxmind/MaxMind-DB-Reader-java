@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 
 final class TestDecoder extends Decoder {
 
-    TestDecoder(NodeCache cache, SingleBuffer buffer, long pointerBase) {
+    TestDecoder(NodeCache cache, Buffer buffer, long pointerBase) {
         super(cache, buffer, pointerBase);
     }
 

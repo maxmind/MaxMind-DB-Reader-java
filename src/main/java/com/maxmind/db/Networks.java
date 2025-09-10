@@ -173,7 +173,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         /** The prefix of the node. */
         public int prefix;
         /** The node number. */
-        public int pointer;
+        public long pointer;
 
         /**
          * Constructs a network node for internal use.
@@ -182,7 +182,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
          * @param prefix The prefix of the node.
          * @param pointer The node number
          */
-        NetworkNode(byte[] ip, int prefix, int pointer) {
+        NetworkNode(byte[] ip, int prefix, long pointer) {
             this.ip = ip;
             this.prefix = prefix;
             this.pointer = pointer;
