@@ -2,10 +2,10 @@ package com.maxmind.db;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CharsetDecoder;
-import java.nio.CharBuffer;
 import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -201,10 +201,14 @@ class MultiBuffer implements Buffer {
             ByteBuffer buf = buffers.get(i);
             buf.position((int) (pos % CHUNK_SIZE));
             int read = channel.read(buf);
-            if (read == -1) break;
+            if (read == -1) {
+                break;
+            }
             totalRead += read;
             pos += read;
-            if (pos >= limit) break;
+            if (pos >= limit) {
+                break;
+            }
         }
         position = pos;
         return totalRead;

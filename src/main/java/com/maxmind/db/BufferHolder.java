@@ -51,11 +51,11 @@ final class BufferHolder {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        final int CHUNK_SIZE = 16 * 1024;
+        final int chunk_size = 16 * 1024;
         List<byte[]> chunks = new ArrayList<>();
         long total = 0;
         int read;
-        byte[] tmp = new byte[CHUNK_SIZE];
+        byte[] tmp = new byte[chunk_size];
 
         while (-1 != (read = stream.read(tmp))) {
             byte[] copy = new byte[read];
