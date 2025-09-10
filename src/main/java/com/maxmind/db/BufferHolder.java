@@ -1,32 +1,41 @@
 package com.maxmind.db;
 
 import com.maxmind.db.Reader.FileMode;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
 
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
     private final Buffer buffer;
 
     BufferHolder(File database, FileMode mode) throws IOException {
-        try (
-            final RandomAccessFile file = new RandomAccessFile(database, "r");
-            final FileChannel channel = file.getChannel()
-        ) {
+        try (RandomAccessFile file = new RandomAccessFile(database, "r");
+             FileChannel channel = file.getChannel()) {
+            long size = channel.size();
             if (mode == FileMode.MEMORY) {
-                final SingleBuffer buf = SingleBuffer.wrap(new byte[(int) channel.size()]);
+                Buffer buf;
+                if (size <= Integer.MAX_VALUE) {
+                    buf = new SingleBuffer(size);
+                } else {
+                    buf = new MultiBuffer(size);
+                }
                 if (buf.readFrom(channel) != buf.capacity()) {
                     throw new IOException("Unable to read "
-                        + database.getName()
-                        + " into memory. Unexpected end of stream.");
+                            + database.getName()
+                            + " into memory. Unexpected end of stream.");
                 }
                 this.buffer = buf;
             } else {
-                this.buffer = SingleBuffer.mapFromChannel(channel);
+                if (size <= Integer.MAX_VALUE) {
+                    this.buffer = SingleBuffer.mapFromChannel(channel);
+                } else {
+                    this.buffer = MultiBuffer.mapFromChannel(channel);
+                }
             }
         }
     }
@@ -42,13 +51,30 @@ final class BufferHolder {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final byte[] bytes = new byte[16 * 1024];
-        int br;
-        while (-1 != (br = stream.read(bytes))) {
-            baos.write(bytes, 0, br);
+        final int CHUNK_SIZE = 16 * 1024;
+        List<byte[]> chunks = new ArrayList<>();
+        long total = 0;
+        int read;
+        byte[] tmp = new byte[CHUNK_SIZE];
+
+        while (-1 != (read = stream.read(tmp))) {
+            byte[] copy = new byte[read];
+            System.arraycopy(tmp, 0, copy, 0, read);
+            chunks.add(copy);
+            total += read;
         }
-        this.buffer = SingleBuffer.wrap(baos.toByteArray());
+
+        if (total <= Integer.MAX_VALUE) {
+            byte[] data = new byte[(int) total];
+            int pos = 0;
+            for (byte[] chunk : chunks) {
+                System.arraycopy(chunk, 0, data, pos, chunk.length);
+                pos += chunk.length;
+            }
+            this.buffer = SingleBuffer.wrap(data);
+        } else {
+            this.buffer = MultiBuffer.wrap(chunks);
+        }
     }
 
     /*
