@@ -113,6 +113,13 @@ class MultiBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public Buffer get(byte[] dst) {
+        if (position + dst.length > limit) {
+            throw new IndexOutOfBoundsException(
+                    "Read exceeds limit: position=" + position
+                            + ", length=" + dst.length
+                            + ", limit=" + limit
+            );
+        }
         long pos = position;
         int offset = 0;
         int length = dst.length;
