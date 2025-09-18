@@ -150,7 +150,7 @@ class MultiBuffer implements Buffer {
         ByteBuffer buf = buffers.get(bufIndex).duplicate();
         buf.position(off);
         double value;
-        if (off + 8 <= buf.remaining()) {
+        if (buf.remaining() >= 8) {
             value = buf.getDouble();
             position += 8;
             return value;
@@ -169,7 +169,7 @@ class MultiBuffer implements Buffer {
         ByteBuffer buf = buffers.get(bufIndex).duplicate();
         buf.position(off);
         float value;
-        if (off + 4 <= buf.remaining()) {
+        if (buf.remaining() >= 4) {
             value = buf.getFloat();
             position += 4;
             return value;
