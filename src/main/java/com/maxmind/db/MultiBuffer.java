@@ -149,9 +149,8 @@ class MultiBuffer implements Buffer {
         int off = (int) (position % CHUNK_SIZE);
         ByteBuffer buf = buffers.get(bufIndex);
         buf.position(off);
-        double value;
         if (buf.remaining() >= 8) {
-            value = buf.getDouble();
+            double value = buf.getDouble();
             position += 8;
             return value;
         } else {
@@ -168,9 +167,8 @@ class MultiBuffer implements Buffer {
         int off = (int) (position % CHUNK_SIZE);
         ByteBuffer buf = buffers.get(bufIndex);
         buf.position(off);
-        float value;
         if (buf.remaining() >= 4) {
-            value = buf.getFloat();
+            float value = buf.getFloat();
             position += 4;
             return value;
         } else {
