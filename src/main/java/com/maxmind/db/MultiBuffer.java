@@ -272,15 +272,11 @@ class MultiBuffer implements Buffer {
             int offset = 0;
             int remaining = chunk.length;
 
-            while (remaining > 0) {
-                int toPut = remaining;
-                ByteBuffer buf = ByteBuffer.allocate(toPut);
-                buf.put(chunk, offset, toPut);
+            if (remaining > 0) {
+                ByteBuffer buf = ByteBuffer.allocate(remaining);
+                buf.put(chunk, offset, remaining);
                 buf.flip();
                 buffers.add(buf);
-
-                offset += toPut;
-                remaining -= toPut;
             }
         }
 
