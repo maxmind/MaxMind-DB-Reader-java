@@ -25,7 +25,7 @@ class MultiBuffer implements Buffer {
     /** Maximum size per underlying chunk. */
     static final int CHUNK_SIZE = Integer.MAX_VALUE / 2;
 
-    final List<ByteBuffer> buffers = new ArrayList<>();
+    final ByteBuffer[] buffers;
     private final long capacity;
 
     private long position = 0;
@@ -46,17 +46,24 @@ class MultiBuffer implements Buffer {
 
         int fullChunks = (int) (capacity / CHUNK_SIZE);
         int remainder = (int) (capacity % CHUNK_SIZE);
+        int totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
+
+        this.buffers = new ByteBuffer[totalChunks];
+
         for (int i = 0; i < fullChunks; i++) {
-            buffers.add(ByteBuffer.allocateDirect(CHUNK_SIZE));
+            buffers[i] = ByteBuffer.allocateDirect(CHUNK_SIZE);
         }
         if (remainder > 0) {
-            buffers.add(ByteBuffer.allocateDirect(remainder));
+            buffers[totalChunks - 1] = ByteBuffer.allocateDirect(remainder);
         }
     }
 
-    private MultiBuffer(List<ByteBuffer> buffers) {
-        this.buffers.addAll(buffers);
-        long capacity = buffers.stream().mapToLong(ByteBuffer::capacity).sum();
+    private MultiBuffer(ByteBuffer[] buffers) {
+        this.buffers = buffers.clone();
+        long capacity = 0;
+        for (ByteBuffer buffer : buffers) {
+            capacity += buffer.capacity();
+        }
         this.capacity = capacity;
         this.limit = capacity;
     }
@@ -126,7 +133,7 @@ class MultiBuffer implements Buffer {
         while (length > 0) {
             int bufIndex = (int) (pos / CHUNK_SIZE);
             int bufOffset = (int) (pos % CHUNK_SIZE);
-            ByteBuffer buf = buffers.get(bufIndex).duplicate();
+            ByteBuffer buf = buffers[bufIndex].duplicate();
             buf.position(bufOffset);
             int toRead = Math.min(buf.remaining(), length);
             buf.get(dst, offset, toRead);
@@ -146,7 +153,7 @@ class MultiBuffer implements Buffer {
         }
         int bufIndex = (int) (index / CHUNK_SIZE);
         int offset = (int) (index % CHUNK_SIZE);
-        return buffers.get(bufIndex).get(offset);
+        return buffers[bufIndex].get(offset);
     }
 
     /** {@inheritDoc} */
@@ -154,7 +161,7 @@ class MultiBuffer implements Buffer {
     public double getDouble() {
         int bufIndex = (int) (position / CHUNK_SIZE);
         int off = (int) (position % CHUNK_SIZE);
-        ByteBuffer buf = buffers.get(bufIndex);
+        ByteBuffer buf = buffers[bufIndex];
         buf.position(off);
         if (buf.remaining() >= 8) {
             double value = buf.getDouble();
@@ -172,7 +179,7 @@ class MultiBuffer implements Buffer {
     public float getFloat() {
         int bufIndex = (int) (position / CHUNK_SIZE);
         int off = (int) (position % CHUNK_SIZE);
-        ByteBuffer buf = buffers.get(bufIndex);
+        ByteBuffer buf = buffers[bufIndex];
         buf.position(off);
         if (buf.remaining() >= 4) {
             float value = buf.getFloat();
@@ -189,8 +196,8 @@ class MultiBuffer implements Buffer {
     @Override
     public Buffer duplicate() {
         MultiBuffer copy = new MultiBuffer(capacity);
-        for (int i = 0; i < buffers.size(); i++) {
-            copy.buffers.set(i, buffers.get(i).duplicate());
+        for (int i = 0; i < buffers.length; i++) {
+            copy.buffers[i] = buffers[i].duplicate();
         }
         copy.position = this.position;
         copy.limit = this.limit;
@@ -202,8 +209,8 @@ class MultiBuffer implements Buffer {
     public long readFrom(FileChannel channel) throws IOException {
         long totalRead = 0;
         long pos = position;
-        for (int i = (int) (pos / CHUNK_SIZE); i < buffers.size(); i++) {
-            ByteBuffer buf = buffers.get(i);
+        for (int i = (int) (pos / CHUNK_SIZE); i < buffers.length; i++) {
+            ByteBuffer buf = buffers[i];
             buf.position((int) (pos % CHUNK_SIZE));
             int read = channel.read(buf);
             if (read == -1) {
@@ -240,7 +247,7 @@ class MultiBuffer implements Buffer {
             int bufIndex = (int) (pos / CHUNK_SIZE);
             int bufOffset = (int) (pos % CHUNK_SIZE);
 
-            ByteBuffer srcView = buffers.get(bufIndex).duplicate();
+            ByteBuffer srcView = buffers[bufIndex].duplicate();
             srcView.position(bufOffset);
 
             int toRead = (int) Math.min(srcView.remaining(), remainingBytes);
@@ -272,13 +279,13 @@ class MultiBuffer implements Buffer {
      * @param chunks the byte arrays to wrap
      * @return a new {@code MultiBuffer} backed by the arrays
      */
-    public static MultiBuffer wrap(List<ByteBuffer> chunks) {
-        for (int i = 0; i < chunks.size(); i++) {
-            ByteBuffer chunk = chunks.get(i);
+    public static MultiBuffer wrap(ByteBuffer[] chunks) {
+        for (int i = 0; i < chunks.length; i++) {
+            ByteBuffer chunk = chunks[i];
             if (chunk.capacity() == CHUNK_SIZE) {
                 continue;
             }
-            if (i == chunks.size() - 1) {
+            if (i == chunks.length - 1) {
                 // The last chunk can have a different size
                 continue;
             }
@@ -306,7 +313,7 @@ class MultiBuffer implements Buffer {
         MultiBuffer buf = new MultiBuffer(size);
         long remaining = size;
 
-        for (int i = 0; i < buf.buffers.size(); i++) {
+        for (int i = 0; i < buf.buffers.length; i++) {
             long chunkPos = (long) i * CHUNK_SIZE;
             long chunkSize = Math.min(CHUNK_SIZE, remaining);
             ByteBuffer mapped = channel.map(
@@ -314,7 +321,7 @@ class MultiBuffer implements Buffer {
                     chunkPos,
                     chunkSize
             );
-            buf.buffers.set(i, mapped);
+            buf.buffers[i] = mapped;
             remaining -= chunkSize;
         }
         return buf;
