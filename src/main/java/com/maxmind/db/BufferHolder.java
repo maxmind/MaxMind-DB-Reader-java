@@ -75,7 +75,7 @@ final class BufferHolder {
             }
             this.buffer = SingleBuffer.wrap(data);
         } else {
-            this.buffer = MultiBuffer.wrap(chunks);
+            this.buffer = MultiBuffer.wrap(chunks.toArray(new ByteBuffer[0]));
         }
     }
 
