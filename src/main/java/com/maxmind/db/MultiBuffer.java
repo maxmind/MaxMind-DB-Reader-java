@@ -272,22 +272,21 @@ class MultiBuffer implements Buffer {
      * @param chunks the byte arrays to wrap
      * @return a new {@code MultiBuffer} backed by the arrays
      */
-    public static MultiBuffer wrap(List<byte[]> chunks) {
-        List<ByteBuffer> buffers = new ArrayList<>();
-
-        for (byte[] chunk : chunks) {
-            int offset = 0;
-            int remaining = chunk.length;
-
-            if (remaining > 0) {
-                ByteBuffer buf = ByteBuffer.allocate(remaining);
-                buf.put(chunk, offset, remaining);
-                buf.flip();
-                buffers.add(buf);
+    public static MultiBuffer wrap(List<ByteBuffer> chunks) {
+        for (int i = 0; i < chunks.size(); i++) {
+            ByteBuffer chunk = chunks.get(i);
+            if (chunk.capacity() == CHUNK_SIZE) {
+                continue;
             }
+            if (i == chunks.size() - 1) {
+                // The last chunk can have a different size
+                continue;
+            }
+            throw new IllegalArgumentException("Chunk at index " + i
+            + " is smaller than expected chunk size");
         }
 
-        return new MultiBuffer(buffers);
+        return new MultiBuffer(chunks);
     }
 
     /**

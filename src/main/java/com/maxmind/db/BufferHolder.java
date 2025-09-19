@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,25 +52,26 @@ final class BufferHolder {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        final int chunk_size = 16 * 1024;
-        List<byte[]> chunks = new ArrayList<>();
+        final int chunkSize = Integer.MAX_VALUE;
+        List<ByteBuffer> chunks = new ArrayList<>();
         long total = 0;
+        byte[] tmp = new byte[chunkSize];
         int read;
-        byte[] tmp = new byte[chunk_size];
 
         while (-1 != (read = stream.read(tmp))) {
-            byte[] copy = new byte[read];
-            System.arraycopy(tmp, 0, copy, 0, read);
-            chunks.add(copy);
+            ByteBuffer chunk = ByteBuffer.allocateDirect(read);
+            chunk.put(tmp, 0, read);
+            chunk.flip();
+            chunks.add(chunk);
             total += read;
         }
 
         if (total <= Integer.MAX_VALUE) {
             byte[] data = new byte[(int) total];
             int pos = 0;
-            for (byte[] chunk : chunks) {
-                System.arraycopy(chunk, 0, data, pos, chunk.length);
-                pos += chunk.length;
+            for (ByteBuffer chunk : chunks) {
+                System.arraycopy(chunk.array(), 0, data, pos, chunk.capacity());
+                pos += chunk.capacity();
             }
             this.buffer = SingleBuffer.wrap(data);
         } else {
