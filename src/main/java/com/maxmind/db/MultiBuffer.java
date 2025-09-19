@@ -133,7 +133,7 @@ class MultiBuffer implements Buffer {
         while (length > 0) {
             int bufIndex = (int) (pos / CHUNK_SIZE);
             int bufOffset = (int) (pos % CHUNK_SIZE);
-            ByteBuffer buf = buffers[bufIndex].duplicate();
+            ByteBuffer buf = buffers[bufIndex];
             buf.position(bufOffset);
             int toRead = Math.min(buf.remaining(), length);
             buf.get(dst, offset, toRead);
