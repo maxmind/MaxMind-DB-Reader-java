@@ -52,21 +52,21 @@ final class BufferHolder {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        final int chunkSize = Integer.MAX_VALUE;
+        final int chunkSize = Integer.MAX_VALUE / 2;
         List<ByteBuffer> chunks = new ArrayList<>();
         long total = 0;
         byte[] tmp = new byte[chunkSize];
         int read;
 
         while (-1 != (read = stream.read(tmp))) {
-            ByteBuffer chunk = ByteBuffer.allocateDirect(read);
+            ByteBuffer chunk = ByteBuffer.allocate(read);
             chunk.put(tmp, 0, read);
             chunk.flip();
             chunks.add(chunk);
             total += read;
         }
 
-        if (total <= Integer.MAX_VALUE) {
+        if (total <= chunkSize) {
             byte[] data = new byte[(int) total];
             int pos = 0;
             for (ByteBuffer chunk : chunks) {

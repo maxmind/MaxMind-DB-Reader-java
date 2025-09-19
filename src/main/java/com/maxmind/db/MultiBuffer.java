@@ -23,7 +23,7 @@ import java.util.List;
 class MultiBuffer implements Buffer {
 
     /** Maximum size per underlying chunk. */
-    static final int CHUNK_SIZE = Integer.MAX_VALUE;
+    static final int CHUNK_SIZE = Integer.MAX_VALUE / 2;
 
     final List<ByteBuffer> buffers = new ArrayList<>();
     private final long capacity;
