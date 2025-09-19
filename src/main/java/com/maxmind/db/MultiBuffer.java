@@ -290,7 +290,7 @@ class MultiBuffer implements Buffer {
                 continue;
             }
             throw new IllegalArgumentException("Chunk at index " + i
-            + " is smaller than expected chunk size");
+                + " is smaller than expected chunk size");
         }
 
         return new MultiBuffer(chunks);
