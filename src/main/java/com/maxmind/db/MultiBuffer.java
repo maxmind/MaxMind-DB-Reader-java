@@ -217,10 +217,11 @@ class MultiBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public Buffer duplicate() {
-        MultiBuffer copy = new MultiBuffer(capacity, chunkSize);
+        ByteBuffer[] duplicatedBuffers = new ByteBuffer[buffers.length];
         for (int i = 0; i < buffers.length; i++) {
-            copy.buffers[i] = buffers[i].duplicate();
+            duplicatedBuffers[i] = buffers[i].duplicate();
         }
+        MultiBuffer copy = new MultiBuffer(duplicatedBuffers, chunkSize);
         copy.position = this.position;
         copy.limit = this.limit;
         return copy;
