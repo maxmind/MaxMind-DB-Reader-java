@@ -50,7 +50,20 @@ class MultiBuffer implements Buffer {
      * @param buffers   the backing buffers (cloned into an internal array)
      * @param chunkSize the size of each buffer chunk
      */
-    private MultiBuffer(ByteBuffer[] buffers, int chunkSize) {
+    MultiBuffer(ByteBuffer[] buffers, int chunkSize) {
+        for (int i = 0; i < buffers.length; i++) {
+            ByteBuffer chunk = buffers[i];
+            if (chunk.capacity() == chunkSize) {
+                continue;
+            }
+            if (i == buffers.length - 1) {
+                // The last chunk can have a different size
+                continue;
+            }
+            throw new IllegalArgumentException("Chunk at index " + i
+                    + " is smaller than expected chunk size");
+        }
+
         this.buffers = buffers.clone();
         long capacity = 0;
         for (ByteBuffer buffer : buffers) {
@@ -306,29 +319,18 @@ class MultiBuffer implements Buffer {
     }
 
     /**
-     * Wraps the given byte arrays in a new {@code MultiBuffer}.
+     * Wraps the given {@link ByteBuffer}s in a new {@code MultiBuffer}.
      *
-     * <p>If any array exceeds {@link #DEFAULT_CHUNK_SIZE}, it will be split across multiple
-     * underlying {@link ByteBuffer}s. The data is copied into new buffers so the
-     * returned {@code MultiBuffer} is fully independent.
+     * <p>All chunks must have size {@link #DEFAULT_CHUNK_SIZE}, except that
+     * the final chunk may be smaller. The buffers are used directly and not
+     * copied.
      *
-     * @param chunks the byte arrays to wrap
-     * @return a new {@code MultiBuffer} backed by the arrays
+     * @param chunks the backing buffers
+     * @return a new {@code MultiBuffer} backed by the given buffers
+     * @throws IllegalArgumentException if a non-final chunk is smaller than
+     *                                  {@link #DEFAULT_CHUNK_SIZE}
      */
     public static MultiBuffer wrap(ByteBuffer[] chunks) {
-        for (int i = 0; i < chunks.length; i++) {
-            ByteBuffer chunk = chunks[i];
-            if (chunk.capacity() == DEFAULT_CHUNK_SIZE) {
-                continue;
-            }
-            if (i == chunks.length - 1) {
-                // The last chunk can have a different size
-                continue;
-            }
-            throw new IllegalArgumentException("Chunk at index " + i
-                + " is smaller than expected chunk size");
-        }
-
         return new MultiBuffer(chunks, DEFAULT_CHUNK_SIZE);
     }
 

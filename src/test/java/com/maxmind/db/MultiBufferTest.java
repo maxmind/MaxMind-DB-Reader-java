@@ -241,22 +241,22 @@ public class MultiBufferTest {
     @Test
     public void testWrapValidChunks() {
         ByteBuffer[] chunks = new ByteBuffer[] {
-                ByteBuffer.allocateDirect(MultiBuffer.DEFAULT_CHUNK_SIZE),
-                ByteBuffer.allocateDirect(500)
+                ByteBuffer.allocate(8),
+                ByteBuffer.allocate(3)
         };
 
-        MultiBuffer buffer = MultiBuffer.wrap(chunks);
-        assertEquals(MultiBuffer.DEFAULT_CHUNK_SIZE + 500, buffer.capacity());
+        MultiBuffer buffer = new MultiBuffer(chunks, 8);
+        assertEquals(11, buffer.capacity());
     }
 
     @Test
     public void testWrapInvalidChunkSize() {
         ByteBuffer[] chunks = new ByteBuffer[] {
-                ByteBuffer.allocateDirect(500),
-                ByteBuffer.allocateDirect(MultiBuffer.DEFAULT_CHUNK_SIZE)
+                ByteBuffer.allocate(3),
+                ByteBuffer.allocate(8)
         };
 
-        assertThrows(IllegalArgumentException.class, () -> MultiBuffer.wrap(chunks));
+        assertThrows(IllegalArgumentException.class, () -> new MultiBuffer(chunks, 8));
     }
 
     @Test
