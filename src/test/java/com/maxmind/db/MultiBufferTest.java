@@ -321,7 +321,7 @@ public class MultiBufferTest {
 
     @Test
     public void testDecodeStringTooLarge() {
-        MultiBuffer buffer = new MultiBuffer((long) Integer.MAX_VALUE + 1);
+        MultiBuffer buffer = new MultiBuffer((long) Integer.MAX_VALUE + 1, 1024);
         assertThrows(IllegalStateException.class, () ->
                 buffer.decode(StandardCharsets.UTF_8.newDecoder()));
     }
