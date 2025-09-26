@@ -21,7 +21,7 @@ import java.nio.charset.CoderResult;
 class MultiBuffer implements Buffer {
 
     /** Default maximum size per underlying chunk. */
-    static final int DEFAULT_CHUNK_SIZE = Integer.MAX_VALUE / 2;
+    static final int DEFAULT_CHUNK_SIZE = Integer.MAX_VALUE - 8;
 
     final ByteBuffer[] buffers;
     private final int chunkSize;
