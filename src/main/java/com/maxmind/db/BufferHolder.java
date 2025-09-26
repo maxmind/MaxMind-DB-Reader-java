@@ -20,7 +20,7 @@ final class BufferHolder {
             long size = channel.size();
             if (mode == FileMode.MEMORY) {
                 Buffer buf;
-                if (size <= Integer.MAX_VALUE) {
+                if (size <= MultiBuffer.DEFAULT_CHUNK_SIZE) {
                     buf = new SingleBuffer(size);
                 } else {
                     buf = new MultiBuffer(size);
@@ -32,7 +32,7 @@ final class BufferHolder {
                 }
                 this.buffer = buf;
             } else {
-                if (size <= Integer.MAX_VALUE) {
+                if (size <= MultiBuffer.DEFAULT_CHUNK_SIZE) {
                     this.buffer = SingleBuffer.mapFromChannel(channel);
                 } else {
                     this.buffer = MultiBuffer.mapFromChannel(channel);
@@ -52,10 +52,9 @@ final class BufferHolder {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        final int chunkSize = Integer.MAX_VALUE / 2;
         List<ByteBuffer> chunks = new ArrayList<>();
         long total = 0;
-        byte[] tmp = new byte[chunkSize];
+        byte[] tmp = new byte[MultiBuffer.DEFAULT_CHUNK_SIZE];
         int read;
 
         while (-1 != (read = stream.read(tmp))) {
@@ -66,7 +65,7 @@ final class BufferHolder {
             total += read;
         }
 
-        if (total <= chunkSize) {
+        if (total <= MultiBuffer.DEFAULT_CHUNK_SIZE) {
             byte[] data = new byte[(int) total];
             int pos = 0;
             for (ByteBuffer chunk : chunks) {
