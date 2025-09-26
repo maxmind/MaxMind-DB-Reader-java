@@ -96,10 +96,10 @@ class MultiBuffer implements Buffer {
         this.buffers = new ByteBuffer[totalChunks];
 
         for (int i = 0; i < fullChunks; i++) {
-            buffers[i] = ByteBuffer.allocateDirect(chunkSize);
+            buffers[i] = ByteBuffer.allocate(chunkSize);
         }
         if (remainder > 0) {
-            buffers[totalChunks - 1] = ByteBuffer.allocateDirect(remainder);
+            buffers[totalChunks - 1] = ByteBuffer.allocate(remainder);
         }
     }
 
