@@ -279,10 +279,15 @@ class MultiBuffer implements Buffer {
     @Override
     public String decode(CharsetDecoder decoder)
             throws CharacterCodingException {
+        return this.decode(decoder, Integer.MAX_VALUE);
+    }
+
+    String decode(CharsetDecoder decoder, int maxCharBufferSize)
+            throws CharacterCodingException {
         long remainingBytes = limit - position;
 
-        // Cannot allocate more than Integer.MAX_VALUE for CharBuffer
-        if (remainingBytes > Integer.MAX_VALUE) {
+        // Cannot allocate more than maxCharBufferSize for CharBuffer
+        if (remainingBytes > maxCharBufferSize) {
             throw new IllegalStateException(
                     "Decoding region too large to fit in a CharBuffer: " + remainingBytes
             );
