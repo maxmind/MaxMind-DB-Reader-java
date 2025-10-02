@@ -80,6 +80,10 @@ public final class Reader implements Closeable {
         this(source, NoCache.getInstance());
     }
 
+    Reader(InputStream source, int chunkSize) throws IOException {
+        this(source, NoCache.getInstance(), chunkSize);
+    }
+
     /**
      * Constructs a Reader with the specified backing cache, as if in mode
      * {@link FileMode#MEMORY}, without using a <code>File</code> instance.
@@ -89,7 +93,11 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source, NodeCache cache) throws IOException {
-        this(new BufferHolder(source), "<InputStream>", cache);
+        this(source, cache, MultiBuffer.DEFAULT_CHUNK_SIZE);
+    }
+
+    Reader(InputStream source, NodeCache cache, int chunkSize) throws IOException {
+        this(new BufferHolder(source, chunkSize), "<InputStream>", cache);
     }
 
     /**

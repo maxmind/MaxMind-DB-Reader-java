@@ -49,12 +49,16 @@ final class BufferHolder {
      * @throws NullPointerException if you provide a NULL InputStream
      */
     BufferHolder(InputStream stream) throws IOException {
+        this(stream, MultiBuffer.DEFAULT_CHUNK_SIZE);
+    }
+
+    BufferHolder(InputStream stream, int chunkSize) throws  IOException {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
         List<ByteBuffer> chunks = new ArrayList<>();
         long total = 0;
-        byte[] tmp = new byte[MultiBuffer.DEFAULT_CHUNK_SIZE];
+        byte[] tmp = new byte[chunkSize];
         int read;
 
         while (-1 != (read = stream.read(tmp))) {
@@ -65,7 +69,7 @@ final class BufferHolder {
             total += read;
         }
 
-        if (total <= MultiBuffer.DEFAULT_CHUNK_SIZE) {
+        if (total <= chunkSize) {
             byte[] data = new byte[(int) total];
             int pos = 0;
             for (ByteBuffer chunk : chunks) {
@@ -74,7 +78,7 @@ final class BufferHolder {
             }
             this.buffer = SingleBuffer.wrap(data);
         } else {
-            this.buffer = MultiBuffer.wrap(chunks.toArray(new ByteBuffer[0]));
+            this.buffer = new MultiBuffer(chunks.toArray(new ByteBuffer[0]), chunkSize);
         }
     }
 
