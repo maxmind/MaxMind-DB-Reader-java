@@ -319,22 +319,6 @@ class MultiBuffer implements Buffer {
     }
 
     /**
-     * Wraps the given {@link ByteBuffer}s in a new {@code MultiBuffer}.
-     *
-     * <p>All chunks must have size {@link #DEFAULT_CHUNK_SIZE}, except that
-     * the final chunk may be smaller. The buffers are used directly and not
-     * copied.
-     *
-     * @param chunks the backing buffers
-     * @return a new {@code MultiBuffer} backed by the given buffers
-     * @throws IllegalArgumentException if a non-final chunk is smaller than
-     *                                  {@link #DEFAULT_CHUNK_SIZE}
-     */
-    public static MultiBuffer wrap(ByteBuffer[] chunks) {
-        return new MultiBuffer(chunks, DEFAULT_CHUNK_SIZE);
-    }
-
-    /**
      * Creates a read-only {@code MultiBuffer} by memory-mapping the given
      * {@link FileChannel}.
      *
