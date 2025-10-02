@@ -355,7 +355,7 @@ public final class Reader implements Closeable {
         return new long[]{record, i};
     }
 
-    int readNode(Buffer buffer, long nodeNumber, int index)
+    long readNode(Buffer buffer, long nodeNumber, int index)
             throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
@@ -365,7 +365,7 @@ public final class Reader implements Closeable {
             case 24:
                 // For a 24 bit record, each record is 3 bytes.
                 buffer.position(baseOffset + (long) index * 3);
-                return Decoder.decodeInteger(buffer, 0, 3);
+                return Decoder.decodeLong(buffer, 0, 3);
             case 28:
                 int middle = buffer.get(baseOffset + 3);
 
@@ -378,10 +378,10 @@ public final class Reader implements Closeable {
                     middle = 0x0F & middle;
                 }
                 buffer.position(baseOffset + (long) index * 4);
-                return Decoder.decodeInteger(buffer, middle, 3);
+                return Decoder.decodeLong(buffer, middle, 3);
             case 32:
                 buffer.position(baseOffset + (long) index * 4);
-                return Decoder.decodeInteger(buffer, 0, 4);
+                return Decoder.decodeLong(buffer, 0, 4);
             default:
                 throw new InvalidDatabaseException("Unknown record size: "
                     + this.metadata.getRecordSize());

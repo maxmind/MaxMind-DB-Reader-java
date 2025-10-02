@@ -154,7 +154,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                 ipRight[node.prefix >> 3] |= 1 << (7 - (node.prefix % 8));
 
                 try {
-                    int rightPointer = this.reader.readNode(this.buffer, node.pointer, 1);
+                    long rightPointer = this.reader.readNode(this.buffer, node.pointer, 1);
                     node.prefix++;
 
                     this.nodes.push(new NetworkNode(ipRight, node.prefix, rightPointer));

@@ -202,9 +202,13 @@ class Decoder {
     }
 
     private long decodeLong(int size) {
-        long integer = 0;
+        return Decoder.decodeLong(this.buffer, 0, size);
+    }
+
+    static long decodeLong(Buffer buffer, int base, int size) {
+        long integer = base;
         for (int i = 0; i < size; i++) {
-            integer = (integer << 8) | (this.buffer.get() & 0xFF);
+            integer = (integer << 8) | (buffer.get() & 0xFF);
         }
         return integer;
     }
