@@ -29,7 +29,7 @@ public class MultiThreadedTest {
     @Test
     public void streamThreadTest() throws IOException, InterruptedException,
         ExecutionException {
-        try (Reader reader = new Reader(ReaderTest.getStream("MaxMind-DB-test-decoder.mmdb"))) {
+        try (Reader reader = new Reader(ReaderTest.getStream("MaxMind-DB-test-decoder.mmdb"), 2048)) {
             MultiThreadedTest.threadTest(reader);
         }
     }

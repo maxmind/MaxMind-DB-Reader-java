@@ -459,7 +459,7 @@ public class ReaderTest {
 
     @Test
     public void testNoIpV4SearchTreeStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"));
+        this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"), 2048);
         this.testNoIpV4SearchTree(this.testReader);
     }
 
@@ -480,7 +480,7 @@ public class ReaderTest {
 
     @Test
     public void testDecodingTypesStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"));
+        this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"), 2048);
         this.testDecodingTypes(this.testReader, true);
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
@@ -1140,7 +1140,7 @@ public class ReaderTest {
 
     @Test
     public void testBrokenDatabaseStream() throws IOException {
-        this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
+        this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"), 2048);
         this.testBrokenDatabase(this.testReader);
     }
 
@@ -1160,7 +1160,7 @@ public class ReaderTest {
 
     @Test
     public void testBrokenSearchTreePointerStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
+        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), 2048);
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
@@ -1178,7 +1178,7 @@ public class ReaderTest {
 
     @Test
     public void testBrokenDataPointerStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
+        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), 2048);
         this.testBrokenDataPointer(this.testReader);
     }
 

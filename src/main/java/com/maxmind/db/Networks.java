@@ -19,7 +19,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Stack<NetworkNode> nodes;
     private NetworkNode lastNode;
     private final boolean includeAliasedNetworks;
-    private final ByteBuffer buffer; /* Stores the buffer for Next() calls */
+    private final Buffer buffer; /* Stores the buffer for Next() calls */
     private final Class<T> typeParameterClass;
 
     /**
@@ -154,7 +154,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                 ipRight[node.prefix >> 3] |= 1 << (7 - (node.prefix % 8));
 
                 try {
-                    int rightPointer = this.reader.readNode(this.buffer, node.pointer, 1);
+                    long rightPointer = this.reader.readNode(this.buffer, node.pointer, 1);
                     node.prefix++;
 
                     this.nodes.push(new NetworkNode(ipRight, node.prefix, rightPointer));
@@ -173,7 +173,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         /** The prefix of the node. */
         public int prefix;
         /** The node number. */
-        public int pointer;
+        public long pointer;
 
         /**
          * Constructs a network node for internal use.
@@ -182,7 +182,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
          * @param prefix The prefix of the node.
          * @param pointer The node number
          */
-        NetworkNode(byte[] ip, int prefix, int pointer) {
+        NetworkNode(byte[] ip, int prefix, long pointer) {
             this.ip = ip;
             this.prefix = prefix;
             this.pointer = pointer;
