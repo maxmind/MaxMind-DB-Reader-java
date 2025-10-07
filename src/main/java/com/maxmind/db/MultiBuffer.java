@@ -337,20 +337,23 @@ class MultiBuffer implements Buffer {
             throw new IllegalArgumentException("File channel has no data");
         }
 
-        MultiBuffer buf = new MultiBuffer(size);
+        int fullChunks = (int) (size / DEFAULT_CHUNK_SIZE);
+        int remainder = (int) (size % DEFAULT_CHUNK_SIZE);
+        int totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
+
+        ByteBuffer[] buffers = new ByteBuffer[totalChunks];
         long remaining = size;
 
-        for (int i = 0; i < buf.buffers.length; i++) {
+        for (int i = 0; i < totalChunks; i++) {
             long chunkPos = (long) i * DEFAULT_CHUNK_SIZE;
             long chunkSize = Math.min(DEFAULT_CHUNK_SIZE, remaining);
-            ByteBuffer mapped = channel.map(
+            buffers[i] = channel.map(
                     FileChannel.MapMode.READ_ONLY,
                     chunkPos,
                     chunkSize
             );
-            buf.buffers[i] = mapped;
             remaining -= chunkSize;
         }
-        return buf;
+        return new MultiBuffer(buffers, DEFAULT_CHUNK_SIZE);
     }
 }
