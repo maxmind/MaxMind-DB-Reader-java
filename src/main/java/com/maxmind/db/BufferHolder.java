@@ -15,12 +15,16 @@ final class BufferHolder {
     private final Buffer buffer;
 
     BufferHolder(File database, FileMode mode) throws IOException {
+        this(database, mode, MultiBuffer.DEFAULT_CHUNK_SIZE);
+    }
+
+    BufferHolder(File database, FileMode mode, int chunkSize) throws IOException {
         try (RandomAccessFile file = new RandomAccessFile(database, "r");
              FileChannel channel = file.getChannel()) {
             long size = channel.size();
             if (mode == FileMode.MEMORY) {
                 Buffer buf;
-                if (size <= MultiBuffer.DEFAULT_CHUNK_SIZE) {
+                if (size <= chunkSize) {
                     buf = new SingleBuffer(size);
                 } else {
                     buf = new MultiBuffer(size);
@@ -32,7 +36,7 @@ final class BufferHolder {
                 }
                 this.buffer = buf;
             } else {
-                if (size <= MultiBuffer.DEFAULT_CHUNK_SIZE) {
+                if (size <= chunkSize) {
                     this.buffer = SingleBuffer.mapFromChannel(channel);
                 } else {
                     this.buffer = MultiBuffer.mapFromChannel(channel);

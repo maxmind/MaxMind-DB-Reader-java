@@ -56,6 +56,14 @@ public final class Reader implements Closeable {
         this(database, NoCache.getInstance());
     }
 
+    Reader(File database, int chunkSize) throws IOException {
+        this(
+            new BufferHolder(database, FileMode.MEMORY_MAPPED, chunkSize),
+            database.getName(),
+            NoCache.getInstance()
+        );
+    }
+
     /**
      * Constructs a Reader for the MaxMind DB format, with the specified backing
      * cache. The file passed to it must be a valid MaxMind DB file such as a
@@ -67,6 +75,14 @@ public final class Reader implements Closeable {
      */
     public Reader(File database, NodeCache cache) throws IOException {
         this(database, FileMode.MEMORY_MAPPED, cache);
+    }
+
+    Reader(File database, NodeCache cache, int chunkSize) throws IOException {
+        this(
+            new BufferHolder(database, FileMode.MEMORY_MAPPED, chunkSize),
+            database.getName(),
+            cache
+        );
     }
 
     /**
