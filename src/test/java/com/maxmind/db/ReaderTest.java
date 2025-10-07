@@ -59,7 +59,7 @@ public class ReaderTest {
                 // that are too big to fit in the heap.
                 // We use half of that just to be sure nothing breaks, but big enough that we
                 // ensure SingleBuffer is tested too using the test MMDBs.
-                MultiBuffer.DEFAULT_CHUNK_SIZE / 2,
+                MultiBuffer.DEFAULT_CHUNK_SIZE / 4,
         };
         return IntStream.of(sizes);
     }
