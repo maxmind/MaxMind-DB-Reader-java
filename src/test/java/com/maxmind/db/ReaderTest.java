@@ -27,9 +27,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class ReaderTest {
     private Reader testReader;
@@ -44,6 +48,20 @@ public class ReaderTest {
         if (this.testReader != null) {
             this.testReader.close();
         }
+    }
+
+    static IntStream chunkSizes() {
+        int[] sizes = new int[] {
+                512,
+                2048,
+                // The default chunk size of the MultiBuffer is close to max int, that causes
+                // some issues when running tests in CI as we try to allocate some byte arrays
+                // that are too big to fit in the heap.
+                // We use half of that just to be sure nothing breaks, but big enough that we
+                // ensure SingleBuffer is tested too using the test MMDBs.
+                MultiBuffer.DEFAULT_CHUNK_SIZE / 2,
+        };
+        return IntStream.of(sizes);
     }
 
     @Test
@@ -457,9 +475,10 @@ public class ReaderTest {
         this.testNoIpV4SearchTree(this.testReader);
     }
 
-    @Test
-    public void testNoIpV4SearchTreeStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"), 2048);
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNoIpV4SearchTreeStream(int chunkSizes) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"), chunkSizes);
         this.testNoIpV4SearchTree(this.testReader);
     }
 
@@ -478,9 +497,10 @@ public class ReaderTest {
         this.testDecodingTypesIntoModelWithList(this.testReader);
     }
 
-    @Test
-    public void testDecodingTypesStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"), 2048);
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodingTypesStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"), chunkSize);
         this.testDecodingTypes(this.testReader, true);
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
@@ -1138,9 +1158,10 @@ public class ReaderTest {
         this.testBrokenDatabase(this.testReader);
     }
 
-    @Test
-    public void testBrokenDatabaseStream() throws IOException {
-        this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"), 2048);
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenDatabaseStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"), chunkSize);
         this.testBrokenDatabase(this.testReader);
     }
 
@@ -1158,9 +1179,10 @@ public class ReaderTest {
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
-    @Test
-    public void testBrokenSearchTreePointerStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), 2048);
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenSearchTreePointerStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), chunkSize);
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
@@ -1176,9 +1198,10 @@ public class ReaderTest {
         this.testBrokenDataPointer(this.testReader);
     }
 
-    @Test
-    public void testBrokenDataPointerStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), 2048);
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenDataPointerStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), chunkSize);
         this.testBrokenDataPointer(this.testReader);
     }
 
