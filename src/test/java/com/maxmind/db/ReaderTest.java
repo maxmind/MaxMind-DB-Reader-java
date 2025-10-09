@@ -109,12 +109,12 @@ public class ReaderTest {
 
                 while(networks.hasNext()) {
                     var iteration = networks.next();
-                    var data = (Map<?, ?>) iteration.getData();
+                    var data = (Map<?, ?>) iteration.data();
 
                     InetAddress actualIPInData = InetAddress.getByName((String) data.get("ip"));
 
                     assertEquals(
-                        iteration.getNetwork().getNetworkAddress(), 
+                        iteration.network().networkAddress(), 
                         actualIPInData,
                         "expected ip address"
                     );
@@ -366,7 +366,7 @@ public class ReaderTest {
                 List<String> innerIPs  = new ArrayList<>();
                 while(networks.hasNext()){
                     var iteration = networks.next();
-                    innerIPs.add(iteration.getNetwork().toString());
+                    innerIPs.add(iteration.network().toString());
                 }
 
                 assertArrayEquals(test.expected, innerIPs.toArray());
@@ -404,7 +404,7 @@ public class ReaderTest {
             ArrayList<String> innerIPs = new ArrayList<>();
             while(networks.hasNext()){
                 var iteration = networks.next();
-                innerIPs.add(iteration.getNetwork().toString());
+                innerIPs.add(iteration.network().toString());
             }
 
             assertArrayEquals(test.expected, innerIPs.toArray());
@@ -434,12 +434,12 @@ public class ReaderTest {
             try (Reader reader = new Reader(test.db, chunkSize)) {
                 DatabaseRecord<?> record = reader.getRecord(test.ip, Map.class);
 
-                assertEquals(test.network, record.getNetwork().toString());
+                assertEquals(test.network, record.network().toString());
 
                 if (test.hasRecord) {
-                    assertNotNull(record.getData());
+                    assertNotNull(record.data());
                 } else {
-                    assertNull(record.getData());
+                    assertNull(record.data());
                 }
             }
         }
@@ -458,12 +458,12 @@ public class ReaderTest {
             try (Reader reader = new Reader(test.db, chunkSize)) {
                 var record = reader.getRecord(test.ip, String.class);
 
-                assertEquals(test.network, record.getNetwork().toString());
+                assertEquals(test.network, record.network().toString());
 
                 if (test.hasRecord) {
-                    assertNotNull(record.getData());
+                    assertNotNull(record.data());
                 } else {
-                    assertNull(record.getData());
+                    assertNull(record.data());
                 }
             }
         }
@@ -473,7 +473,7 @@ public class ReaderTest {
     @MethodSource("chunkSizes")
     public void testMetadataPointers(int chunkSize) throws IOException {
         Reader reader = new Reader(getFile("MaxMind-DB-test-metadata-pointers.mmdb"), chunkSize);
-        assertEquals("Lots of pointers in metadata", reader.getMetadata().getDatabaseType());
+        assertEquals("Lots of pointers in metadata", reader.getMetadata().databaseType());
     }
 
     @ParameterizedTest
@@ -1279,26 +1279,26 @@ public class ReaderTest {
 
         Metadata metadata = reader.getMetadata();
 
-        assertEquals(2, metadata.getBinaryFormatMajorVersion(), "major version");
-        assertEquals(0, metadata.getBinaryFormatMinorVersion());
-        assertEquals(ipVersion, metadata.getIpVersion());
-        assertEquals("Test", metadata.getDatabaseType());
+        assertEquals(2, metadata.binaryFormatMajorVersion(), "major version");
+        assertEquals(0, metadata.binaryFormatMinorVersion());
+        assertEquals(ipVersion, metadata.ipVersion());
+        assertEquals("Test", metadata.databaseType());
 
         List<String> languages = new ArrayList<>(List.of("en", "zh"));
 
-        assertEquals(languages, metadata.getLanguages());
+        assertEquals(languages, metadata.languages());
 
         Map<String, String> description = new HashMap<>();
         description.put("en", "Test Database");
         description.put("zh", "Test Database Chinese");
 
-        assertEquals(description, metadata.getDescription());
-        assertEquals(recordSize, metadata.getRecordSize());
+        assertEquals(description, metadata.description());
+        assertEquals(recordSize, metadata.recordSize());
 
         Calendar cal = Calendar.getInstance();
         cal.set(2014, Calendar.JANUARY, 1);
 
-        assertTrue(metadata.getBuildDate().compareTo(cal.getTime()) > 0);
+        assertTrue(metadata.buildDate().compareTo(cal.getTime()) > 0);
     }
 
     private void testIpV4(Reader reader, File file) throws IOException {

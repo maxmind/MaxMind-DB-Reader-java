@@ -14,8 +14,8 @@ public class NetworkTest {
             28
         );
 
-        assertEquals("2001:db0:0:0:0:0:0:0", network.getNetworkAddress().getHostAddress());
-        assertEquals(28, network.getPrefixLength());
+        assertEquals("2001:db0:0:0:0:0:0:0", network.networkAddress().getHostAddress());
+        assertEquals(28, network.prefixLength());
         assertEquals("2001:db0:0:0:0:0:0:0/28", network.toString());
     }
 
@@ -26,8 +26,8 @@ public class NetworkTest {
             31
         );
 
-        assertEquals("192.168.213.110", network.getNetworkAddress().getHostAddress());
-        assertEquals(31, network.getPrefixLength());
+        assertEquals("192.168.213.110", network.networkAddress().getHostAddress());
+        assertEquals(31, network.prefixLength());
         assertEquals("192.168.213.110/31", network.toString());
     }
 

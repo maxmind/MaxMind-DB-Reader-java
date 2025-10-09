@@ -69,7 +69,7 @@ class Decoder {
         }
 
         this.buffer.position(offset);
-        return cls.cast(decode(cls, null).getValue());
+        return cls.cast(decode(cls, null).value());
     }
 
     private <T> DecodedValue decode(CacheKey<T> key) throws IOException {
@@ -300,7 +300,7 @@ class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            Object e = this.decode(elementClass, null).getValue();
+            Object e = this.decode(elementClass, null).value();
             array.add(elementClass.cast(e));
         }
 
@@ -360,8 +360,8 @@ class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null).getValue();
-            Object value = this.decode(valueClass, null).getValue();
+            String key = (String) this.decode(String.class, null).value();
+            Object value = this.decode(valueClass, null).value();
             try {
                 map.put(key, valueClass.cast(value));
             } catch (ClassCastException e) {
@@ -412,7 +412,7 @@ class Decoder {
 
         Object[] parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null).getValue();
+            String key = (String) this.decode(String.class, null).value();
 
             Integer parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
@@ -424,7 +424,7 @@ class Decoder {
             parameters[parameterIndex] = this.decode(
                 parameterTypes[parameterIndex],
                 parameterGenericTypes[parameterIndex]
-            ).getValue();
+            ).value();
         }
 
         try {

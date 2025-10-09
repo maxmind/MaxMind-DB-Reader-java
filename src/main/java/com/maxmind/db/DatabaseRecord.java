@@ -7,11 +7,14 @@ import java.net.InetAddress;
  * lookup.
  *
  * @param <T> the type to deserialize the returned value to
+ * @param data the data for the record in the database. The record will be
+ *             {@code null} if there was no data for the address in the
+ *             database.
+ * @param network the network associated with the record in the database. This is
+ *                the largest network where all of the IPs in the network have the same
+ *                data.
  */
-public final class DatabaseRecord<T> {
-    private final T data;
-    private final Network network;
-
+public record DatabaseRecord<T>(T data, Network network) {
     /**
      * Create a new record.
      *
@@ -20,25 +23,6 @@ public final class DatabaseRecord<T> {
      * @param prefixLength the network prefix length associated with the record in the database.
      */
     public DatabaseRecord(T data, InetAddress ipAddress, int prefixLength) {
-        this.data = data;
-        this.network = new Network(ipAddress, prefixLength);
-    }
-
-    /**
-     * @return the data for the record in the database. The record will be
-     *         <code>null</code> if there was no data for the address in the
-     *         database.
-     */
-    public T getData() {
-        return data;
-    }
-
-    /**
-     * @return the network associated with the record in the database. This is
-     *         the largest network where all of the IPs in the network have the same
-     *         data.
-     */
-    public Network getNetwork() {
-        return network;
+        this(data, new Network(ipAddress, prefixLength));
     }
 }

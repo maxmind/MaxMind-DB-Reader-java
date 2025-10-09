@@ -132,7 +132,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
             NetworkNode node = this.nodes.pop();
 
             // Next until we don't have data.
-            while (node.pointer != this.reader.getMetadata().getNodeCount()) {
+            while (node.pointer != this.reader.getMetadata().nodeCount()) {
                 // This skips IPv4 aliases without hardcoding the networks that the writer
                 // currently aliases.
                 if (!this.includeAliasedNetworks && this.reader.getIpv4Start() != 0
@@ -141,7 +141,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                     break;
                 }
 
-                if (node.pointer > this.reader.getMetadata().getNodeCount()) {
+                if (node.pointer > this.reader.getMetadata().nodeCount()) {
                     this.lastNode = node;
                     return true;
                 }

@@ -10,6 +10,17 @@ CHANGELOG
   2GB ByteBuffer limit. Files under 2GB continue to use a single ByteBuffer
   for optimal performance. Requested by nonetallt. GitHub #154. Fixed by
   Silvano Cerza. GitHub #289.
+* `DatabaseRecord`, `Metadata`, `Network`, and internal `DecodedValue` classes
+  have been converted to records. The following API changes were made:
+  * `DatabaseRecord.getData()` and `DatabaseRecord.getNetwork()` have been
+    replaced with record accessor methods `data()` and `network()`.
+  * `Metadata.getBuildDate()` has been renamed to `buildDate()` to follow record
+    naming conventions. All other simple getter methods on `Metadata` (e.g.,
+    `getBinaryFormatMajorVersion()`, `getDatabaseType()`, etc.) have been
+    replaced with their corresponding record accessor methods (e.g.,
+    `binaryFormatMajorVersion()`, `databaseType()`, etc.).
+  * `Network.getNetworkAddress()` and `Network.getPrefixLength()` have been
+    replaced with record accessor methods `networkAddress()` and `prefixLength()`.
 
 3.2.0 (2025-05-28)
 ------------------
