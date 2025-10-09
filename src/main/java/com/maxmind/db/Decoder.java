@@ -131,10 +131,9 @@ class Decoder {
 
     DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
             throws IOException {
-        var targetOffset = pointer;
         var position = buffer.position();
 
-        var key = new CacheKey<>(targetOffset, cls, genericType);
+        var key = new CacheKey<>(pointer, cls, genericType);
         var o = cache.get(key, cacheLoader);
 
         buffer.position(position);
