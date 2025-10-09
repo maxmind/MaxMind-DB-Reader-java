@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -399,7 +398,7 @@ public class DecoderTest {
 
     @Test
     public void testInvalidControlByte() {
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[] {0x0, 0xF});
+        SingleBuffer buffer = SingleBuffer.wrap(new byte[] {0x0, 0xF});
 
         Decoder decoder = new Decoder(new CHMCache(), buffer, 0);
         InvalidDatabaseException ex = assertThrows(
@@ -418,7 +417,7 @@ public class DecoderTest {
             byte[] input = entry.getValue();
 
             String desc = "decoded " + type.name() + " - " + expect;
-            ByteBuffer buffer = ByteBuffer.wrap(input);
+            SingleBuffer buffer = SingleBuffer.wrap(input);
 
             Decoder decoder = new TestDecoder(cache, buffer, 0);
 

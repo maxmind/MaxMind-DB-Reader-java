@@ -22,7 +22,7 @@ public final class Reader implements Closeable {
         (byte) 0xCD, (byte) 0xEF, 'M', 'a', 'x', 'M', 'i', 'n', 'd', '.',
         'c', 'o', 'm'};
 
-    private final int ipV4Start;
+    private final long ipV4Start;
     private final Metadata metadata;
     private final AtomicReference<BufferHolder> bufferHolderReference;
     private final NodeCache cache;
@@ -56,6 +56,14 @@ public final class Reader implements Closeable {
         this(database, NoCache.getInstance());
     }
 
+    Reader(File database, int chunkSize) throws IOException {
+        this(
+            new BufferHolder(database, FileMode.MEMORY_MAPPED, chunkSize),
+            database.getName(),
+            NoCache.getInstance()
+        );
+    }
+
     /**
      * Constructs a Reader for the MaxMind DB format, with the specified backing
      * cache. The file passed to it must be a valid MaxMind DB file such as a
@@ -69,6 +77,14 @@ public final class Reader implements Closeable {
         this(database, FileMode.MEMORY_MAPPED, cache);
     }
 
+    Reader(File database, NodeCache cache, int chunkSize) throws IOException {
+        this(
+            new BufferHolder(database, FileMode.MEMORY_MAPPED, chunkSize),
+            database.getName(),
+            cache
+        );
+    }
+
     /**
      * Constructs a Reader with no caching, as if in mode
      * {@link FileMode#MEMORY}, without using a <code>File</code> instance.
@@ -80,6 +96,10 @@ public final class Reader implements Closeable {
         this(source, NoCache.getInstance());
     }
 
+    Reader(InputStream source, int chunkSize) throws IOException {
+        this(source, NoCache.getInstance(), chunkSize);
+    }
+
     /**
      * Constructs a Reader with the specified backing cache, as if in mode
      * {@link FileMode#MEMORY}, without using a <code>File</code> instance.
@@ -89,7 +109,11 @@ public final class Reader implements Closeable {
      * @throws IOException if there is an error reading from the Stream.
      */
     public Reader(InputStream source, NodeCache cache) throws IOException {
-        this(new BufferHolder(source), "<InputStream>", cache);
+        this(source, cache, MultiBuffer.DEFAULT_CHUNK_SIZE);
+    }
+
+    Reader(InputStream source, NodeCache cache, int chunkSize) throws IOException {
+        this(new BufferHolder(source, chunkSize), "<InputStream>", cache);
     }
 
     /**
@@ -128,8 +152,8 @@ public final class Reader implements Closeable {
         }
         this.cache = cache;
 
-        ByteBuffer buffer = bufferHolder.get();
-        int start = this.findMetadataStart(buffer, name);
+        Buffer buffer = bufferHolder.get();
+        long start = this.findMetadataStart(buffer, name);
 
         Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
         this.metadata = metadataDecoder.decode(start, Metadata.class);
@@ -152,7 +176,7 @@ public final class Reader implements Closeable {
         return getRecord(ipAddress, cls).getData();
     }
 
-    int getIpv4Start() {
+    long getIpv4Start() {
         return this.ipV4Start;
     }
 
@@ -171,13 +195,13 @@ public final class Reader implements Closeable {
 
         byte[] rawAddress = ipAddress.getAddress();
 
-        int[] traverseResult = traverseTree(rawAddress, rawAddress.length * 8);
+        long[] traverseResult = traverseTree(rawAddress, rawAddress.length * 8);
 
-        int pl = traverseResult[1];
-        int record = traverseResult[0];
+        long record = traverseResult[0];
+        int pl = (int) traverseResult[1];
 
-        int nodeCount = this.metadata.getNodeCount();
-        ByteBuffer buffer = this.getBufferHolder().get();
+        long nodeCount = this.metadata.getNodeCount();
+        Buffer buffer = this.getBufferHolder().get();
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
@@ -253,7 +277,7 @@ public final class Reader implements Closeable {
         return bufferHolder;
     }
 
-    private int startNode(int bitLength) {
+    private long startNode(int bitLength) {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
         if (this.metadata.getIpVersion() == 6 && bitLength == 32) {
@@ -264,13 +288,13 @@ public final class Reader implements Closeable {
         return 0;
     }
 
-    private int findIpV4StartNode(ByteBuffer buffer)
+    private long findIpV4StartNode(Buffer buffer)
         throws InvalidDatabaseException {
         if (this.metadata.getIpVersion() == 4) {
             return 0;
         }
 
-        int node = 0;
+        long node = 0;
         for (int i = 0; i < 96 && node < this.metadata.getNodeCount(); i++) {
             node = this.readNode(buffer, node, 0);
         }
@@ -319,9 +343,9 @@ public final class Reader implements Closeable {
             prefixLength += 96;
         }
 
-        int[] traverseResult = this.traverseTree(ipBytes, prefixLength);
-        int node = traverseResult[0];
-        int prefix = traverseResult[1];
+        long[] traverseResult = this.traverseTree(ipBytes, prefixLength);
+        long node = traverseResult[0];
+        int prefix = (int) traverseResult[1];
 
         return new Networks<>(this, includeAliasedNetworks,
             new Networks.NetworkNode[] {new Networks.NetworkNode(ipBytes, prefix, node)},
@@ -335,12 +359,12 @@ public final class Reader implements Closeable {
      * @param bitCount The prefix.
      * @return int[]
      */
-    private int[] traverseTree(byte[] ip, int bitCount)
+    private long[] traverseTree(byte[] ip, int bitCount)
         throws ClosedDatabaseException, InvalidDatabaseException {
-        ByteBuffer buffer = this.getBufferHolder().get();
+        Buffer buffer = this.getBufferHolder().get();
         int bitLength = ip.length * 8;
-        int record = this.startNode(bitLength);
-        int nodeCount = this.metadata.getNodeCount();
+        long record = this.startNode(bitLength);
+        long nodeCount = this.metadata.getNodeCount();
 
         int i = 0;
         for (; i < bitCount && record < nodeCount; i++) {
@@ -352,20 +376,20 @@ public final class Reader implements Closeable {
             record = this.readNode(buffer, record, bit);
         }
 
-        return new int[]{record, i};
+        return new long[]{record, i};
     }
 
-    int readNode(ByteBuffer buffer, int nodeNumber, int index)
+    long readNode(Buffer buffer, long nodeNumber, int index)
             throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
-        int baseOffset = nodeNumber * this.metadata.getNodeByteSize();
+        long baseOffset = nodeNumber * this.metadata.getNodeByteSize();
 
         switch (this.metadata.getRecordSize()) {
             case 24:
                 // For a 24 bit record, each record is 3 bytes.
-                buffer.position(baseOffset + index * 3);
-                return Decoder.decodeInteger(buffer, 0, 3);
+                buffer.position(baseOffset + (long) index * 3);
+                return Decoder.decodeLong(buffer, 0, 3);
             case 28:
                 int middle = buffer.get(baseOffset + 3);
 
@@ -377,11 +401,11 @@ public final class Reader implements Closeable {
                     // We get the most significant byte of the second record.
                     middle = 0x0F & middle;
                 }
-                buffer.position(baseOffset + index * 4);
-                return Decoder.decodeInteger(buffer, middle, 3);
+                buffer.position(baseOffset + (long) index * 4);
+                return Decoder.decodeLong(buffer, middle, 3);
             case 32:
-                buffer.position(baseOffset + index * 4);
-                return Decoder.decodeInteger(buffer, 0, 4);
+                buffer.position(baseOffset + (long) index * 4);
+                return Decoder.decodeLong(buffer, 0, 4);
             default:
                 throw new InvalidDatabaseException("Unknown record size: "
                     + this.metadata.getRecordSize());
@@ -389,11 +413,11 @@ public final class Reader implements Closeable {
     }
 
     <T> T resolveDataPointer(
-        ByteBuffer buffer,
-        int pointer,
+        Buffer buffer,
+        long pointer,
         Class<T> cls
     ) throws IOException {
-        int resolved = (pointer - this.metadata.getNodeCount())
+        long resolved = (pointer - this.metadata.getNodeCount())
             + this.metadata.getSearchTreeSize();
 
         if (resolved >= buffer.capacity()) {
@@ -421,12 +445,12 @@ public final class Reader implements Closeable {
      * are much faster algorithms (e.g., Boyer-Moore) for this if speed is ever
      * an issue, but I suspect it won't be.
      */
-    private int findMetadataStart(ByteBuffer buffer, String databaseName)
+    private long findMetadataStart(Buffer buffer, String databaseName)
         throws InvalidDatabaseException {
-        int fileSize = buffer.capacity();
+        long fileSize = buffer.capacity();
 
         FILE:
-        for (int i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
+        for (long i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {
             for (int j = 0; j < METADATA_START_MARKER.length; j++) {
                 byte b = buffer.get(fileSize - i - j - 1);
                 if (b != METADATA_START_MARKER[METADATA_START_MARKER.length - j

@@ -34,11 +34,11 @@ class Decoder {
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
 
-    private final ByteBuffer buffer;
+    private final Buffer buffer;
 
     private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
 
-    Decoder(NodeCache cache, ByteBuffer buffer, long pointerBase) {
+    Decoder(NodeCache cache, Buffer buffer, long pointerBase) {
         this(
             cache,
             buffer,
@@ -49,7 +49,7 @@ class Decoder {
 
     Decoder(
         NodeCache cache,
-        ByteBuffer buffer,
+        Buffer buffer,
         long pointerBase,
         ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors
     ) {
@@ -61,7 +61,7 @@ class Decoder {
 
     private final NodeCache.Loader cacheLoader = this::decode;
 
-    <T> T decode(int offset, Class<T> cls) throws IOException {
+    <T> T decode(long offset, Class<T> cls) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
@@ -73,7 +73,7 @@ class Decoder {
     }
 
     private <T> DecodedValue decode(CacheKey<T> key) throws IOException {
-        int offset = key.offset();
+        long offset = key.offset();
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
@@ -132,8 +132,8 @@ class Decoder {
 
     DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
             throws IOException {
-        int targetOffset = (int) pointer;
-        int position = buffer.position();
+        long targetOffset = pointer;
+        long position = buffer.position();
 
         CacheKey<?> key = new CacheKey<>(targetOffset, cls, genericType);
         DecodedValue o = cache.get(key, cacheLoader);
@@ -185,10 +185,10 @@ class Decoder {
         }
     }
 
-    private String decodeString(int size) throws CharacterCodingException {
-        int oldLimit = buffer.limit();
+    private String decodeString(long size) throws CharacterCodingException {
+        long oldLimit = buffer.limit();
         buffer.limit(buffer.position() + size);
-        String s = utfDecoder.decode(buffer).toString();
+        String s = buffer.decode(utfDecoder);
         buffer.limit(oldLimit);
         return s;
     }
@@ -202,9 +202,13 @@ class Decoder {
     }
 
     private long decodeLong(int size) {
-        long integer = 0;
+        return Decoder.decodeLong(this.buffer, 0, size);
+    }
+
+    static long decodeLong(Buffer buffer, int base, int size) {
+        long integer = base;
         for (int i = 0; i < size; i++) {
-            integer = (integer << 8) | (this.buffer.get() & 0xFF);
+            integer = (integer << 8) | (buffer.get() & 0xFF);
         }
         return integer;
     }
@@ -221,7 +225,7 @@ class Decoder {
         return Decoder.decodeInteger(this.buffer, base, size);
     }
 
-    static int decodeInteger(ByteBuffer buffer, int base, int size) {
+    static int decodeInteger(Buffer buffer, int base, int size) {
         int integer = base;
         for (int i = 0; i < size; i++) {
             integer = (integer << 8) | (buffer.get() & 0xFF);
@@ -412,7 +416,7 @@ class Decoder {
 
             Integer parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
-                int offset = this.nextValueOffset(this.buffer.position(), 1);
+                long offset = this.nextValueOffset(this.buffer.position(), 1);
                 this.buffer.position(offset);
                 continue;
             }
@@ -485,7 +489,7 @@ class Decoder {
                 + " is not annotated with MaxMindDbParameter.");
     }
 
-    private int nextValueOffset(int offset, int numberToSkip)
+    private long nextValueOffset(long offset, int numberToSkip)
         throws InvalidDatabaseException {
         if (numberToSkip == 0) {
             return offset;
@@ -518,7 +522,7 @@ class Decoder {
         return nextValueOffset(offset, numberToSkip - 1);
     }
 
-    private CtrlData getCtrlData(int offset)
+    private CtrlData getCtrlData(long offset)
         throws InvalidDatabaseException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -566,7 +570,7 @@ class Decoder {
         return Decoder.getByteArray(this.buffer, length);
     }
 
-    private static byte[] getByteArray(ByteBuffer buffer, int length) {
+    private static byte[] getByteArray(Buffer buffer, int length) {
         byte[] bytes = new byte[length];
         buffer.get(bytes);
         return bytes;

@@ -1,34 +1,46 @@
 package com.maxmind.db;
 
 import com.maxmind.db.Reader.FileMode;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.FileChannel.MapMode;
+import java.util.ArrayList;
+import java.util.List;
 
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
-    private final ByteBuffer buffer;
+    private final Buffer buffer;
 
     BufferHolder(File database, FileMode mode) throws IOException {
-        try (
-            final RandomAccessFile file = new RandomAccessFile(database, "r");
-            final FileChannel channel = file.getChannel()
-        ) {
+        this(database, mode, MultiBuffer.DEFAULT_CHUNK_SIZE);
+    }
+
+    BufferHolder(File database, FileMode mode, int chunkSize) throws IOException {
+        try (RandomAccessFile file = new RandomAccessFile(database, "r");
+             FileChannel channel = file.getChannel()) {
+            long size = channel.size();
             if (mode == FileMode.MEMORY) {
-                final ByteBuffer buf = ByteBuffer.wrap(new byte[(int) channel.size()]);
-                if (channel.read(buf) != buf.capacity()) {
-                    throw new IOException("Unable to read "
-                        + database.getName()
-                        + " into memory. Unexpected end of stream.");
+                Buffer buf;
+                if (size <= chunkSize) {
+                    buf = new SingleBuffer(size);
+                } else {
+                    buf = new MultiBuffer(size);
                 }
-                this.buffer = buf.asReadOnlyBuffer();
+                if (buf.readFrom(channel) != buf.capacity()) {
+                    throw new IOException("Unable to read "
+                            + database.getName()
+                            + " into memory. Unexpected end of stream.");
+                }
+                this.buffer = buf;
             } else {
-                this.buffer = channel.map(MapMode.READ_ONLY, 0, channel.size()).asReadOnlyBuffer();
+                if (size <= chunkSize) {
+                    this.buffer = SingleBuffer.mapFromChannel(channel);
+                } else {
+                    this.buffer = MultiBuffer.mapFromChannel(channel);
+                }
             }
         }
     }
@@ -41,23 +53,44 @@ final class BufferHolder {
      * @throws NullPointerException if you provide a NULL InputStream
      */
     BufferHolder(InputStream stream) throws IOException {
+        this(stream, MultiBuffer.DEFAULT_CHUNK_SIZE);
+    }
+
+    BufferHolder(InputStream stream, int chunkSize) throws  IOException {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final byte[] bytes = new byte[16 * 1024];
-        int br;
-        while (-1 != (br = stream.read(bytes))) {
-            baos.write(bytes, 0, br);
+        List<ByteBuffer> chunks = new ArrayList<>();
+        long total = 0;
+        byte[] tmp = new byte[chunkSize];
+        int read;
+
+        while (-1 != (read = stream.read(tmp))) {
+            ByteBuffer chunk = ByteBuffer.allocate(read);
+            chunk.put(tmp, 0, read);
+            chunk.flip();
+            chunks.add(chunk);
+            total += read;
         }
-        this.buffer = ByteBuffer.wrap(baos.toByteArray()).asReadOnlyBuffer();
+
+        if (total <= chunkSize) {
+            byte[] data = new byte[(int) total];
+            int pos = 0;
+            for (ByteBuffer chunk : chunks) {
+                System.arraycopy(chunk.array(), 0, data, pos, chunk.capacity());
+                pos += chunk.capacity();
+            }
+            this.buffer = SingleBuffer.wrap(data);
+        } else {
+            this.buffer = new MultiBuffer(chunks.toArray(new ByteBuffer[0]), chunkSize);
+        }
     }
 
     /*
-     * Returns a duplicate of the underlying ByteBuffer. The returned ByteBuffer
+     * Returns a duplicate of the underlying Buffer. The returned Buffer
      * should not be shared between threads.
      */
-    ByteBuffer get() {
+    Buffer get() {
         // The Java API docs for buffer state:
         //
         //     Buffers are not safe for use by multiple concurrent threads. If a buffer is to be
@@ -70,7 +103,7 @@ final class BufferHolder {
         // * https://github.com/maxmind/MaxMind-DB-Reader-java/issues/65
         // * https://github.com/maxmind/MaxMind-DB-Reader-java/pull/69
         //
-        // Given that we are not modifying the original ByteBuffer in any way and all currently
+        // Given that we are not modifying the original Buffer in any way and all currently
         // known and most reasonably imaginable implementations of duplicate() only do read
         // operations on the original buffer object, the risk of not synchronizing this call seems
         // relatively low and worth taking for the performance benefit when lookups are being done

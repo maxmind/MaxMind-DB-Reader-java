@@ -27,9 +27,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class ReaderTest {
     private Reader testReader;
@@ -46,12 +50,27 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void test() throws IOException {
+    static IntStream chunkSizes() {
+        int[] sizes = new int[] {
+                512,
+                2048,
+                // The default chunk size of the MultiBuffer is close to max int, that causes
+                // some issues when running tests in CI as we try to allocate some byte arrays
+                // that are too big to fit in the heap.
+                // We use half of that just to be sure nothing breaks, but big enough that we
+                // ensure SingleBuffer is tested too using the test MMDBs.
+                MultiBuffer.DEFAULT_CHUNK_SIZE / 4,
+        };
+        return IntStream.of(sizes);
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void test(int chunkSize) throws IOException {
         for (long recordSize : new long[] {24, 28, 32}) {
             for (int ipVersion : new int[] {4, 6}) {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
-                try (Reader reader = new Reader(file)) {
+                try (Reader reader = new Reader(file, chunkSize)) {
                     this.testMetadata(reader, ipVersion, recordSize);
                     if (ipVersion == 4) {
                         this.testIpV4(reader, file);
@@ -78,13 +97,14 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testNetworks() throws IOException, InvalidDatabaseException, InvalidNetworkException {
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNetworks(int chunkSize) throws IOException, InvalidDatabaseException, InvalidNetworkException {
         for (long recordSize : new long[] {24, 28, 32}) {
             for (int ipVersion : new int[] {4, 6}) {
                 File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
 
-                Reader reader = new Reader(file);
+                Reader reader = new Reader(file, chunkSize);
                 var networks = reader.networks(false, Map.class);
 
                 while(networks.hasNext()) {
@@ -105,10 +125,11 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testNetworksWithInvalidSearchTree() throws IOException, InvalidNetworkException{
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNetworksWithInvalidSearchTree(int chunkSize) throws IOException, InvalidNetworkException{
         File file = getFile("MaxMind-DB-test-broken-search-tree-24.mmdb");
-        Reader reader = new Reader(file);
+        Reader reader = new Reader(file, chunkSize);
 
         var networks = reader.networks(false, Map.class);
 
@@ -328,12 +349,13 @@ public class ReaderTest {
         )
     };
 
-    @Test
-    public void testNetworksWithin() throws IOException, InvalidNetworkException{
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNetworksWithin(int chunkSize) throws IOException, InvalidNetworkException{
         for(networkTest test : tests){
             for(int recordSize : new int[]{24, 28, 32}){
                 File file = getFile("MaxMind-DB-test-"+test.database+"-"+recordSize+".mmdb");
-                Reader reader = new Reader(file);
+                Reader reader = new Reader(file, chunkSize);
 
                 InetAddress address = InetAddress.getByName(test.network);
                 Network network = new Network(address, test.prefix);
@@ -367,11 +389,12 @@ public class ReaderTest {
         )
     };
 
-    @Test
-    public void testGeoIPNetworksWithin() throws IOException, InvalidNetworkException{
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testGeoIPNetworksWithin(int chunkSize) throws IOException, InvalidNetworkException{
         for (networkTest test : geoipTests){
             File file = getFile(test.database);
-            Reader reader = new Reader(file);
+            Reader reader = new Reader(file, chunkSize);
 
             InetAddress address = InetAddress.getByName(test.network);
             Network network = new Network(address, test.prefix);
@@ -390,8 +413,9 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testGetRecord() throws IOException {
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testGetRecord(int chunkSize) throws IOException {
         GetRecordTest[] mapTests = {
             new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
             new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb",
@@ -407,7 +431,7 @@ public class ReaderTest {
                 "0:0:0:0:0:0:101:100/120", true),
         };
         for (GetRecordTest test : mapTests) {
-            try (Reader reader = new Reader(test.db)) {
+            try (Reader reader = new Reader(test.db, chunkSize)) {
                 DatabaseRecord<?> record = reader.getRecord(test.ip, Map.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
@@ -431,7 +455,7 @@ public class ReaderTest {
                 "8000:0:0:0:0:0:0:0/1", false)
         };
         for (GetRecordTest test : stringTests) {
-            try (Reader reader = new Reader(test.db)) {
+            try (Reader reader = new Reader(test.db, chunkSize)) {
                 var record = reader.getRecord(test.ip, String.class);
 
                 assertEquals(test.network, record.getNetwork().toString());
@@ -445,21 +469,24 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testMetadataPointers() throws IOException {
-        Reader reader = new Reader(getFile("MaxMind-DB-test-metadata-pointers.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMetadataPointers(int chunkSize) throws IOException {
+        Reader reader = new Reader(getFile("MaxMind-DB-test-metadata-pointers.mmdb"), chunkSize);
         assertEquals("Lots of pointers in metadata", reader.getMetadata().getDatabaseType());
     }
 
-    @Test
-    public void testNoIpV4SearchTreeFile() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-no-ipv4-search-tree.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNoIpV4SearchTreeFile(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-no-ipv4-search-tree.mmdb"), chunkSize);
         this.testNoIpV4SearchTree(this.testReader);
     }
 
-    @Test
-    public void testNoIpV4SearchTreeStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNoIpV4SearchTreeStream(int chunkSizes) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-no-ipv4-search-tree.mmdb"), chunkSizes);
         this.testNoIpV4SearchTree(this.testReader);
     }
 
@@ -469,27 +496,30 @@ public class ReaderTest {
         assertEquals("::0/64", reader.get(InetAddress.getByName("192.1.1.1"), String.class));
     }
 
-    @Test
-    public void testDecodingTypesFile() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodingTypesFile(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
         this.testDecodingTypes(this.testReader, true);
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
     }
 
-    @Test
-    public void testDecodingTypesStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodingTypesStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-test-decoder.mmdb"), chunkSize);
         this.testDecodingTypes(this.testReader, true);
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
     }
 
-    @Test
-    public void testDecodingTypesPointerDecoderFile() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-pointer-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodingTypesPointerDecoderFile(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-pointer-decoder.mmdb"), chunkSize);
         this.testDecodingTypes(this.testReader, false);
         this.testDecodingTypesIntoModelObject(this.testReader, false);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, false);
@@ -799,16 +829,18 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testZerosFile() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testZerosFile(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
         this.testZeros(this.testReader);
         this.testZerosModelObject(this.testReader);
     }
 
-    @Test
-    public void testZerosStream() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testZerosStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
         this.testZeros(this.testReader);
         this.testZerosModelObject(this.testReader);
     }
@@ -860,9 +892,10 @@ public class ReaderTest {
         assertEquals(BigInteger.ZERO, model.uint128Field);
     }
 
-    @Test
-    public void testDecodeSubdivisions() throws IOException {
-        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodeSubdivisions(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
 
         TestModelSubdivisions model = this.testReader.get(
             InetAddress.getByName("2.125.160.216"),
@@ -898,9 +931,10 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testDecodeWrongTypeWithConstructorException() throws IOException {
-        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodeWrongTypeWithConstructorException(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
         DeserializationException ex = assertThrows(DeserializationException.class,
             () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
                 TestModelSubdivisionsWithUnknownException.class));
@@ -921,18 +955,20 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testDecodeWrongTypeWithWrongArguments() throws IOException {
-        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodeWrongTypeWithWrongArguments(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
         DeserializationException ex = assertThrows(DeserializationException.class,
             () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
                 TestWrongModelSubdivisions.class));
         assertThat(ex.getMessage(), containsString("Error getting record for IP"));
     }
 
-    @Test
-    public void testDecodeWithDataTypeMismatchInModel() throws IOException {
-        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodeWithDataTypeMismatchInModel(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
         DeserializationException ex = assertThrows(DeserializationException.class,
                 () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
                         TestDataTypeMismatchInModel.class));
@@ -953,9 +989,10 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testDecodeWithDataTypeMismatchInModelAndNullValue() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodeWithDataTypeMismatchInModelAndNullValue(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
 
         DeserializationException ex = assertThrows(DeserializationException.class,
             () -> this.testReader.get(
@@ -1002,9 +1039,10 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testDecodeConcurrentHashMap() throws IOException {
-        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodeConcurrentHashMap(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
 
         var m = this.testReader.get(
             InetAddress.getByName("2.125.160.216"),
@@ -1019,9 +1057,10 @@ public class ReaderTest {
         assertEquals("ENG", isoCode);
     }
 
-    @Test
-    public void testDecodeVector() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testDecodeVector(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
 
         TestModelVector model = this.testReader.get(
             InetAddress.getByName("::1.1.1.0"),
@@ -1047,13 +1086,15 @@ public class ReaderTest {
     }
 
     // Test that we cache differently depending on more than the offset.
-    @Test
-    public void testCacheWithDifferentModels() throws IOException {
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testCacheWithDifferentModels(int chunkSize) throws IOException {
         NodeCache cache = new CHMCache();
 
         this.testReader = new Reader(
             getFile("MaxMind-DB-test-decoder.mmdb"),
-            cache
+            cache,
+            chunkSize
         );
 
         TestModelA modelA = this.testReader.get(
@@ -1132,15 +1173,17 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testBrokenDatabaseFile() throws IOException {
-        this.testReader = new Reader(getFile("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenDatabaseFile(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test-Broken-Double-Format.mmdb"), chunkSize);
         this.testBrokenDatabase(this.testReader);
     }
 
-    @Test
-    public void testBrokenDatabaseStream() throws IOException {
-        this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenDatabaseStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("GeoIP2-City-Test-Broken-Double-Format.mmdb"), chunkSize);
         this.testBrokenDatabase(this.testReader);
     }
 
@@ -1152,15 +1195,17 @@ public class ReaderTest {
             containsString("The MaxMind DB file's data section contains bad data"));
     }
 
-    @Test
-    public void testBrokenSearchTreePointerFile() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenSearchTreePointerFile(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"), chunkSize);
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
-    @Test
-    public void testBrokenSearchTreePointerStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenSearchTreePointerStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), chunkSize);
         this.testBrokenSearchTreePointer(this.testReader);
     }
 
@@ -1170,15 +1215,17 @@ public class ReaderTest {
         assertThat(ex.getMessage(), containsString("The MaxMind DB file's search tree is corrupt"));
     }
 
-    @Test
-    public void testBrokenDataPointerFile() throws IOException {
-        this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenDataPointerFile(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-broken-pointers-24.mmdb"), chunkSize);
         this.testBrokenDataPointer(this.testReader);
     }
 
-    @Test
-    public void testBrokenDataPointerStream() throws IOException {
-        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testBrokenDataPointerStream(int chunkSize) throws IOException {
+        this.testReader = new Reader(getStream("MaxMind-DB-test-broken-pointers-24.mmdb"), chunkSize);
         this.testBrokenDataPointer(this.testReader);
     }
 
@@ -1189,9 +1236,10 @@ public class ReaderTest {
             containsString("The MaxMind DB file's data section contains bad data"));
     }
 
-    @Test
-    public void testClosedReaderThrowsException() throws IOException {
-        Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testClosedReaderThrowsException(int chunkSize) throws IOException {
+        Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
 
         reader.close();
         ClosedDatabaseException ex = assertThrows(ClosedDatabaseException.class,
@@ -1199,9 +1247,10 @@ public class ReaderTest {
         assertEquals("The MaxMind DB has been closed.", ex.getMessage());
     }
 
-    @Test
-    public void voidTestMapKeyIsString() throws IOException {
-        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"));
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void voidTestMapKeyIsString(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
 
         DeserializationException ex = assertThrows(
             DeserializationException.class,
