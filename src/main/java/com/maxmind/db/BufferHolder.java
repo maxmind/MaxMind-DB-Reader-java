@@ -23,18 +23,48 @@ final class BufferHolder {
              FileChannel channel = file.getChannel()) {
             long size = channel.size();
             if (mode == FileMode.MEMORY) {
-                Buffer buf;
                 if (size <= chunkSize) {
-                    buf = new SingleBuffer(size);
+                    // Allocate, read, and make read-only
+                    ByteBuffer buffer = ByteBuffer.allocate((int) size);
+                    if (channel.read(buffer) != size) {
+                        throw new IOException("Unable to read "
+                                + database.getName()
+                                + " into memory. Unexpected end of stream.");
+                    }
+                    buffer.flip();
+                    this.buffer = new SingleBuffer(buffer);
                 } else {
-                    buf = new MultiBuffer(size);
+                    // Allocate chunks, read, and make read-only
+                    int fullChunks = (int) (size / chunkSize);
+                    int remainder = (int) (size % chunkSize);
+                    int totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
+                    ByteBuffer[] buffers = new ByteBuffer[totalChunks];
+
+                    for (int i = 0; i < fullChunks; i++) {
+                        buffers[i] = ByteBuffer.allocate(chunkSize);
+                    }
+                    if (remainder > 0) {
+                        buffers[totalChunks - 1] = ByteBuffer.allocate(remainder);
+                    }
+
+                    long totalRead = 0;
+                    for (ByteBuffer buffer : buffers) {
+                        int read = channel.read(buffer);
+                        if (read == -1) {
+                            break;
+                        }
+                        totalRead += read;
+                        buffer.flip();
+                    }
+
+                    if (totalRead != size) {
+                        throw new IOException("Unable to read "
+                                + database.getName()
+                                + " into memory. Unexpected end of stream.");
+                    }
+
+                    this.buffer = new MultiBuffer(buffers, chunkSize);
                 }
-                if (buf.readFrom(channel) != buf.capacity()) {
-                    throw new IOException("Unable to read "
-                            + database.getName()
-                            + " into memory. Unexpected end of stream.");
-                }
-                this.buffer = buf;
             } else {
                 if (size <= chunkSize) {
                     this.buffer = SingleBuffer.mapFromChannel(channel);

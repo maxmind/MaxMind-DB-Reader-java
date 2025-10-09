@@ -16,6 +16,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 public class MultiBufferTest {
+    /**
+     * Helper method to create a MultiBuffer with a single empty ByteBuffer.
+     */
+    static MultiBuffer createEmptyBuffer(int capacity) {
+        ByteBuffer bb = ByteBuffer.allocate(capacity);
+        bb.flip();
+        return new MultiBuffer(new ByteBuffer[]{bb}, capacity);
+    }
+
     static MultiBuffer createBuffer(int chunkSize) {
         try {
             Path tmpFile = Files.createTempFile("test-data", ".bin");
@@ -69,13 +78,25 @@ public class MultiBufferTest {
             try (RandomAccessFile file = new RandomAccessFile(tmpFile.toFile(), "r");
                 FileChannel channel = file.getChannel()) {
 
-                MultiBuffer buffer = new MultiBuffer(channel.size(), chunkSize);
+                long size = channel.size();
+                int fullChunks = (int) (size / chunkSize);
+                int remainder = (int) (size % chunkSize);
+                int totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
 
-                buffer.readFrom(channel, chunkSize);
-                buffer.position(0);
-                buffer.limit(channel.size());
+                ByteBuffer[] buffers = new ByteBuffer[totalChunks];
+                for (int i = 0; i < fullChunks; i++) {
+                    buffers[i] = ByteBuffer.allocate(chunkSize);
+                }
+                if (remainder > 0) {
+                    buffers[totalChunks - 1] = ByteBuffer.allocate(remainder);
+                }
 
-                return buffer;
+                for (ByteBuffer buffer : buffers) {
+                    channel.read(buffer);
+                    buffer.flip();
+                }
+
+                return new MultiBuffer(buffers, chunkSize);
             }
         } catch (IOException e) {
             fail("Could not create test buffer: " + e.getMessage());
@@ -85,46 +106,46 @@ public class MultiBufferTest {
 
     @Test
     public void testPositionSetter() {
-        MultiBuffer buffer = new MultiBuffer(1000);
+        MultiBuffer buffer = createEmptyBuffer(1000);
         buffer.position(500);
         assertEquals(500, buffer.position());
     }
 
     @Test
     public void testPositionSetterInvalidNegative() {
-        MultiBuffer buffer = new MultiBuffer(1000);
+        MultiBuffer buffer = createEmptyBuffer(1000);
         assertThrows(IllegalArgumentException.class, () -> buffer.position(-1));
     }
 
     @Test
     public void testPositionSetterExceedsLimit() {
-        MultiBuffer buffer = new MultiBuffer(1000);
+        MultiBuffer buffer = createEmptyBuffer(1000);
         buffer.limit(500);
         assertThrows(IllegalArgumentException.class, () -> buffer.position(600));
     }
 
     @Test
     public void testLimitSetter() {
-        MultiBuffer buffer = new MultiBuffer(1000);
+        MultiBuffer buffer = createEmptyBuffer(1000);
         buffer.limit(500);
         assertEquals(500, buffer.limit());
     }
 
     @Test
     public void testLimitSetterInvalidNegative() {
-        MultiBuffer buffer = new MultiBuffer(1000);
+        MultiBuffer buffer = createEmptyBuffer(1000);
         assertThrows(IllegalArgumentException.class, () -> buffer.limit(-1));
     }
 
     @Test
     public void testLimitSetterExceedsCapacity() {
-        MultiBuffer buffer = new MultiBuffer(1000);
+        MultiBuffer buffer = createEmptyBuffer(1000);
         assertThrows(IllegalArgumentException.class, () -> buffer.limit(1001));
     }
 
     @Test
     public void testLimitSetterAdjustsPosition() {
-        MultiBuffer buffer = new MultiBuffer(1000);
+        MultiBuffer buffer = createEmptyBuffer(1000);
         buffer.position(800);
         buffer.limit(500);
         assertEquals(500, buffer.position());
@@ -168,7 +189,7 @@ public class MultiBufferTest {
 
     @Test
     public void testGetByteArrayExceedsLimit() {
-        MultiBuffer buffer = new MultiBuffer(100);
+        MultiBuffer buffer = createEmptyBuffer(100);
         buffer.limit(5);
         byte[] dst = new byte[10];
         assertThrows(IndexOutOfBoundsException.class, () -> buffer.get(dst));
@@ -222,7 +243,7 @@ public class MultiBufferTest {
 
     @Test
     public void testDuplicate() {
-        MultiBuffer original = new MultiBuffer(1000);
+        MultiBuffer original = createEmptyBuffer(1000);
         original.position(100);
         original.limit(800);
 
@@ -273,10 +294,12 @@ public class MultiBufferTest {
         Files.write(testFile, testData);
 
         try (FileChannel channel = FileChannel.open(testFile, StandardOpenOption.READ)) {
-            MultiBuffer buffer = new MultiBuffer(testData.length);
-            long bytesRead = buffer.readFrom(channel);
+            ByteBuffer buffer = ByteBuffer.allocate(testData.length);
+            long bytesRead = channel.read(buffer);
+            buffer.flip();
+            MultiBuffer multiBuffer = new MultiBuffer(new ByteBuffer[]{buffer}, testData.length);
             assertEquals(21, bytesRead);
-            assertEquals(21, buffer.position());
+            assertEquals(0, multiBuffer.position());
         }
     }
 

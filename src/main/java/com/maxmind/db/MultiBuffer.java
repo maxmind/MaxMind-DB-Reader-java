@@ -17,6 +17,9 @@ import java.nio.charset.CoderResult;
  * a single logical position and limit across them.
  *
  * <p>Use this when working with databases/files that may exceed 2GB.
+ *
+ * <p>All underlying {@link ByteBuffer}s are read-only to prevent accidental
+ * modification of shared data.
  */
 class MultiBuffer implements Buffer {
 
@@ -29,16 +32,6 @@ class MultiBuffer implements Buffer {
 
     private long position = 0;
     private long limit;
-
-    /**
-     * Creates a new {@code MultiBuffer} with the given capacity, backed by
-     * heap-allocated {@link ByteBuffer}s.
-     *
-     * @param capacity the total capacity in bytes
-     */
-    public MultiBuffer(long capacity) {
-        this(capacity, DEFAULT_CHUNK_SIZE);
-    }
 
     /**
      * Creates a new {@code MultiBuffer} backed by the given
@@ -64,43 +57,19 @@ class MultiBuffer implements Buffer {
                     + " is smaller than expected chunk size");
         }
 
-        this.buffers = buffers.clone();
+        // Make all buffers read-only
+        this.buffers = new ByteBuffer[buffers.length];
+        for (int i = 0; i < buffers.length; i++) {
+            this.buffers[i] = buffers[i].asReadOnlyBuffer();
+        }
+
         long capacity = 0;
-        for (ByteBuffer buffer : buffers) {
+        for (ByteBuffer buffer : this.buffers) {
             capacity += buffer.capacity();
         }
         this.capacity = capacity;
         this.limit = capacity;
         this.chunkSize = chunkSize;
-    }
-
-    /**
-     * Creates a new {@code MultiBuffer} with the given capacity, backed by
-     * heap-allocated {@link ByteBuffer}s with the given chunk size.
-     *
-     * @param capacity the total capacity in bytes
-     * @param chunkSize the size of each buffer chunk
-     */
-    MultiBuffer(long capacity, int chunkSize) {
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("Capacity must be positive");
-        }
-        this.capacity = capacity;
-        this.limit = capacity;
-        this.chunkSize = chunkSize;
-
-        int fullChunks = (int) (capacity / chunkSize);
-        int remainder = (int) (capacity % chunkSize);
-        int totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
-
-        this.buffers = new ByteBuffer[totalChunks];
-
-        for (int i = 0; i < fullChunks; i++) {
-            buffers[i] = ByteBuffer.allocate(chunkSize);
-        }
-        if (remainder > 0) {
-            buffers[totalChunks - 1] = ByteBuffer.allocate(remainder);
-        }
     }
 
     /** {@inheritDoc} */
@@ -238,41 +207,6 @@ class MultiBuffer implements Buffer {
         copy.position = this.position;
         copy.limit = this.limit;
         return copy;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public long readFrom(FileChannel channel) throws IOException {
-        return this.readFrom(channel, DEFAULT_CHUNK_SIZE);
-    }
-
-    /**
-     * Reads data from the given channel into this buffer starting at the
-     * current position.
-     *
-     * @param channel the file channel
-     * @param chunkSize the chunk size to use for positioning reads
-     * @return the number of bytes read
-     * @throws IOException if an I/O error occurs
-     */
-    long readFrom(FileChannel channel, int chunkSize) throws IOException {
-        long totalRead = 0;
-        long pos = position;
-        for (int i = (int) (pos / chunkSize); i < buffers.length; i++) {
-            ByteBuffer buf = buffers[i];
-            buf.position((int) (pos % chunkSize));
-            int read = channel.read(buf);
-            if (read == -1) {
-                break;
-            }
-            totalRead += read;
-            pos += read;
-            if (pos >= limit) {
-                break;
-            }
-        }
-        position = pos;
-        return totalRead;
     }
 
     /** {@inheritDoc} */
