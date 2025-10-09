@@ -35,10 +35,10 @@ final class BufferHolder {
                     this.buffer = new SingleBuffer(buffer);
                 } else {
                     // Allocate chunks, read, and make read-only
-                    int fullChunks = (int) (size / chunkSize);
-                    int remainder = (int) (size % chunkSize);
-                    int totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
-                    ByteBuffer[] buffers = new ByteBuffer[totalChunks];
+                    var fullChunks = (int) (size / chunkSize);
+                    var remainder = (int) (size % chunkSize);
+                    var totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
+                    var buffers = new ByteBuffer[totalChunks];
 
                     for (int i = 0; i < fullChunks; i++) {
                         buffers[i] = ByteBuffer.allocate(chunkSize);
@@ -47,9 +47,9 @@ final class BufferHolder {
                         buffers[totalChunks - 1] = ByteBuffer.allocate(remainder);
                     }
 
-                    long totalRead = 0;
-                    for (ByteBuffer buffer : buffers) {
-                        int read = channel.read(buffer);
+                    var totalRead = 0L;
+                    for (var buffer : buffers) {
+                        var read = channel.read(buffer);
                         if (read == -1) {
                             break;
                         }
@@ -90,13 +90,13 @@ final class BufferHolder {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        List<ByteBuffer> chunks = new ArrayList<>();
-        long total = 0;
-        byte[] tmp = new byte[chunkSize];
+        var chunks = new ArrayList<ByteBuffer>();
+        var total = 0L;
+        var tmp = new byte[chunkSize];
         int read;
 
         while (-1 != (read = stream.read(tmp))) {
-            ByteBuffer chunk = ByteBuffer.allocate(read);
+            var chunk = ByteBuffer.allocate(read);
             chunk.put(tmp, 0, read);
             chunk.flip();
             chunks.add(chunk);
@@ -104,9 +104,9 @@ final class BufferHolder {
         }
 
         if (total <= chunkSize) {
-            byte[] data = new byte[(int) total];
-            int pos = 0;
-            for (ByteBuffer chunk : chunks) {
+            var data = new byte[(int) total];
+            var pos = 0;
+            for (var chunk : chunks) {
                 System.arraycopy(chunk.array(), 0, data, pos, chunk.capacity());
                 pos += chunk.capacity();
             }

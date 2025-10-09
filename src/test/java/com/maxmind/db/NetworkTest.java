@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 public class NetworkTest {
     @Test
     public void testIPv6() throws UnknownHostException {
-        Network network = new Network(
+        var network = new Network(
             InetAddress.getByName("2001:0db8:85a3:0000:0000:8a2e:0370:7334"),
             28
         );
@@ -21,7 +21,7 @@ public class NetworkTest {
 
     @Test
     public void TestIPv4() throws UnknownHostException {
-        Network network = new Network(
+        var network = new Network(
             InetAddress.getByName("192.168.213.111"),
             31
         );

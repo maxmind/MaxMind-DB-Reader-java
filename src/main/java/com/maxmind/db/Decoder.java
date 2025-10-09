@@ -87,26 +87,26 @@ class Decoder {
 
     private <T> DecodedValue decode(Class<T> cls, java.lang.reflect.Type genericType)
         throws IOException {
-        int ctrlByte = 0xFF & this.buffer.get();
+        var ctrlByte = 0xFF & this.buffer.get();
 
-        Type type = Type.fromControlByte(ctrlByte);
+        var type = Type.fromControlByte(ctrlByte);
 
         // Pointers are a special case, we don't read the next 'size' bytes, we
         // use the size to determine the length of the pointer and then follow
         // it.
         if (type.equals(Type.POINTER)) {
-            int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
-            int base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
-            int packed = this.decodeInteger(base, pointerSize);
-            long pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
+            var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+            var base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
+            var packed = this.decodeInteger(base, pointerSize);
+            var pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
 
             return decodePointer(pointer, cls, genericType);
         }
 
         if (type.equals(Type.EXTENDED)) {
-            int nextByte = this.buffer.get();
+            var nextByte = this.buffer.get();
 
-            int typeNum = nextByte + 7;
+            var typeNum = nextByte + 7;
 
             if (typeNum < 8) {
                 throw new InvalidDatabaseException(
@@ -132,11 +132,11 @@ class Decoder {
 
     DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
             throws IOException {
-        long targetOffset = pointer;
-        long position = buffer.position();
+        var targetOffset = pointer;
+        var position = buffer.position();
 
-        CacheKey<?> key = new CacheKey<>(targetOffset, cls, genericType);
-        DecodedValue o = cache.get(key, cacheLoader);
+        var key = new CacheKey<>(targetOffset, cls, genericType);
+        var o = cache.get(key, cacheLoader);
 
         buffer.position(position);
         return o;
@@ -154,7 +154,7 @@ class Decoder {
             case ARRAY:
                 Class<?> elementClass = Object.class;
                 if (genericType instanceof ParameterizedType ptype) {
-                    java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
+                    var actualTypes = ptype.getActualTypeArguments();
                     if (actualTypes.length == 1) {
                         elementClass = (Class<?>) actualTypes[0];
                     }
@@ -186,9 +186,9 @@ class Decoder {
     }
 
     private String decodeString(long size) throws CharacterCodingException {
-        long oldLimit = buffer.limit();
+        var oldLimit = buffer.limit();
         buffer.limit(buffer.position() + size);
-        String s = buffer.decode(utfDecoder);
+        var s = buffer.decode(utfDecoder);
         buffer.limit(oldLimit);
         return s;
     }
@@ -234,7 +234,7 @@ class Decoder {
     }
 
     private BigInteger decodeBigInteger(int size) {
-        byte[] bytes = this.getByteArray(size);
+        var bytes = this.getByteArray(size);
         return new BigInteger(1, bytes);
     }
 
@@ -287,10 +287,10 @@ class Decoder {
                 throw new DeserializationException(
                     "No constructor found for the List: " + e.getMessage(), e);
             }
-            Object[] parameters = {size};
+            var parameters = new Object[]{size};
             try {
                 @SuppressWarnings("unchecked")
-                List<V> array2 = (List<V>) constructor.newInstance(parameters);
+                var array2 = (List<V>) constructor.newInstance(parameters);
                 array = array2;
             } catch (InstantiationException
                      | IllegalAccessException
@@ -300,7 +300,7 @@ class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            Object e = this.decode(elementClass, null).value();
+            var e = this.decode(elementClass, null).value();
             array.add(elementClass.cast(e));
         }
 
@@ -315,9 +315,9 @@ class Decoder {
         if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
             Class<?> valueClass = Object.class;
             if (genericType instanceof ParameterizedType ptype) {
-                java.lang.reflect.Type[] actualTypes = ptype.getActualTypeArguments();
+                var actualTypes = ptype.getActualTypeArguments();
                 if (actualTypes.length == 2) {
-                    Class<?> keyClass = (Class<?>) actualTypes[0];
+                    var keyClass = (Class<?>) actualTypes[0];
                     if (!keyClass.equals(String.class)) {
                         throw new DeserializationException("Map keys must be strings.");
                     }
@@ -347,10 +347,10 @@ class Decoder {
                 throw new DeserializationException(
                     "No constructor found for the Map: " + e.getMessage(), e);
             }
-            Object[] parameters = {size};
+            var parameters = new Object[]{size};
             try {
                 @SuppressWarnings("unchecked")
-                Map<String, V> map2 = (Map<String, V>) constructor.newInstance(parameters);
+                var map2 = (Map<String, V>) constructor.newInstance(parameters);
                 map = map2;
             } catch (InstantiationException
                      | IllegalAccessException
@@ -360,8 +360,8 @@ class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null).value();
-            Object value = this.decode(valueClass, null).value();
+            var key = (String) this.decode(String.class, null).value();
+            var value = this.decode(valueClass, null).value();
             try {
                 map.put(key, valueClass.cast(value));
             } catch (ClassCastException e) {
@@ -375,7 +375,7 @@ class Decoder {
 
     private <T> Object decodeMapIntoObject(int size, Class<T> cls)
         throws IOException {
-        CachedConstructor<T> cachedConstructor = getCachedConstructor(cls);
+        var cachedConstructor = getCachedConstructor(cls);
         Constructor<T> constructor;
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
@@ -388,9 +388,9 @@ class Decoder {
             parameterGenericTypes = constructor.getGenericParameterTypes();
 
             parameterIndexes = new HashMap<>();
-            Annotation[][] annotations = constructor.getParameterAnnotations();
+            var annotations = constructor.getParameterAnnotations();
             for (int i = 0; i < constructor.getParameterCount(); i++) {
-                String parameterName = getParameterName(cls, i, annotations[i]);
+                var parameterName = getParameterName(cls, i, annotations[i]);
                 parameterIndexes.put(parameterName, i);
             }
 
@@ -410,13 +410,13 @@ class Decoder {
             parameterIndexes = cachedConstructor.parameterIndexes();
         }
 
-        Object[] parameters = new Object[parameterTypes.length];
+        var parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            String key = (String) this.decode(String.class, null).value();
+            var key = (String) this.decode(String.class, null).value();
 
-            Integer parameterIndex = parameterIndexes.get(key);
+            var parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
-                long offset = this.nextValueOffset(this.buffer.position(), 1);
+                var offset = this.nextValueOffset(this.buffer.position(), 1);
                 this.buffer.position(offset);
                 continue;
             }
@@ -434,9 +434,9 @@ class Decoder {
                  | InvocationTargetException e) {
             throw new DeserializationException("Error creating object: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
-            StringBuilder sbErrors = new StringBuilder();
-            for (String key : parameterIndexes.keySet()) {
-                int index = parameterIndexes.get(key);
+            var sbErrors = new StringBuilder();
+            for (var key : parameterIndexes.keySet()) {
+                var index = parameterIndexes.get(key);
                 if (parameters[index] != null
                     && !parameters[index].getClass().isAssignableFrom(parameterTypes[index])) {
                     sbErrors.append(" argument type mismatch in " + key + " MMDB Type: "
@@ -458,8 +458,8 @@ class Decoder {
 
     private static <T> Constructor<T> findConstructor(Class<T> cls)
         throws ConstructorNotFoundException {
-        Constructor<?>[] constructors = cls.getConstructors();
-        for (Constructor<?> constructor : constructors) {
+        var constructors = cls.getConstructors();
+        for (var constructor : constructors) {
             if (constructor.getAnnotation(MaxMindDbConstructor.class) == null) {
                 continue;
             }
@@ -477,11 +477,11 @@ class Decoder {
         int index,
         Annotation[] annotations
     ) throws ParameterNotFoundException {
-        for (Annotation annotation : annotations) {
+        for (var annotation : annotations) {
             if (!annotation.annotationType().equals(MaxMindDbParameter.class)) {
                 continue;
             }
-            MaxMindDbParameter paramAnnotation = (MaxMindDbParameter) annotation;
+            var paramAnnotation = (MaxMindDbParameter) annotation;
             return paramAnnotation.name();
         }
         throw new ParameterNotFoundException(
@@ -495,15 +495,15 @@ class Decoder {
             return offset;
         }
 
-        CtrlData ctrlData = this.getCtrlData(offset);
-        int ctrlByte = ctrlData.ctrlByte();
-        int size = ctrlData.size();
+        var ctrlData = this.getCtrlData(offset);
+        var ctrlByte = ctrlData.ctrlByte();
+        var size = ctrlData.size();
         offset = ctrlData.offset();
 
-        Type type = ctrlData.type();
+        var type = ctrlData.type();
         switch (type) {
             case POINTER:
-                int pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+                var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
                 offset += pointerSize;
                 break;
             case MAP:
@@ -531,15 +531,15 @@ class Decoder {
         }
 
         this.buffer.position(offset);
-        int ctrlByte = 0xFF & this.buffer.get();
+        var ctrlByte = 0xFF & this.buffer.get();
         offset++;
 
-        Type type = Type.fromControlByte(ctrlByte);
+        var type = Type.fromControlByte(ctrlByte);
 
         if (type.equals(Type.EXTENDED)) {
-            int nextByte = this.buffer.get();
+            var nextByte = this.buffer.get();
 
-            int typeNum = nextByte + 7;
+            var typeNum = nextByte + 7;
 
             if (typeNum < 8) {
                 throw new InvalidDatabaseException(
@@ -552,9 +552,9 @@ class Decoder {
             offset++;
         }
 
-        int size = ctrlByte & 0x1f;
+        var size = ctrlByte & 0x1f;
         if (size >= 29) {
-            int bytesToRead = size - 28;
+            var bytesToRead = size - 28;
             offset += bytesToRead;
             size = switch (size) {
                 case 29 -> 29 + (0xFF & buffer.get());
@@ -571,7 +571,7 @@ class Decoder {
     }
 
     private static byte[] getByteArray(Buffer buffer, int length) {
-        byte[] bytes = new byte[length];
+        var bytes = new byte[length];
         buffer.get(bytes);
         return bytes;
     }

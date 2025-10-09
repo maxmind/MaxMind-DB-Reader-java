@@ -79,11 +79,11 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     @Override
     public DatabaseRecord<T> next() {
         try {
-            T data = this.reader.resolveDataPointer(
+            var data = this.reader.resolveDataPointer(
                 this.buffer, this.lastNode.pointer, this.typeParameterClass);
 
-            byte[] ip = this.lastNode.ip;
-            int prefixLength = this.lastNode.prefix;
+            var ip = this.lastNode.ip;
+            var prefixLength = this.lastNode.prefix;
 
             // We do this because uses of includeAliasedNetworks will get IPv4 networks
             // from the ::FFFF:0:0/96. We want to return the IPv4 form of the address
@@ -95,7 +95,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
 
             // If the ip is in ipv6 form, drop the prefix manually
             // as InetAddress converts it to ipv4.
-            InetAddress ipAddr = InetAddress.getByAddress(ip);
+            var ipAddr = InetAddress.getByAddress(ip);
             if (ipAddr instanceof Inet4Address && ip.length > 4 && prefixLength > 96) {
                 prefixLength -= 96;
             }
@@ -129,7 +129,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     @Override
     public boolean hasNext()  {
         while (!this.nodes.isEmpty()) {
-            NetworkNode node = this.nodes.pop();
+            var node = this.nodes.pop();
 
             // Next until we don't have data.
             while (node.pointer != this.reader.getMetadata().nodeCount()) {
@@ -146,7 +146,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                     return true;
                 }
 
-                byte[] ipRight = Arrays.copyOf(node.ip, node.ip.length);
+                var ipRight = Arrays.copyOf(node.ip, node.ip.length);
                 if (ipRight.length <= (node.prefix >> 3)) {
                     throw new NetworksIterationException("Invalid search tree");
                 }
@@ -154,7 +154,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                 ipRight[node.prefix >> 3] |= 1 << (7 - (node.prefix % 8));
 
                 try {
-                    long rightPointer = this.reader.readNode(this.buffer, node.pointer, 1);
+                    var rightPointer = this.reader.readNode(this.buffer, node.pointer, 1);
                     node.prefix++;
 
                     this.nodes.push(new NetworkNode(ipRight, node.prefix, rightPointer));

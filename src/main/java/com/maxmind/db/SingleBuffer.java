@@ -126,7 +126,7 @@ final class SingleBuffer implements Buffer {
      */
     public static SingleBuffer mapFromChannel(FileChannel channel)
         throws IOException {
-        ByteBuffer buffer = channel.map(MapMode.READ_ONLY, 0, channel.size());
+        var buffer = channel.map(MapMode.READ_ONLY, 0, channel.size());
         return new SingleBuffer(buffer);
     }
 }

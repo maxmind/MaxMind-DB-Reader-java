@@ -45,7 +45,7 @@ final class MultiBuffer implements Buffer {
      */
     MultiBuffer(ByteBuffer[] buffers, int chunkSize) {
         for (int i = 0; i < buffers.length; i++) {
-            ByteBuffer chunk = buffers[i];
+            var chunk = buffers[i];
             if (chunk.capacity() == chunkSize) {
                 continue;
             }
@@ -63,8 +63,8 @@ final class MultiBuffer implements Buffer {
             this.buffers[i] = buffers[i].asReadOnlyBuffer();
         }
 
-        long capacity = 0;
-        for (ByteBuffer buffer : this.buffers) {
+        var capacity = 0L;
+        for (var buffer : this.buffers) {
             capacity += buffer.capacity();
         }
         this.capacity = capacity;
@@ -116,7 +116,7 @@ final class MultiBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public byte get() {
-        byte value = get(position);
+        var value = get(position);
         position++;
         return value;
     }
@@ -131,15 +131,15 @@ final class MultiBuffer implements Buffer {
                             + ", limit=" + limit
             );
         }
-        long pos = position;
-        int offset = 0;
-        int length = dst.length;
+        var pos = position;
+        var offset = 0;
+        var length = dst.length;
         while (length > 0) {
-            int bufIndex = (int) (pos / this.chunkSize);
-            int bufOffset = (int) (pos % this.chunkSize);
-            ByteBuffer buf = buffers[bufIndex];
+            var bufIndex = (int) (pos / this.chunkSize);
+            var bufOffset = (int) (pos % this.chunkSize);
+            var buf = buffers[bufIndex];
             buf.position(bufOffset);
-            int toRead = Math.min(buf.remaining(), length);
+            var toRead = Math.min(buf.remaining(), length);
             buf.get(dst, offset, toRead);
             pos += toRead;
             offset += toRead;
@@ -155,24 +155,24 @@ final class MultiBuffer implements Buffer {
         if (index < 0 || index >= limit) {
             throw new IndexOutOfBoundsException("Index: " + index);
         }
-        int bufIndex = (int) (index / this.chunkSize);
-        int offset = (int) (index % this.chunkSize);
+        var bufIndex = (int) (index / this.chunkSize);
+        var offset = (int) (index % this.chunkSize);
         return buffers[bufIndex].get(offset);
     }
 
     /** {@inheritDoc} */
     @Override
     public double getDouble() {
-        int bufIndex = (int) (position / this.chunkSize);
-        int off = (int) (position % this.chunkSize);
-        ByteBuffer buf = buffers[bufIndex];
+        var bufIndex = (int) (position / this.chunkSize);
+        var off = (int) (position % this.chunkSize);
+        var buf = buffers[bufIndex];
         buf.position(off);
         if (buf.remaining() >= 8) {
-            double value = buf.getDouble();
+            var value = buf.getDouble();
             position += 8;
             return value;
         } else {
-            byte[] eight = new byte[8];
+            var eight = new byte[8];
             get(eight);
             return ByteBuffer.wrap(eight).getDouble();
         }
@@ -181,16 +181,16 @@ final class MultiBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public float getFloat() {
-        int bufIndex = (int) (position / this.chunkSize);
-        int off = (int) (position % this.chunkSize);
-        ByteBuffer buf = buffers[bufIndex];
+        var bufIndex = (int) (position / this.chunkSize);
+        var off = (int) (position % this.chunkSize);
+        var buf = buffers[bufIndex];
         buf.position(off);
         if (buf.remaining() >= 4) {
-            float value = buf.getFloat();
+            var value = buf.getFloat();
             position += 4;
             return value;
         } else {
-            byte[] four = new byte[4];
+            var four = new byte[4];
             get(four);
             return ByteBuffer.wrap(four).getFloat();
         }
@@ -199,11 +199,11 @@ final class MultiBuffer implements Buffer {
     /** {@inheritDoc} */
     @Override
     public Buffer duplicate() {
-        ByteBuffer[] duplicatedBuffers = new ByteBuffer[buffers.length];
+        var duplicatedBuffers = new ByteBuffer[buffers.length];
         for (int i = 0; i < buffers.length; i++) {
             duplicatedBuffers[i] = buffers[i].duplicate();
         }
-        MultiBuffer copy = new MultiBuffer(duplicatedBuffers, chunkSize);
+        var copy = new MultiBuffer(duplicatedBuffers, chunkSize);
         copy.position = this.position;
         copy.limit = this.limit;
         return copy;
@@ -218,7 +218,7 @@ final class MultiBuffer implements Buffer {
 
     String decode(CharsetDecoder decoder, int maxCharBufferSize)
             throws CharacterCodingException {
-        long remainingBytes = limit - position;
+        var remainingBytes = limit - position;
 
         // Cannot allocate more than maxCharBufferSize for CharBuffer
         if (remainingBytes > maxCharBufferSize) {
@@ -227,22 +227,22 @@ final class MultiBuffer implements Buffer {
             );
         }
 
-        CharBuffer out = CharBuffer.allocate((int) remainingBytes);
-        long pos = position;
+        var out = CharBuffer.allocate((int) remainingBytes);
+        var pos = position;
 
         while (remainingBytes > 0) {
             // Locate which underlying buffer we are in
-            int bufIndex = (int) (pos / this.chunkSize);
-            int bufOffset = (int) (pos % this.chunkSize);
+            var bufIndex = (int) (pos / this.chunkSize);
+            var bufOffset = (int) (pos % this.chunkSize);
 
-            ByteBuffer srcView = buffers[bufIndex];
-            int savedLimit = srcView.limit();
+            var srcView = buffers[bufIndex];
+            var savedLimit = srcView.limit();
             srcView.position(bufOffset);
 
-            int toRead = (int) Math.min(srcView.remaining(), remainingBytes);
+            var toRead = (int) Math.min(srcView.remaining(), remainingBytes);
             srcView.limit(bufOffset + toRead);
 
-            CoderResult result = decoder.decode(srcView, out, false);
+            var result = decoder.decode(srcView, out, false);
             srcView.limit(savedLimit);
 
             if (result.isError()) {
@@ -269,21 +269,21 @@ final class MultiBuffer implements Buffer {
      * @throws IOException if an I/O error occurs
      */
     public static MultiBuffer mapFromChannel(FileChannel channel) throws IOException {
-        long size = channel.size();
+        var size = channel.size();
         if (size <= 0) {
             throw new IllegalArgumentException("File channel has no data");
         }
 
-        int fullChunks = (int) (size / DEFAULT_CHUNK_SIZE);
-        int remainder = (int) (size % DEFAULT_CHUNK_SIZE);
-        int totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
+        var fullChunks = (int) (size / DEFAULT_CHUNK_SIZE);
+        var remainder = (int) (size % DEFAULT_CHUNK_SIZE);
+        var totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
 
-        ByteBuffer[] buffers = new ByteBuffer[totalChunks];
-        long remaining = size;
+        var buffers = new ByteBuffer[totalChunks];
+        var remaining = size;
 
         for (int i = 0; i < totalChunks; i++) {
-            long chunkPos = (long) i * DEFAULT_CHUNK_SIZE;
-            long chunkSize = Math.min(DEFAULT_CHUNK_SIZE, remaining);
+            var chunkPos = (long) i * DEFAULT_CHUNK_SIZE;
+            var chunkSize = Math.min(DEFAULT_CHUNK_SIZE, remaining);
             buffers[i] = channel.map(
                     FileChannel.MapMode.READ_ONLY,
                     chunkPos,
