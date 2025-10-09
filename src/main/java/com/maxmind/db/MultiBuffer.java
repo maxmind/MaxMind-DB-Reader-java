@@ -301,13 +301,16 @@ class MultiBuffer implements Buffer {
             int bufIndex = (int) (pos / this.chunkSize);
             int bufOffset = (int) (pos % this.chunkSize);
 
-            ByteBuffer srcView = buffers[bufIndex].duplicate();
+            ByteBuffer srcView = buffers[bufIndex];
+            int savedLimit = srcView.limit();
             srcView.position(bufOffset);
 
             int toRead = (int) Math.min(srcView.remaining(), remainingBytes);
             srcView.limit(bufOffset + toRead);
 
             CoderResult result = decoder.decode(srcView, out, false);
+            srcView.limit(savedLimit);
+
             if (result.isError()) {
                 result.throwException();
             }
