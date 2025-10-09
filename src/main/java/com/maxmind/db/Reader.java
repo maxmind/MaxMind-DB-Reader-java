@@ -385,31 +385,27 @@ public final class Reader implements Closeable {
         // can either be 0 or 1.
         long baseOffset = nodeNumber * this.metadata.nodeByteSize();
 
-        switch (this.metadata.recordSize()) {
-            case 24:
+        int recordSize = this.metadata.recordSize();
+        return switch (recordSize) {
+            case 24 -> {
                 // For a 24 bit record, each record is 3 bytes.
                 buffer.position(baseOffset + (long) index * 3);
-                return Decoder.decodeLong(buffer, 0, 3);
-            case 28:
+                yield Decoder.decodeLong(buffer, 0, 3);
+            }
+            case 28 -> {
                 int middle = buffer.get(baseOffset + 3);
-
-                if (index == 0) {
-                    // We get the most significant from the first half
-                    // of the byte. It belongs to the first record.
-                    middle = (0xF0 & middle) >>> 4;
-                } else {
-                    // We get the most significant byte of the second record.
-                    middle = 0x0F & middle;
-                }
+                // We get the most significant bits from the appropriate half
+                // of the byte based on the index.
+                middle = index == 0 ? (0xF0 & middle) >>> 4 : 0x0F & middle;
                 buffer.position(baseOffset + (long) index * 4);
-                return Decoder.decodeLong(buffer, middle, 3);
-            case 32:
+                yield Decoder.decodeLong(buffer, middle, 3);
+            }
+            case 32 -> {
                 buffer.position(baseOffset + (long) index * 4);
-                return Decoder.decodeLong(buffer, 0, 4);
-            default:
-                throw new InvalidDatabaseException("Unknown record size: "
-                    + this.metadata.recordSize());
-        }
+                yield Decoder.decodeLong(buffer, 0, 4);
+            }
+            default -> throw new InvalidDatabaseException("Unknown record size: " + recordSize);
+        };
     }
 
     <T> T resolveDataPointer(
