@@ -16,7 +16,7 @@ import java.nio.charset.CharsetDecoder;
  * <p>The underlying {@link ByteBuffer} is read-only to prevent accidental
  * modification of shared data.
  */
-class SingleBuffer implements Buffer {
+final class SingleBuffer implements Buffer {
 
     private final ByteBuffer buffer;
 

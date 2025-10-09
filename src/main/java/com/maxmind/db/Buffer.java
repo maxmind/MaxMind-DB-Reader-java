@@ -14,7 +14,7 @@ import java.nio.charset.CharsetDecoder;
  * <p>All underlying {@link java.nio.ByteBuffer}s are read-only to prevent
  * accidental modification of shared data.
  */
-interface Buffer {
+sealed interface Buffer permits SingleBuffer, MultiBuffer {
     /**
      * Returns the total capacity of this buffer in bytes.
      *

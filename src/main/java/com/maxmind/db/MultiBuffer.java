@@ -21,7 +21,7 @@ import java.nio.charset.CoderResult;
  * <p>All underlying {@link ByteBuffer}s are read-only to prevent accidental
  * modification of shared data.
  */
-class MultiBuffer implements Buffer {
+final class MultiBuffer implements Buffer {
 
     /** Default maximum size per underlying chunk. */
     static final int DEFAULT_CHUNK_SIZE = Integer.MAX_VALUE - 8;
