@@ -8,9 +8,6 @@ import java.io.IOException;
  * corrupt or otherwise not in a format supported by the reader.
  */
 public class InvalidDatabaseException extends IOException {
-
-    private static final long serialVersionUID = 6161763462364823003L;
-
     /**
      * @param message A message describing the reason why the exception was thrown.
      */
