@@ -5,6 +5,11 @@ CHANGELOG
 ------------------
 
 * Java 17 or greater is now required.
+* Added support for MaxMind DB files larger than 2GB. The library now uses
+  an internal Buffer abstraction that can handle databases exceeding the
+  2GB ByteBuffer limit. Files under 2GB continue to use a single ByteBuffer
+  for optimal performance. Requested by nonetallt. GitHub #154. Fixed by
+  Silvano Cerza. GitHub #289.
 
 3.2.0 (2025-05-28)
 ------------------
