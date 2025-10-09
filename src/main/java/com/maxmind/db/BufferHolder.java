@@ -8,7 +8,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.List;
 
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
@@ -73,17 +72,6 @@ final class BufferHolder {
                 }
             }
         }
-    }
-
-    /**
-     * Construct a ThreadBuffer from the provided URL.
-     *
-     * @param stream the source of my bytes.
-     * @throws IOException          if unable to read from your source.
-     * @throws NullPointerException if you provide a NULL InputStream
-     */
-    BufferHolder(InputStream stream) throws IOException {
-        this(stream, MultiBuffer.DEFAULT_CHUNK_SIZE);
     }
 
     BufferHolder(InputStream stream, int chunkSize) throws  IOException {

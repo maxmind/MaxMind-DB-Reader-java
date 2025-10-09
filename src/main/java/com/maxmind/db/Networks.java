@@ -3,7 +3,6 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Stack;
@@ -21,19 +20,6 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final boolean includeAliasedNetworks;
     private final Buffer buffer; /* Stores the buffer for Next() calls */
     private final Class<T> typeParameterClass;
-
-    /**
-     * Constructs a Networks instance.
-     *
-     * @param reader The reader object.
-     * @param includeAliasedNetworks The boolean to include aliased networks.
-     * @param typeParameterClass The type of data returned by the iterator.
-     * @throws ClosedDatabaseException Exception for a closed database.
-     */
-    Networks(Reader reader, boolean includeAliasedNetworks, Class<T> typeParameterClass)
-        throws ClosedDatabaseException {
-        this(reader, includeAliasedNetworks, new NetworkNode[0], typeParameterClass);
-    }
 
     /**
      * Constructs a Networks instance.
@@ -58,16 +44,6 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         for (NetworkNode node : nodes) {
             this.nodes.push(node);
         }
-    }
-
-    /**
-     * Constructs a Networks instance with includeAliasedNetworks set to false by default.
-     *
-     * @param reader The reader object.
-     * @param typeParameterClass The type of data returned by the iterator.
-     */
-    Networks(Reader reader, Class<T> typeParameterClass) throws ClosedDatabaseException {
-        this(reader, false, typeParameterClass);
     }
 
     /**

@@ -6,7 +6,6 @@ import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 
 /**
  * A {@link Buffer} implementation backed by multiple {@link ByteBuffer}s,
