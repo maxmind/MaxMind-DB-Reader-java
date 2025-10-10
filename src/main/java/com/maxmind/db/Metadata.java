@@ -51,18 +51,4 @@ public record Metadata(
     public Date buildDate() {
         return new Date(buildEpoch.longValue() * 1000);
     }
-
-    /**
-     * @return the nodeByteSize
-     */
-    int nodeByteSize() {
-        return recordSize / 4;
-    }
-
-    /**
-     * @return the searchTreeSize
-     */
-    long searchTreeSize() {
-        return nodeCount * nodeByteSize();
-    }
 }

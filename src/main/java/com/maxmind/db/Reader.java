@@ -23,6 +23,8 @@ public final class Reader implements Closeable {
 
     private final long ipV4Start;
     private final Metadata metadata;
+    private final int nodeByteSize;
+    private final long searchTreeSize;
     private final AtomicReference<BufferHolder> bufferHolderReference;
     private final NodeCache cache;
     private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
@@ -156,6 +158,10 @@ public final class Reader implements Closeable {
 
         var metadataDecoder = new Decoder(this.cache, buffer, start);
         this.metadata = metadataDecoder.decode(start, Metadata.class);
+
+        // Calculate and cache these values as they are used in hot paths
+        this.nodeByteSize = this.metadata.recordSize() / 4;
+        this.searchTreeSize = this.metadata.nodeCount() * this.nodeByteSize;
 
         this.ipV4Start = this.findIpV4StartNode(buffer);
 
@@ -382,7 +388,7 @@ public final class Reader implements Closeable {
             throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
-        var baseOffset = nodeNumber * this.metadata.nodeByteSize();
+        var baseOffset = nodeNumber * this.nodeByteSize;
 
         var recordSize = this.metadata.recordSize();
         return switch (recordSize) {
@@ -413,7 +419,7 @@ public final class Reader implements Closeable {
         Class<T> cls
     ) throws IOException {
         long resolved = (pointer - this.metadata.nodeCount())
-            + this.metadata.searchTreeSize();
+            + this.searchTreeSize;
 
         if (resolved >= buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -426,7 +432,7 @@ public final class Reader implements Closeable {
         var decoder = new Decoder(
             this.cache,
             buffer,
-            this.metadata.searchTreeSize() + DATA_SECTION_SEPARATOR_SIZE,
+            this.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE,
             this.constructors
         );
         return decoder.decode(resolved, cls);
