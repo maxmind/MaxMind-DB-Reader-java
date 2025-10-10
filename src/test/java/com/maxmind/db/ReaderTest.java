@@ -19,9 +19,11 @@ import java.lang.reflect.Constructor;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +53,7 @@ public class ReaderTest {
     }
 
     static IntStream chunkSizes() {
-        int[] sizes = new int[] {
+        var sizes = new int[] {
                 512,
                 2048,
                 // The default chunk size of the MultiBuffer is close to max int, that causes
@@ -69,8 +71,8 @@ public class ReaderTest {
     public void test(int chunkSize) throws IOException {
         for (long recordSize : new long[] {24, 28, 32}) {
             for (int ipVersion : new int[] {4, 6}) {
-                File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
-                try (Reader reader = new Reader(file, chunkSize)) {
+                var file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
+                try (var reader = new Reader(file, chunkSize)) {
                     this.testMetadata(reader, ipVersion, recordSize);
                     if (ipVersion == 4) {
                         this.testIpV4(reader, file);
@@ -102,19 +104,19 @@ public class ReaderTest {
     public void testNetworks(int chunkSize) throws IOException, InvalidDatabaseException, InvalidNetworkException {
         for (long recordSize : new long[] {24, 28, 32}) {
             for (int ipVersion : new int[] {4, 6}) {
-                File file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
+                var file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
 
-                Reader reader = new Reader(file, chunkSize);
+                var reader = new Reader(file, chunkSize);
                 var networks = reader.networks(false, Map.class);
 
                 while(networks.hasNext()) {
                     var iteration = networks.next();
-                    var data = (Map<?, ?>) iteration.getData();
+                    var data = (Map<?, ?>) iteration.data();
 
-                    InetAddress actualIPInData = InetAddress.getByName((String) data.get("ip"));
+                    var actualIPInData = InetAddress.getByName((String) data.get("ip"));
 
                     assertEquals(
-                        iteration.getNetwork().getNetworkAddress(), 
+                        iteration.network().networkAddress(), 
                         actualIPInData,
                         "expected ip address"
                     );
@@ -128,12 +130,12 @@ public class ReaderTest {
     @ParameterizedTest
     @MethodSource("chunkSizes")
     public void testNetworksWithInvalidSearchTree(int chunkSize) throws IOException, InvalidNetworkException{
-        File file = getFile("MaxMind-DB-test-broken-search-tree-24.mmdb");
-        Reader reader = new Reader(file, chunkSize);
+        var file = getFile("MaxMind-DB-test-broken-search-tree-24.mmdb");
+        var reader = new Reader(file, chunkSize);
 
         var networks = reader.networks(false, Map.class);
 
-        Exception exception = assertThrows(RuntimeException.class, () -> {
+        var exception = assertThrows(RuntimeException.class, () -> {
             while(networks.hasNext()){
                 assertNotNull(networks.next());
             }
@@ -354,19 +356,19 @@ public class ReaderTest {
     public void testNetworksWithin(int chunkSize) throws IOException, InvalidNetworkException{
         for(networkTest test : tests){
             for(int recordSize : new int[]{24, 28, 32}){
-                File file = getFile("MaxMind-DB-test-"+test.database+"-"+recordSize+".mmdb");
-                Reader reader = new Reader(file, chunkSize);
+                var file = getFile("MaxMind-DB-test-"+test.database+"-"+recordSize+".mmdb");
+                var reader = new Reader(file, chunkSize);
 
-                InetAddress address = InetAddress.getByName(test.network);
-                Network network = new Network(address, test.prefix);
+                var address = InetAddress.getByName(test.network);
+                var network = new Network(address, test.prefix);
 
                 boolean includeAliasedNetworks = !test.skipAliasedNetworks;
                 var networks = reader.networksWithin(network, includeAliasedNetworks, Map.class);
 
-                List<String> innerIPs  = new ArrayList<>();
+                var innerIPs = new ArrayList<String>();
                 while(networks.hasNext()){
                     var iteration = networks.next();
-                    innerIPs.add(iteration.getNetwork().toString());
+                    innerIPs.add(iteration.network().toString());
                 }
 
                 assertArrayEquals(test.expected, innerIPs.toArray());
@@ -393,18 +395,18 @@ public class ReaderTest {
     @MethodSource("chunkSizes")
     public void testGeoIPNetworksWithin(int chunkSize) throws IOException, InvalidNetworkException{
         for (networkTest test : geoipTests){
-            File file = getFile(test.database);
-            Reader reader = new Reader(file, chunkSize);
+            var file = getFile(test.database);
+            var reader = new Reader(file, chunkSize);
 
-            InetAddress address = InetAddress.getByName(test.network);
-            Network network = new Network(address, test.prefix);
+            var address = InetAddress.getByName(test.network);
+            var network = new Network(address, test.prefix);
 
             var networks = reader.networksWithin(network, test.skipAliasedNetworks, Map.class);
 
-            ArrayList<String> innerIPs = new ArrayList<>();
+            var innerIPs = new ArrayList<String>();
             while(networks.hasNext()){
                 var iteration = networks.next();
-                innerIPs.add(iteration.getNetwork().toString());
+                innerIPs.add(iteration.network().toString());
             }
 
             assertArrayEquals(test.expected, innerIPs.toArray());
@@ -416,7 +418,7 @@ public class ReaderTest {
     @ParameterizedTest
     @MethodSource("chunkSizes")
     public void testGetRecord(int chunkSize) throws IOException {
-        GetRecordTest[] mapTests = {
+        var mapTests = new GetRecordTest[] {
             new GetRecordTest("1.1.1.1", "MaxMind-DB-test-ipv6-32.mmdb", "1.0.0.0/8", false),
             new GetRecordTest("::1:ffff:ffff", "MaxMind-DB-test-ipv6-24.mmdb",
                 "0:0:0:0:0:1:ffff:ffff/128", true),
@@ -431,20 +433,20 @@ public class ReaderTest {
                 "0:0:0:0:0:0:101:100/120", true),
         };
         for (GetRecordTest test : mapTests) {
-            try (Reader reader = new Reader(test.db, chunkSize)) {
-                DatabaseRecord<?> record = reader.getRecord(test.ip, Map.class);
+            try (var reader = new Reader(test.db, chunkSize)) {
+                var record = reader.getRecord(test.ip, Map.class);
 
-                assertEquals(test.network, record.getNetwork().toString());
+                assertEquals(test.network, record.network().toString());
 
                 if (test.hasRecord) {
-                    assertNotNull(record.getData());
+                    assertNotNull(record.data());
                 } else {
-                    assertNull(record.getData());
+                    assertNull(record.data());
                 }
             }
         }
 
-        GetRecordTest[] stringTests = {
+        var stringTests = new GetRecordTest[] {
             new GetRecordTest("200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb", "0.0.0.0/0",
                 true),
             new GetRecordTest("::200.0.2.1", "MaxMind-DB-no-ipv4-search-tree.mmdb",
@@ -455,15 +457,15 @@ public class ReaderTest {
                 "8000:0:0:0:0:0:0:0/1", false)
         };
         for (GetRecordTest test : stringTests) {
-            try (Reader reader = new Reader(test.db, chunkSize)) {
+            try (var reader = new Reader(test.db, chunkSize)) {
                 var record = reader.getRecord(test.ip, String.class);
 
-                assertEquals(test.network, record.getNetwork().toString());
+                assertEquals(test.network, record.network().toString());
 
                 if (test.hasRecord) {
-                    assertNotNull(record.getData());
+                    assertNotNull(record.data());
                 } else {
-                    assertNull(record.getData());
+                    assertNull(record.data());
                 }
             }
         }
@@ -472,8 +474,8 @@ public class ReaderTest {
     @ParameterizedTest
     @MethodSource("chunkSizes")
     public void testMetadataPointers(int chunkSize) throws IOException {
-        Reader reader = new Reader(getFile("MaxMind-DB-test-metadata-pointers.mmdb"), chunkSize);
-        assertEquals("Lots of pointers in metadata", reader.getMetadata().getDatabaseType());
+        var reader = new Reader(getFile("MaxMind-DB-test-metadata-pointers.mmdb"), chunkSize);
+        assertEquals("Lots of pointers in metadata", reader.getMetadata().databaseType());
     }
 
     @ParameterizedTest
@@ -573,7 +575,7 @@ public class ReaderTest {
 
     private void testDecodingTypesIntoModelObject(Reader reader, boolean booleanValue)
         throws IOException {
-        TestModel model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModel.class);
+        var model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModel.class);
 
         if (booleanValue) {
             assertTrue(model.booleanField);
@@ -585,12 +587,12 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
-        List<Long> expectedArray = new ArrayList<>(List.of(
+        var expectedArray = new ArrayList<>(List.of(
             (long) 1, (long) 2, (long) 3
         ));
         assertEquals(expectedArray, model.arrayField);
 
-        List<Long> expectedArray2 = new ArrayList<>(List.of(
+        var expectedArray2 = new ArrayList<>(List.of(
             (long) 7, (long) 8, (long) 9
         ));
         assertEquals(expectedArray2, model.mapField.mapXField.arrayXField);
@@ -693,7 +695,7 @@ public class ReaderTest {
 
     private void testDecodingTypesIntoModelObjectBoxed(Reader reader, boolean booleanValue)
         throws IOException {
-        TestModelBoxed model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelBoxed.class);
+        var model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelBoxed.class);
 
         if (booleanValue) {
             assertTrue(model.booleanField);
@@ -705,12 +707,12 @@ public class ReaderTest {
 
         assertEquals("unicode! ☯ - ♫", model.utf8StringField);
 
-        List<Long> expectedArray = new ArrayList<>(List.of(
+        var expectedArray = new ArrayList<>(List.of(
             (long) 1, (long) 2, (long) 3
         ));
         assertEquals(expectedArray, model.arrayField);
 
-        List<Long> expectedArray2 = new ArrayList<>(List.of(
+        var expectedArray2 = new ArrayList<>(List.of(
             (long) 7, (long) 8, (long) 9
         ));
         assertEquals(expectedArray2, model.mapField.mapXField.arrayXField);
@@ -813,7 +815,7 @@ public class ReaderTest {
 
     private void testDecodingTypesIntoModelWithList(Reader reader)
         throws IOException {
-        TestModelList model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelList.class);
+        var model = reader.get(InetAddress.getByName("::1.1.1.0"), TestModelList.class);
 
         assertEquals(List.of((long) 1, (long) 2, (long) 3), model.arrayField);
     }
@@ -870,7 +872,7 @@ public class ReaderTest {
     }
 
     private void testZerosModelObject(Reader reader) throws IOException {
-        TestModel model = reader.get(InetAddress.getByName("::"), TestModel.class);
+        var model = reader.get(InetAddress.getByName("::"), TestModel.class);
 
         assertFalse(model.booleanField);
 
@@ -878,7 +880,7 @@ public class ReaderTest {
 
         assertEquals("", model.utf8StringField);
 
-        List<Long> expectedArray = new ArrayList<>();
+        var expectedArray = new ArrayList<Long>();
         assertEquals(expectedArray, model.arrayField);
 
         assertNull(model.mapField.mapXField);
@@ -897,7 +899,7 @@ public class ReaderTest {
     public void testDecodeSubdivisions(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
 
-        TestModelSubdivisions model = this.testReader.get(
+        var model = this.testReader.get(
             InetAddress.getByName("2.125.160.216"),
             TestModelSubdivisions.class
         );
@@ -935,7 +937,7 @@ public class ReaderTest {
     @MethodSource("chunkSizes")
     public void testDecodeWrongTypeWithConstructorException(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
-        DeserializationException ex = assertThrows(DeserializationException.class,
+        var ex = assertThrows(DeserializationException.class,
             () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
                 TestModelSubdivisionsWithUnknownException.class));
 
@@ -959,7 +961,7 @@ public class ReaderTest {
     @MethodSource("chunkSizes")
     public void testDecodeWrongTypeWithWrongArguments(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
-        DeserializationException ex = assertThrows(DeserializationException.class,
+        var ex = assertThrows(DeserializationException.class,
             () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
                 TestWrongModelSubdivisions.class));
         assertThat(ex.getMessage(), containsString("Error getting record for IP"));
@@ -969,7 +971,7 @@ public class ReaderTest {
     @MethodSource("chunkSizes")
     public void testDecodeWithDataTypeMismatchInModel(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
-        DeserializationException ex = assertThrows(DeserializationException.class,
+        var ex = assertThrows(DeserializationException.class,
                 () -> this.testReader.get(InetAddress.getByName("2.125.160.216"),
                         TestDataTypeMismatchInModel.class));
         assertThat(ex.getMessage(), containsString("Error getting record for IP"));
@@ -994,7 +996,7 @@ public class ReaderTest {
     public void testDecodeWithDataTypeMismatchInModelAndNullValue(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
 
-        DeserializationException ex = assertThrows(DeserializationException.class,
+        var ex = assertThrows(DeserializationException.class,
             () -> this.testReader.get(
                 InetAddress.getByName("::1.1.1.0"),
                 TestConstructorMismatchModel.class));
@@ -1053,7 +1055,7 @@ public class ReaderTest {
 
         var eng = (Map<?, ?>) subdivisions.get(0);
 
-        String isoCode = (String) eng.get("iso_code");
+        var isoCode = (String) eng.get("iso_code");
         assertEquals("ENG", isoCode);
     }
 
@@ -1062,7 +1064,7 @@ public class ReaderTest {
     public void testDecodeVector(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
 
-        TestModelVector model = this.testReader.get(
+        var model = this.testReader.get(
             InetAddress.getByName("::1.1.1.0"),
             TestModelVector.class
         );
@@ -1089,7 +1091,7 @@ public class ReaderTest {
     @ParameterizedTest
     @MethodSource("chunkSizes")
     public void testCacheWithDifferentModels(int chunkSize) throws IOException {
-        NodeCache cache = new CHMCache();
+        var cache = new CHMCache();
 
         this.testReader = new Reader(
             getFile("MaxMind-DB-test-decoder.mmdb"),
@@ -1097,13 +1099,13 @@ public class ReaderTest {
             chunkSize
         );
 
-        TestModelA modelA = this.testReader.get(
+        var modelA = this.testReader.get(
             InetAddress.getByName("::1.1.1.0"),
             TestModelA.class
         );
         assertEquals("unicode! ☯ - ♫", modelA.utf8StringFieldA);
 
-        TestModelB modelB = this.testReader.get(
+        var modelB = this.testReader.get(
             InetAddress.getByName("::1.1.1.0"),
             TestModelB.class
         );
@@ -1134,32 +1136,32 @@ public class ReaderTest {
 
     @Test
     public void testCacheKey() {
-        Class<TestModelCacheKey> cls = TestModelCacheKey.class;
+        var cls = TestModelCacheKey.class;
 
-        CacheKey<TestModelCacheKey> a = new CacheKey<>(1, cls, getType(cls, 0));
-        CacheKey<TestModelCacheKey> b = new CacheKey<>(1, cls, getType(cls, 0));
+        var a = new CacheKey<>(1, cls, getType(cls, 0));
+        var b = new CacheKey<>(1, cls, getType(cls, 0));
         assertEquals(a, b);
 
-        CacheKey<TestModelCacheKey> c = new CacheKey<>(2, cls, getType(cls, 0));
+        var c = new CacheKey<>(2, cls, getType(cls, 0));
         assertNotEquals(a, c);
 
-        CacheKey<String> d = new CacheKey<>(1, String.class, getType(cls, 0));
+        var d = new CacheKey<>(1, String.class, getType(cls, 0));
         assertNotEquals(a, d);
 
-        CacheKey<TestModelCacheKey> e = new CacheKey<>(1, cls, getType(cls, 1));
+        var e = new CacheKey<>(1, cls, getType(cls, 1));
         assertNotEquals(a, e);
     }
 
     private <T> java.lang.reflect.Type getType(Class<T> cls, int i) {
-        Constructor<?>[] constructors = cls.getConstructors();
+        var constructors = cls.getConstructors();
         Constructor<TestModelCacheKey> constructor = null;
-        for (Constructor<?> constructor2 : constructors) {
+        for (var constructor2 : constructors) {
             constructor = (Constructor<TestModelCacheKey>) constructor2;
             break;
         }
         assertNotNull(constructor);
 
-        java.lang.reflect.Type[] types = constructor.getGenericParameterTypes();
+        var types = constructor.getGenericParameterTypes();
         return types[i];
     }
 
@@ -1188,7 +1190,7 @@ public class ReaderTest {
     }
 
     private void testBrokenDatabase(Reader reader) {
-        InvalidDatabaseException ex = assertThrows(
+        var ex = assertThrows(
             InvalidDatabaseException.class,
             () -> reader.get(InetAddress.getByName("2001:220::"), Map.class));
         assertThat(ex.getMessage(),
@@ -1210,7 +1212,7 @@ public class ReaderTest {
     }
 
     private void testBrokenSearchTreePointer(Reader reader) {
-        InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
+        var ex = assertThrows(InvalidDatabaseException.class,
             () -> reader.get(InetAddress.getByName("1.1.1.32"), Map.class));
         assertThat(ex.getMessage(), containsString("The MaxMind DB file's search tree is corrupt"));
     }
@@ -1230,7 +1232,7 @@ public class ReaderTest {
     }
 
     private void testBrokenDataPointer(Reader reader) {
-        InvalidDatabaseException ex = assertThrows(InvalidDatabaseException.class,
+        var ex = assertThrows(InvalidDatabaseException.class,
             () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
         assertThat(ex.getMessage(),
             containsString("The MaxMind DB file's data section contains bad data"));
@@ -1239,10 +1241,10 @@ public class ReaderTest {
     @ParameterizedTest
     @MethodSource("chunkSizes")
     public void testClosedReaderThrowsException(int chunkSize) throws IOException {
-        Reader reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
 
         reader.close();
-        ClosedDatabaseException ex = assertThrows(ClosedDatabaseException.class,
+        var ex = assertThrows(ClosedDatabaseException.class,
             () -> reader.get(InetAddress.getByName("1.1.1.16"), Map.class));
         assertEquals("The MaxMind DB has been closed.", ex.getMessage());
     }
@@ -1252,7 +1254,7 @@ public class ReaderTest {
     public void voidTestMapKeyIsString(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("GeoIP2-City-Test.mmdb"), chunkSize);
 
-        DeserializationException ex = assertThrows(
+        var ex = assertThrows(
             DeserializationException.class,
             () -> this.testReader.get(
                 InetAddress.getByName("2.125.160.216"),
@@ -1277,35 +1279,36 @@ public class ReaderTest {
 
     private void testMetadata(Reader reader, int ipVersion, long recordSize) {
 
-        Metadata metadata = reader.getMetadata();
+        var metadata = reader.getMetadata();
 
-        assertEquals(2, metadata.getBinaryFormatMajorVersion(), "major version");
-        assertEquals(0, metadata.getBinaryFormatMinorVersion());
-        assertEquals(ipVersion, metadata.getIpVersion());
-        assertEquals("Test", metadata.getDatabaseType());
+        assertEquals(2, metadata.binaryFormatMajorVersion(), "major version");
+        assertEquals(0, metadata.binaryFormatMinorVersion());
+        assertEquals(ipVersion, metadata.ipVersion());
+        assertEquals("Test", metadata.databaseType());
 
-        List<String> languages = new ArrayList<>(List.of("en", "zh"));
+        var languages = new ArrayList<>(List.of("en", "zh"));
 
-        assertEquals(languages, metadata.getLanguages());
+        assertEquals(languages, metadata.languages());
 
-        Map<String, String> description = new HashMap<>();
+        var description = new HashMap<String, String>();
         description.put("en", "Test Database");
         description.put("zh", "Test Database Chinese");
 
-        assertEquals(description, metadata.getDescription());
-        assertEquals(recordSize, metadata.getRecordSize());
+        assertEquals(description, metadata.description());
+        assertEquals(recordSize, metadata.recordSize());
 
-        Calendar cal = Calendar.getInstance();
-        cal.set(2014, Calendar.JANUARY, 1);
+        var january2014 = LocalDate.of(2014, 1, 1)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant();
 
-        assertTrue(metadata.getBuildDate().compareTo(cal.getTime()) > 0);
+        assertTrue(metadata.buildTime().isAfter(january2014));
     }
 
     private void testIpV4(Reader reader, File file) throws IOException {
 
         for (int i = 0; i <= 5; i++) {
-            String address = "1.1.1." + (int) Math.pow(2, i);
-            Map<String, String> data = new HashMap<>();
+            var address = "1.1.1." + (int) Math.pow(2, i);
+            var data = new HashMap<String, String>();
             data.put("ip", address);
 
             assertEquals(
@@ -1315,7 +1318,7 @@ public class ReaderTest {
             );
         }
 
-        Map<String, String> pairs = new HashMap<>();
+        var pairs = new HashMap<String, String>();
         pairs.put("1.1.1.3", "1.1.1.2");
         pairs.put("1.1.1.5", "1.1.1.4");
         pairs.put("1.1.1.7", "1.1.1.4");
@@ -1324,7 +1327,7 @@ public class ReaderTest {
         pairs.put("1.1.1.17", "1.1.1.16");
         pairs.put("1.1.1.31", "1.1.1.16");
         for (String address : pairs.keySet()) {
-            Map<String, String> data = new HashMap<>();
+            var data = new HashMap<String, String>();
             data.put("ip", pairs.get(address));
 
             assertEquals(
@@ -1341,11 +1344,11 @@ public class ReaderTest {
 
     // XXX - logic could be combined with above
     private void testIpV6(Reader reader, File file) throws IOException {
-        String[] subnets = new String[] {"::1:ffff:ffff", "::2:0:0",
+        var subnets = new String[] {"::1:ffff:ffff", "::2:0:0",
             "::2:0:40", "::2:0:50", "::2:0:58"};
 
         for (String address : subnets) {
-            Map<String, String> data = new HashMap<>();
+            var data = new HashMap<String, String>();
             data.put("ip", address);
 
             assertEquals(
@@ -1355,7 +1358,7 @@ public class ReaderTest {
             );
         }
 
-        Map<String, String> pairs = new HashMap<>();
+        var pairs = new HashMap<String, String>();
         pairs.put("::2:0:1", "::2:0:0");
         pairs.put("::2:0:33", "::2:0:0");
         pairs.put("::2:0:39", "::2:0:0");
@@ -1366,7 +1369,7 @@ public class ReaderTest {
         pairs.put("::2:0:59", "::2:0:58");
 
         for (String address : pairs.keySet()) {
-            Map<String, String> data = new HashMap<>();
+            var data = new HashMap<String, String>();
             data.put("ip", pairs.get(address));
 
             assertEquals(

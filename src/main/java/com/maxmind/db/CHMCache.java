@@ -37,7 +37,7 @@ public class CHMCache implements NodeCache {
 
     @Override
     public DecodedValue get(CacheKey<?> key, Loader loader) throws IOException {
-        DecodedValue value = cache.get(key);
+        var value = cache.get(key);
         if (value == null) {
             value = loader.load(key);
             if (!cacheFull) {

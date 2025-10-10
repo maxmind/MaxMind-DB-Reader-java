@@ -19,7 +19,7 @@ public class MultiThreadedTest {
     public void multipleMmapOpens() throws InterruptedException,
         ExecutionException {
         Callable<Map<?, ?>> task = () -> {
-            try (Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
+            try (var reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
                 return reader.get(InetAddress.getByName("::1.1.1.0"), Map.class);
             }
         };
@@ -29,7 +29,7 @@ public class MultiThreadedTest {
     @Test
     public void streamThreadTest() throws IOException, InterruptedException,
         ExecutionException {
-        try (Reader reader = new Reader(ReaderTest.getStream("MaxMind-DB-test-decoder.mmdb"), 2048)) {
+        try (var reader = new Reader(ReaderTest.getStream("MaxMind-DB-test-decoder.mmdb"), 2048)) {
             MultiThreadedTest.threadTest(reader);
         }
     }
@@ -37,7 +37,7 @@ public class MultiThreadedTest {
     @Test
     public void mmapThreadTest() throws IOException, InterruptedException,
         ExecutionException {
-        try (Reader reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
+        try (var reader = new Reader(ReaderTest.getFile("MaxMind-DB-test-decoder.mmdb"))) {
             MultiThreadedTest.threadTest(reader);
         }
     }
@@ -52,12 +52,12 @@ public class MultiThreadedTest {
         throws InterruptedException, ExecutionException {
         int threadCount = 256;
         var tasks = Collections.nCopies(threadCount, task);
-        ExecutorService executorService = Executors
+        var executorService = Executors
             .newFixedThreadPool(threadCount);
         var futures = executorService.invokeAll(tasks);
 
         for (Future<Map<?, ?>> future : futures) {
-            Map<?, ?> record = future.get();
+            var record = future.get();
             assertEquals(268435456, (long) record.get("uint32"));
             assertEquals("unicode! ☯ - ♫", record.get("utf8_string"));
         }

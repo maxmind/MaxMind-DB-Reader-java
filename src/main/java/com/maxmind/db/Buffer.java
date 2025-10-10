@@ -1,7 +1,5 @@
 package com.maxmind.db;
 
-import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CharsetDecoder;
 
@@ -12,8 +10,11 @@ import java.nio.charset.CharsetDecoder;
  *
  * <p>This interface is designed to provide a long-based API while
  * remaining compatible with the limitations of underlying storage.
+ *
+ * <p>All underlying {@link java.nio.ByteBuffer}s are read-only to prevent
+ * accidental modification of shared data.
  */
-interface Buffer {
+sealed interface Buffer permits SingleBuffer, MultiBuffer {
     /**
      * Returns the total capacity of this buffer in bytes.
      *
@@ -95,16 +96,6 @@ interface Buffer {
      * @return a duplicate buffer
      */
     Buffer duplicate();
-
-    /**
-     * Reads data from the given channel into this buffer starting at the
-     * current position.
-     *
-     * @param channel the file channel
-     * @return the number of bytes read
-     * @throws IOException if an I/O error occurs
-     */
-    long readFrom(FileChannel channel) throws IOException;
 
     /**
      * Decodes the buffer's content into a string using the given decoder.

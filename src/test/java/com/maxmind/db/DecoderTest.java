@@ -20,7 +20,7 @@ public class DecoderTest {
 
     private static Map<Integer, byte[]> int32() {
         int max = (2 << 30) - 1;
-        HashMap<Integer, byte[]> int32 = new HashMap<>();
+        var int32 = new HashMap<Integer, byte[]>();
 
         int32.put(0, new byte[] {0x0, 0x1});
         int32.put(-1, new byte[] {0x4, 0x1, (byte) 0xff, (byte) 0xff,
@@ -49,7 +49,7 @@ public class DecoderTest {
 
     private static Map<Long, byte[]> uint32() {
         long max = (((long) 1) << 32) - 1;
-        HashMap<Long, byte[]> uint32s = new HashMap<>();
+        var uint32s = new HashMap<Long, byte[]>();
 
         uint32s.put((long) 0, new byte[] {(byte) 0xc0});
         uint32s.put((long) ((1 << 8) - 1), new byte[] {(byte) 0xc1,
@@ -69,7 +69,7 @@ public class DecoderTest {
     private static Map<Integer, byte[]> uint16() {
         int max = (1 << 16) - 1;
 
-        Map<Integer, byte[]> uint16s = new HashMap<>();
+        var uint16s = new HashMap<Integer, byte[]>();
 
         uint16s.put(0, new byte[] {(byte) 0xa0});
         uint16s.put((1 << 8) - 1, new byte[] {(byte) 0xa1, (byte) 0xff});
@@ -80,7 +80,7 @@ public class DecoderTest {
     }
 
     private static Map<BigInteger, byte[]> largeUint(int bits) {
-        Map<BigInteger, byte[]> uints = new HashMap<>();
+        var uints = new HashMap<BigInteger, byte[]>();
 
         byte ctrlByte = (byte) (bits == 64 ? 0x2 : 0x3);
 
@@ -92,10 +92,10 @@ public class DecoderTest {
 
         for (int power = 1; power <= bits / 8; power++) {
 
-            BigInteger key = BigInteger.valueOf(2).pow(8 * power)
+            var key = BigInteger.valueOf(2).pow(8 * power)
                 .subtract(BigInteger.valueOf(1));
 
-            byte[] value = new byte[2 + power];
+            var value = new byte[2 + power];
             value[0] = (byte) power;
             value[1] = ctrlByte;
             for (int i = 2; i < value.length; i++) {
@@ -108,7 +108,7 @@ public class DecoderTest {
     }
 
     private static Map<Long, byte[]> pointers() {
-        Map<Long, byte[]> pointers = new HashMap<>();
+        var pointers = new HashMap<Long, byte[]>();
 
         pointers.put((long) 0, new byte[] {0x20, 0x0});
         pointers.put((long) 5, new byte[] {0x20, 0x5});
@@ -131,7 +131,7 @@ public class DecoderTest {
     }
 
     private static Map<String, byte[]> strings() {
-        Map<String, byte[]> strings = new HashMap<>();
+        var strings = new HashMap<String, byte[]>();
 
         DecoderTest.addTestString(strings, (byte) 0x40, "");
         DecoderTest.addTestString(strings, (byte) 0x41, "1");
@@ -167,12 +167,12 @@ public class DecoderTest {
     }
 
     private static Map<byte[], byte[]> bytes() {
-        Map<byte[], byte[]> bytes = new HashMap<>();
+        var bytes = new HashMap<byte[], byte[]>();
 
-        Map<String, byte[]> strings = DecoderTest.strings();
+        var strings = DecoderTest.strings();
 
         for (String s : strings.keySet()) {
-            byte[] ba = strings.get(s);
+            var ba = strings.get(s);
             ba[0] ^= 0xc0;
 
             bytes.put(s.getBytes(StandardCharsets.UTF_8), ba);
@@ -189,8 +189,8 @@ public class DecoderTest {
     private static void addTestString(Map<String, byte[]> tests, byte[] ctrl,
                                       String str) {
 
-        byte[] sb = str.getBytes(StandardCharsets.UTF_8);
-        byte[] bytes = new byte[ctrl.length + sb.length];
+        var sb = str.getBytes(StandardCharsets.UTF_8);
+        var bytes = new byte[ctrl.length + sb.length];
 
         System.arraycopy(ctrl, 0, bytes, 0, ctrl.length);
         System.arraycopy(sb, 0, bytes, ctrl.length, sb.length);
@@ -198,7 +198,7 @@ public class DecoderTest {
     }
 
     private static Map<Double, byte[]> doubles() {
-        Map<Double, byte[]> doubles = new HashMap<>();
+        var doubles = new HashMap<Double, byte[]>();
         doubles.put(0.0, new byte[] {0x68, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0});
         doubles.put(0.5, new byte[] {0x68, 0x3F, (byte) 0xE0, 0x0, 0x0, 0x0,
@@ -220,7 +220,7 @@ public class DecoderTest {
     }
 
     private static Map<Float, byte[]> floats() {
-        Map<Float, byte[]> floats = new HashMap<>();
+        var floats = new HashMap<Float, byte[]>();
         floats.put((float) 0.0, new byte[] {0x4, 0x8, 0x0, 0x0, 0x0, 0x0});
         floats.put((float) 1.0, new byte[] {0x4, 0x8, 0x3F, (byte) 0x80, 0x0,
             0x0});
@@ -243,7 +243,7 @@ public class DecoderTest {
     }
 
     private static Map<Boolean, byte[]> booleans() {
-        Map<Boolean, byte[]> booleans = new HashMap<>();
+        var booleans = new HashMap<Boolean, byte[]>();
 
         booleans.put(Boolean.FALSE, new byte[] {0x0, 0x7});
         booleans.put(Boolean.TRUE, new byte[] {0x1, 0x7});
@@ -251,17 +251,17 @@ public class DecoderTest {
     }
 
     private static Map<Map<String, ?>, byte[]> maps() {
-        Map<Map<String, ?>, byte[]> maps = new HashMap<>();
+        var maps = new HashMap<Map<String, ?>, byte[]>();
 
-        Map<String, Object> empty = Map.of();
+        var empty = Map.<String, Object>of();
         maps.put(empty, new byte[] {(byte) 0xe0});
 
-        Map<String, String> one = new HashMap<>();
+        var one = new HashMap<String, String>();
         one.put("en", "Foo");
         maps.put(one, new byte[] {(byte) 0xe1, /* en */0x42, 0x65, 0x6e,
             /* Foo */0x43, 0x46, 0x6f, 0x6f});
 
-        Map<String, String> two = new HashMap<>();
+        var two = new HashMap<String, String>();
         two.put("en", "Foo");
         two.put("zh", "人");
         maps.put(two, new byte[] {(byte) 0xe2,
@@ -274,7 +274,7 @@ public class DecoderTest {
             /* 人 */
             0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        Map<String, Map<String, String>> nested = new HashMap<>();
+        var nested = new HashMap<String, Map<String, String>>();
         nested.put("name", two);
 
         maps.put(nested, new byte[] {(byte) 0xe1, /* name */
@@ -287,8 +287,8 @@ public class DecoderTest {
             /* 人 */
             0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        Map<String, List<Object>> guess = new HashMap<>();
-        List<Object> languages = new ArrayList<>();
+        var guess = new HashMap<String, List<Object>>();
+        var languages = new ArrayList<Object>();
         languages.add("en");
         languages.add("zh");
         guess.put("languages", languages);
@@ -305,15 +305,15 @@ public class DecoderTest {
     }
 
     private static Map<List<String>, byte[]> arrays() {
-        Map<List<String>, byte[]> arrays = new HashMap<>();
+        var arrays = new HashMap<List<String>, byte[]>();
 
-        ArrayList<String> f1 = new ArrayList<>();
+        var f1 = new ArrayList<String>();
         f1.add("Foo");
         arrays.put(f1, new byte[] {0x1, 0x4,
             /* Foo */
             0x43, 0x46, 0x6f, 0x6f});
 
-        ArrayList<String> f2 = new ArrayList<>();
+        var f2 = new ArrayList<String>();
         f2.add("Foo");
         f2.add("人");
         arrays.put(f2, new byte[] {0x2, 0x4,
@@ -322,7 +322,7 @@ public class DecoderTest {
             /* 人 */
             0x43, (byte) 0xe4, (byte) 0xba, (byte) 0xba});
 
-        ArrayList<String> empty = new ArrayList<>();
+        var empty = new ArrayList<String>();
         arrays.put(empty, new byte[] {0x0, 0x4});
 
         return arrays;
@@ -398,10 +398,10 @@ public class DecoderTest {
 
     @Test
     public void testInvalidControlByte() {
-        SingleBuffer buffer = SingleBuffer.wrap(new byte[] {0x0, 0xF});
+        var buffer = SingleBuffer.wrap(new byte[] {0x0, 0xF});
 
-        Decoder decoder = new Decoder(new CHMCache(), buffer, 0);
-        InvalidDatabaseException ex = assertThrows(
+        var decoder = new Decoder(new CHMCache(), buffer, 0);
+        var ex = assertThrows(
                 InvalidDatabaseException.class,
                 () -> decoder.decode(0, String.class));
         assertThat(ex.getMessage(),
@@ -410,16 +410,16 @@ public class DecoderTest {
 
     private static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)
             throws IOException {
-        NodeCache cache = new CHMCache();
+        var cache = new CHMCache();
 
         for (Map.Entry<T, byte[]> entry : tests.entrySet()) {
-            T expect = entry.getKey();
-            byte[] input = entry.getValue();
+            var expect = entry.getKey();
+            var input = entry.getValue();
 
-            String desc = "decoded " + type.name() + " - " + expect;
-            SingleBuffer buffer = SingleBuffer.wrap(input);
+            var desc = "decoded " + type.name() + " - " + expect;
+            var buffer = SingleBuffer.wrap(input);
 
-            Decoder decoder = new TestDecoder(cache, buffer, 0);
+            var decoder = new TestDecoder(cache, buffer, 0);
 
             switch (type) {
                 case BYTES:
@@ -455,14 +455,14 @@ public class DecoderTest {
                 default: {
                     // We hit this for Type.MAP.
 
-                    Map<?, ?> got = decoder.decode(0, Map.class);
-                    Map<?, ?> expectMap = (Map<?, ?>) expect;
+                    var got = decoder.decode(0, Map.class);
+                    var expectMap = (Map<?, ?>) expect;
 
                     assertEquals(expectMap.size(), got.size(), desc);
 
                     for (Object keyObject : expectMap.keySet()) {
-                        String key = (String) keyObject;
-                        Object value = expectMap.get(key);
+                        var key = (String) keyObject;
+                        var value = expectMap.get(key);
 
                         if (value instanceof Object[] arrayValue) {
                             assertArrayEquals(arrayValue, (Object[]) got.get(key), desc);

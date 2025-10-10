@@ -12,34 +12,22 @@ import java.nio.charset.CharsetDecoder;
  *
  * <p>This implementation is limited to capacities up to
  * {@link Integer#MAX_VALUE}, as {@link ByteBuffer} cannot exceed that size.
+ *
+ * <p>The underlying {@link ByteBuffer} is read-only to prevent accidental
+ * modification of shared data.
  */
-class SingleBuffer implements Buffer {
+final class SingleBuffer implements Buffer {
 
     private final ByteBuffer buffer;
 
     /**
-     * Creates a new {@code SingleBuffer} with the given capacity.
-     *
-     * @param capacity the capacity in bytes (must be <= Integer.MAX_VALUE)
-     * @throws IllegalArgumentException if the capacity exceeds
-     *                                  {@link Integer#MAX_VALUE}
-     */
-    public SingleBuffer(long capacity) {
-        if (capacity > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException(
-                "SingleBuffer cannot exceed Integer.MAX_VALUE capacity"
-            );
-        }
-        this.buffer = ByteBuffer.allocate((int) capacity);
-    }
-
-    /**
      * Creates a new {@code SingleBuffer} wrapping the given {@link ByteBuffer}.
+     * The buffer is made read-only.
      *
      * @param buffer the underlying buffer
      */
-    private SingleBuffer(ByteBuffer buffer) {
-        this.buffer = buffer;
+    SingleBuffer(ByteBuffer buffer) {
+        this.buffer = buffer.asReadOnlyBuffer();
     }
 
     /** {@inheritDoc} */
@@ -113,12 +101,6 @@ class SingleBuffer implements Buffer {
 
     /** {@inheritDoc} */
     @Override
-    public long readFrom(FileChannel channel) throws IOException {
-        return channel.read(buffer);
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public String decode(CharsetDecoder decoder)
         throws CharacterCodingException {
         return decoder.decode(buffer).toString();
@@ -144,7 +126,7 @@ class SingleBuffer implements Buffer {
      */
     public static SingleBuffer mapFromChannel(FileChannel channel)
         throws IOException {
-        ByteBuffer buffer = channel.map(MapMode.READ_ONLY, 0, channel.size());
-        return new SingleBuffer(buffer.asReadOnlyBuffer());
+        var buffer = channel.map(MapMode.READ_ONLY, 0, channel.size());
+        return new SingleBuffer(buffer);
     }
 }

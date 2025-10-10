@@ -13,11 +13,11 @@ public class PointerTest {
     @SuppressWarnings("static-method")
     @Test
     public void testWithPointers() throws IOException {
-        File file = ReaderTest.getFile("maps-with-pointers.raw");
-        BufferHolder ptf = new BufferHolder(file, FileMode.MEMORY);
-        Decoder decoder = new Decoder(NoCache.getInstance(), ptf.get(), 0);
+        var file = ReaderTest.getFile("maps-with-pointers.raw");
+        var ptf = new BufferHolder(file, FileMode.MEMORY);
+        var decoder = new Decoder(NoCache.getInstance(), ptf.get(), 0);
 
-        Map<String, String> map = new HashMap<>();
+        var map = new HashMap<String, String>();
         map.put("long_key", "long_value1");
         assertEquals(map, decoder.decode(0, Map.class));
 

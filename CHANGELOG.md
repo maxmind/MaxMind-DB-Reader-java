@@ -5,6 +5,23 @@ CHANGELOG
 ------------------
 
 * Java 17 or greater is now required.
+* Added support for MaxMind DB files larger than 2GB. The library now uses
+  an internal Buffer abstraction that can handle databases exceeding the
+  2GB ByteBuffer limit. Files under 2GB continue to use a single ByteBuffer
+  for optimal performance. Requested by nonetallt. GitHub #154. Fixed by
+  Silvano Cerza. GitHub #289.
+* `Metadata.getBuildDate()` has been replaced with `buildTime()`, which returns
+  `java.time.Instant` instead of `java.util.Date`. The instant represents the
+  database build time in UTC.
+* `DatabaseRecord`, `Metadata`, `Network`, and internal `DecodedValue` classes
+  have been converted to records. The following API changes were made:
+  * `DatabaseRecord.getData()` and `DatabaseRecord.getNetwork()` have been
+    replaced with record accessor methods `data()` and `network()`.
+  * Simple getter methods on `Metadata` (e.g., `getBinaryFormatMajorVersion()`,
+    `getDatabaseType()`, etc.) have been replaced with their corresponding record
+    accessor methods (e.g., `binaryFormatMajorVersion()`, `databaseType()`, etc.).
+  * `Network.getNetworkAddress()` and `Network.getPrefixLength()` have been
+    replaced with record accessor methods `networkAddress()` and `prefixLength()`.
 
 3.2.0 (2025-05-28)
 ------------------

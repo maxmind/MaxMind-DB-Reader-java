@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -24,6 +23,8 @@ public final class Reader implements Closeable {
 
     private final long ipV4Start;
     private final Metadata metadata;
+    private final int nodeByteSize;
+    private final long searchTreeSize;
     private final AtomicReference<BufferHolder> bufferHolderReference;
     private final NodeCache cache;
     private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
@@ -152,11 +153,15 @@ public final class Reader implements Closeable {
         }
         this.cache = cache;
 
-        Buffer buffer = bufferHolder.get();
+        var buffer = bufferHolder.get();
         long start = this.findMetadataStart(buffer, name);
 
-        Decoder metadataDecoder = new Decoder(this.cache, buffer, start);
+        var metadataDecoder = new Decoder(this.cache, buffer, start);
         this.metadata = metadataDecoder.decode(start, Metadata.class);
+
+        // Calculate and cache these values as they are used in hot paths
+        this.nodeByteSize = this.metadata.recordSize() / 4;
+        this.searchTreeSize = this.metadata.nodeCount() * this.nodeByteSize;
 
         this.ipV4Start = this.findIpV4StartNode(buffer);
 
@@ -173,7 +178,7 @@ public final class Reader implements Closeable {
      * @throws IOException if a file I/O error occurs.
      */
     public <T> T get(InetAddress ipAddress, Class<T> cls) throws IOException {
-        return getRecord(ipAddress, cls).getData();
+        return getRecord(ipAddress, cls).data();
     }
 
     long getIpv4Start() {
@@ -193,15 +198,15 @@ public final class Reader implements Closeable {
     public <T> DatabaseRecord<T> getRecord(InetAddress ipAddress, Class<T> cls)
         throws IOException {
 
-        byte[] rawAddress = ipAddress.getAddress();
+        var rawAddress = ipAddress.getAddress();
 
-        long[] traverseResult = traverseTree(rawAddress, rawAddress.length * 8);
+        var traverseResult = traverseTree(rawAddress, rawAddress.length * 8);
 
         long record = traverseResult[0];
         int pl = (int) traverseResult[1];
 
-        long nodeCount = this.metadata.getNodeCount();
-        Buffer buffer = this.getBufferHolder().get();
+        long nodeCount = this.metadata.nodeCount();
+        var buffer = this.getBufferHolder().get();
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
@@ -253,14 +258,14 @@ public final class Reader implements Closeable {
             Class<T> typeParameterClass) throws
         InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
         try {
-            if (this.getMetadata().getIpVersion() == 6) {
-                InetAddress ipv6 = InetAddress.getByAddress(new byte[16]);
-                Network ipAllV6 = new Network(ipv6, 0); // Mask 128.
+            if (this.getMetadata().ipVersion() == 6) {
+                var ipv6 = InetAddress.getByAddress(new byte[16]);
+                var ipAllV6 = new Network(ipv6, 0); // Mask 128.
                 return this.networksWithin(ipAllV6, includeAliasedNetworks, typeParameterClass);
             }
 
-            InetAddress ipv4 = InetAddress.getByAddress(new byte[4]);
-            Network ipAllV4 = new Network(ipv4, 0); // Mask 32.
+            var ipv4 = InetAddress.getByAddress(new byte[4]);
+            var ipAllV4 = new Network(ipv4, 0); // Mask 32.
             return this.networksWithin(ipAllV4, includeAliasedNetworks, typeParameterClass);
         } catch (UnknownHostException e) {
             /* This is returned by getByAddress. This should never happen
@@ -270,7 +275,7 @@ public final class Reader implements Closeable {
     }
 
     BufferHolder getBufferHolder() throws ClosedDatabaseException {
-        BufferHolder bufferHolder = this.bufferHolderReference.get();
+        var bufferHolder = this.bufferHolderReference.get();
         if (bufferHolder == null) {
             throw new ClosedDatabaseException();
         }
@@ -280,7 +285,7 @@ public final class Reader implements Closeable {
     private long startNode(int bitLength) {
         // Check if we are looking up an IPv4 address in an IPv6 tree. If this
         // is the case, we can skip over the first 96 nodes.
-        if (this.metadata.getIpVersion() == 6 && bitLength == 32) {
+        if (this.metadata.ipVersion() == 6 && bitLength == 32) {
             return this.ipV4Start;
         }
         // The first node of the tree is always node 0, at the beginning of the
@@ -290,12 +295,12 @@ public final class Reader implements Closeable {
 
     private long findIpV4StartNode(Buffer buffer)
         throws InvalidDatabaseException {
-        if (this.metadata.getIpVersion() == 4) {
+        if (this.metadata.ipVersion() == 4) {
             return 0;
         }
 
         long node = 0;
-        for (int i = 0; i < 96 && node < this.metadata.getNodeCount(); i++) {
+        for (int i = 0; i < 96 && node < this.metadata.nodeCount(); i++) {
             node = this.readNode(buffer, node, 0);
         }
         return node;
@@ -322,15 +327,15 @@ public final class Reader implements Closeable {
             boolean includeAliasedNetworks,
             Class<T> typeParameterClass)
         throws InvalidNetworkException, ClosedDatabaseException, InvalidDatabaseException {
-        InetAddress networkAddress = network.getNetworkAddress();
-        if (this.metadata.getIpVersion() == 4 && networkAddress instanceof Inet6Address) {
+        var networkAddress = network.networkAddress();
+        if (this.metadata.ipVersion() == 4 && networkAddress instanceof Inet6Address) {
             throw new InvalidNetworkException(networkAddress);
         }
 
-        byte[] ipBytes = networkAddress.getAddress();
-        int prefixLength = network.getPrefixLength();
+        var ipBytes = networkAddress.getAddress();
+        int prefixLength = network.prefixLength();
 
-        if (this.metadata.getIpVersion() == 6 && ipBytes.length == IPV4_LEN) {
+        if (this.metadata.ipVersion() == 6 && ipBytes.length == IPV4_LEN) {
             if (includeAliasedNetworks) {
                 // Convert it to the IP address (in 16-byte from) of the IPv4 address.
                 ipBytes = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -343,7 +348,7 @@ public final class Reader implements Closeable {
             prefixLength += 96;
         }
 
-        long[] traverseResult = this.traverseTree(ipBytes, prefixLength);
+        var traverseResult = this.traverseTree(ipBytes, prefixLength);
         long node = traverseResult[0];
         int prefix = (int) traverseResult[1];
 
@@ -361,10 +366,10 @@ public final class Reader implements Closeable {
      */
     private long[] traverseTree(byte[] ip, int bitCount)
         throws ClosedDatabaseException, InvalidDatabaseException {
-        Buffer buffer = this.getBufferHolder().get();
+        var buffer = this.getBufferHolder().get();
         int bitLength = ip.length * 8;
         long record = this.startNode(bitLength);
-        long nodeCount = this.metadata.getNodeCount();
+        long nodeCount = this.metadata.nodeCount();
 
         int i = 0;
         for (; i < bitCount && record < nodeCount; i++) {
@@ -383,33 +388,29 @@ public final class Reader implements Closeable {
             throws InvalidDatabaseException {
         // index is the index of the record within the node, which
         // can either be 0 or 1.
-        long baseOffset = nodeNumber * this.metadata.getNodeByteSize();
+        var baseOffset = nodeNumber * this.nodeByteSize;
 
-        switch (this.metadata.getRecordSize()) {
-            case 24:
+        var recordSize = this.metadata.recordSize();
+        return switch (recordSize) {
+            case 24 -> {
                 // For a 24 bit record, each record is 3 bytes.
                 buffer.position(baseOffset + (long) index * 3);
-                return Decoder.decodeLong(buffer, 0, 3);
-            case 28:
+                yield Decoder.decodeLong(buffer, 0, 3);
+            }
+            case 28 -> {
                 int middle = buffer.get(baseOffset + 3);
-
-                if (index == 0) {
-                    // We get the most significant from the first half
-                    // of the byte. It belongs to the first record.
-                    middle = (0xF0 & middle) >>> 4;
-                } else {
-                    // We get the most significant byte of the second record.
-                    middle = 0x0F & middle;
-                }
+                // We get the most significant bits from the appropriate half
+                // of the byte based on the index.
+                middle = index == 0 ? (0xF0 & middle) >>> 4 : 0x0F & middle;
                 buffer.position(baseOffset + (long) index * 4);
-                return Decoder.decodeLong(buffer, middle, 3);
-            case 32:
+                yield Decoder.decodeLong(buffer, middle, 3);
+            }
+            case 32 -> {
                 buffer.position(baseOffset + (long) index * 4);
-                return Decoder.decodeLong(buffer, 0, 4);
-            default:
-                throw new InvalidDatabaseException("Unknown record size: "
-                    + this.metadata.getRecordSize());
-        }
+                yield Decoder.decodeLong(buffer, 0, 4);
+            }
+            default -> throw new InvalidDatabaseException("Unknown record size: " + recordSize);
+        };
     }
 
     <T> T resolveDataPointer(
@@ -417,8 +418,8 @@ public final class Reader implements Closeable {
         long pointer,
         Class<T> cls
     ) throws IOException {
-        long resolved = (pointer - this.metadata.getNodeCount())
-            + this.metadata.getSearchTreeSize();
+        long resolved = (pointer - this.metadata.nodeCount())
+            + this.searchTreeSize;
 
         if (resolved >= buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -428,10 +429,10 @@ public final class Reader implements Closeable {
 
         // We only want the data from the decoder, not the offset where it was
         // found.
-        Decoder decoder = new Decoder(
+        var decoder = new Decoder(
             this.cache,
             buffer,
-            this.metadata.getSearchTreeSize() + DATA_SECTION_SEPARATOR_SIZE,
+            this.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE,
             this.constructors
         );
         return decoder.decode(resolved, cls);
@@ -447,7 +448,7 @@ public final class Reader implements Closeable {
      */
     private long findMetadataStart(Buffer buffer, String databaseName)
         throws InvalidDatabaseException {
-        long fileSize = buffer.capacity();
+        var fileSize = buffer.capacity();
 
         FILE:
         for (long i = 0; i < fileSize - METADATA_START_MARKER.length + 1; i++) {

@@ -8,7 +8,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.List;
 
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
@@ -23,18 +22,48 @@ final class BufferHolder {
              FileChannel channel = file.getChannel()) {
             long size = channel.size();
             if (mode == FileMode.MEMORY) {
-                Buffer buf;
                 if (size <= chunkSize) {
-                    buf = new SingleBuffer(size);
+                    // Allocate, read, and make read-only
+                    ByteBuffer buffer = ByteBuffer.allocate((int) size);
+                    if (channel.read(buffer) != size) {
+                        throw new IOException("Unable to read "
+                                + database.getName()
+                                + " into memory. Unexpected end of stream.");
+                    }
+                    buffer.flip();
+                    this.buffer = new SingleBuffer(buffer);
                 } else {
-                    buf = new MultiBuffer(size);
+                    // Allocate chunks, read, and make read-only
+                    var fullChunks = (int) (size / chunkSize);
+                    var remainder = (int) (size % chunkSize);
+                    var totalChunks = fullChunks + (remainder > 0 ? 1 : 0);
+                    var buffers = new ByteBuffer[totalChunks];
+
+                    for (int i = 0; i < fullChunks; i++) {
+                        buffers[i] = ByteBuffer.allocate(chunkSize);
+                    }
+                    if (remainder > 0) {
+                        buffers[totalChunks - 1] = ByteBuffer.allocate(remainder);
+                    }
+
+                    var totalRead = 0L;
+                    for (var buffer : buffers) {
+                        var read = channel.read(buffer);
+                        if (read == -1) {
+                            break;
+                        }
+                        totalRead += read;
+                        buffer.flip();
+                    }
+
+                    if (totalRead != size) {
+                        throw new IOException("Unable to read "
+                                + database.getName()
+                                + " into memory. Unexpected end of stream.");
+                    }
+
+                    this.buffer = new MultiBuffer(buffers, chunkSize);
                 }
-                if (buf.readFrom(channel) != buf.capacity()) {
-                    throw new IOException("Unable to read "
-                            + database.getName()
-                            + " into memory. Unexpected end of stream.");
-                }
-                this.buffer = buf;
             } else {
                 if (size <= chunkSize) {
                     this.buffer = SingleBuffer.mapFromChannel(channel);
@@ -45,28 +74,17 @@ final class BufferHolder {
         }
     }
 
-    /**
-     * Construct a ThreadBuffer from the provided URL.
-     *
-     * @param stream the source of my bytes.
-     * @throws IOException          if unable to read from your source.
-     * @throws NullPointerException if you provide a NULL InputStream
-     */
-    BufferHolder(InputStream stream) throws IOException {
-        this(stream, MultiBuffer.DEFAULT_CHUNK_SIZE);
-    }
-
     BufferHolder(InputStream stream, int chunkSize) throws  IOException {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        List<ByteBuffer> chunks = new ArrayList<>();
-        long total = 0;
-        byte[] tmp = new byte[chunkSize];
+        var chunks = new ArrayList<ByteBuffer>();
+        var total = 0L;
+        var tmp = new byte[chunkSize];
         int read;
 
         while (-1 != (read = stream.read(tmp))) {
-            ByteBuffer chunk = ByteBuffer.allocate(read);
+            var chunk = ByteBuffer.allocate(read);
             chunk.put(tmp, 0, read);
             chunk.flip();
             chunks.add(chunk);
@@ -74,9 +92,9 @@ final class BufferHolder {
         }
 
         if (total <= chunkSize) {
-            byte[] data = new byte[(int) total];
-            int pos = 0;
-            for (ByteBuffer chunk : chunks) {
+            var data = new byte[(int) total];
+            var pos = 0;
+            for (var chunk : chunks) {
                 System.arraycopy(chunk.array(), 0, data, pos, chunk.capacity());
                 pos += chunk.capacity();
             }
