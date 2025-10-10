@@ -91,9 +91,19 @@ public class MultiBufferTest {
                     buffers[totalChunks - 1] = ByteBuffer.allocate(remainder);
                 }
 
-                for (ByteBuffer buffer : buffers) {
-                    channel.read(buffer);
+                var totalRead = 0L;
+                for (var buffer : buffers) {
+                    var read = channel.read(buffer);
+                    if (read == -1) {
+                        break;
+                    }
+                    totalRead += read;
                     buffer.flip();
+                }
+
+                if (totalRead != size) {
+                    throw new IOException("Unable to read test data into memory. "
+                            + "Expected " + size + " bytes but read " + totalRead + " bytes.");
                 }
 
                 return new MultiBuffer(buffers, chunkSize);
