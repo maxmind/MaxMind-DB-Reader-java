@@ -1,7 +1,7 @@
 package com.maxmind.db;
 
 import java.math.BigInteger;
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -46,9 +46,9 @@ public record Metadata(
     public Metadata {}
 
     /**
-     * @return the date of the database build.
+     * @return the instant of the database build in UTC.
      */
-    public Date buildDate() {
-        return new Date(buildEpoch.longValue() * 1000);
+    public Instant buildTime() {
+        return Instant.ofEpochSecond(buildEpoch.longValue());
     }
 }

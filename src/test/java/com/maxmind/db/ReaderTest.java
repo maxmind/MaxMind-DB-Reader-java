@@ -19,9 +19,11 @@ import java.lang.reflect.Constructor;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1295,10 +1297,11 @@ public class ReaderTest {
         assertEquals(description, metadata.description());
         assertEquals(recordSize, metadata.recordSize());
 
-        var cal = Calendar.getInstance();
-        cal.set(2014, Calendar.JANUARY, 1);
+        var january2014 = LocalDate.of(2014, 1, 1)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant();
 
-        assertTrue(metadata.buildDate().compareTo(cal.getTime()) > 0);
+        assertTrue(metadata.buildTime().isAfter(january2014));
     }
 
     private void testIpV4(Reader reader, File file) throws IOException {
