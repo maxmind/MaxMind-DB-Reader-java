@@ -169,11 +169,11 @@ class Decoder {
             case BYTES:
                 return this.getByteArray(size);
             case UINT16:
-                return this.decodeUint16(size);
+                return coerceFromInt(this.decodeUint16(size), cls);
             case UINT32:
-                return this.decodeUint32(size);
+                return coerceFromLong(this.decodeUint32(size), cls);
             case INT32:
-                return this.decodeInt32(size);
+                return coerceFromInt(this.decodeInt32(size), cls);
             case UINT64:
             case UINT128:
                 return this.decodeBigInteger(size);
@@ -181,6 +181,74 @@ class Decoder {
                 throw new InvalidDatabaseException(
                     "Unknown or unexpected type: " + type.name());
         }
+    }
+
+    private static Object coerceFromInt(int value, Class<?> target) {
+        if (target.equals(Object.class)
+            || target.equals(Integer.TYPE)
+            || target.equals(Integer.class)) {
+            return value;
+        }
+        if (target.equals(Long.TYPE) || target.equals(Long.class)) {
+            return (long) value;
+        }
+        if (target.equals(Short.TYPE) || target.equals(Short.class)) {
+            if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
+                throw new DeserializationException("Value " + value + " out of range for short");
+            }
+            return (short) value;
+        }
+        if (target.equals(Byte.TYPE) || target.equals(Byte.class)) {
+            if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
+                throw new DeserializationException("Value " + value + " out of range for byte");
+            }
+            return (byte) value;
+        }
+        if (target.equals(Double.TYPE) || target.equals(Double.class)) {
+            return (double) value;
+        }
+        if (target.equals(Float.TYPE) || target.equals(Float.class)) {
+            return (float) value;
+        }
+        if (target.equals(BigInteger.class)) {
+            return BigInteger.valueOf(value);
+        }
+        // Fallback: return as Integer; caller may attempt to cast/assign
+        return value;
+    }
+
+    private static Object coerceFromLong(long value, Class<?> target) {
+        if (target.equals(Object.class) || target.equals(Long.TYPE) || target.equals(Long.class)) {
+            return value;
+        }
+        if (target.equals(Integer.TYPE) || target.equals(Integer.class)) {
+            if (value < 0 || value > Integer.MAX_VALUE) {
+                throw new DeserializationException("Value " + value + " out of range for int");
+            }
+            return (int) value;
+        }
+        if (target.equals(Short.TYPE) || target.equals(Short.class)) {
+            if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
+                throw new DeserializationException("Value " + value + " out of range for short");
+            }
+            return (short) value;
+        }
+        if (target.equals(Byte.TYPE) || target.equals(Byte.class)) {
+            if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
+                throw new DeserializationException("Value " + value + " out of range for byte");
+            }
+            return (byte) value;
+        }
+        if (target.equals(Double.TYPE) || target.equals(Double.class)) {
+            return (double) value;
+        }
+        if (target.equals(Float.TYPE) || target.equals(Float.class)) {
+            return (float) value;
+        }
+        if (target.equals(BigInteger.class)) {
+            return BigInteger.valueOf(value);
+        }
+        return value;
     }
 
     private String decodeString(long size) throws CharacterCodingException {

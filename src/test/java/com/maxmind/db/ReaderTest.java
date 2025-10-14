@@ -1148,8 +1148,93 @@ public class ReaderTest {
             @MaxMindDbParameter(name = "array")
             Vector<Long> arrayField
         ) {
-            this.arrayField = arrayField;
+        this.arrayField = arrayField;
         }
+    }
+
+    // Positive tests for primitive constructor parameters
+    static class TestModelPrimitivesBasic {
+        boolean booleanField;
+        double doubleField;
+        float floatField;
+        int int32Field;
+        long uint32Field;
+
+        @MaxMindDbConstructor
+        public TestModelPrimitivesBasic(
+            @MaxMindDbParameter(name = "boolean") boolean booleanField,
+            @MaxMindDbParameter(name = "double") double doubleField,
+            @MaxMindDbParameter(name = "float") float floatField,
+            @MaxMindDbParameter(name = "int32") int int32Field,
+            @MaxMindDbParameter(name = "uint32") long uint32Field
+        ) {
+            this.booleanField = booleanField;
+            this.doubleField = doubleField;
+            this.floatField = floatField;
+            this.int32Field = int32Field;
+            this.uint32Field = uint32Field;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testPrimitiveConstructorParamsBasicWorks(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+
+        var model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelPrimitivesBasic.class
+        );
+
+        assertTrue(model.booleanField);
+        assertEquals(42.123456, model.doubleField, 0.000000001);
+        assertEquals(1.1, model.floatField, 0.000001);
+        assertEquals(-268435456, model.int32Field);
+        assertEquals(268435456L, model.uint32Field);
+    }
+
+    static class TestModelShortPrimitive {
+        short uint16Field;
+
+        @MaxMindDbConstructor
+        public TestModelShortPrimitive(
+            @MaxMindDbParameter(name = "uint16") short uint16Field
+        ) {
+            this.uint16Field = uint16Field;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testPrimitiveConstructorParamShortWorks(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelShortPrimitive.class
+        );
+        assertEquals((short) 100, model.uint16Field);
+    }
+
+    static class TestModelBytePrimitive {
+        byte uint16Field;
+
+        @MaxMindDbConstructor
+        public TestModelBytePrimitive(
+            @MaxMindDbParameter(name = "uint16") byte uint16Field
+        ) {
+            this.uint16Field = uint16Field;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testPrimitiveConstructorParamByteWorks(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelBytePrimitive.class
+        );
+        assertEquals((byte) 100, model.uint16Field);
     }
 
     // Test that we cache differently depending on more than the offset.
