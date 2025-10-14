@@ -120,6 +120,23 @@ public class Lookup {
 }
 ```
 
+### Constructor and parameter selection
+
+- Preferred: annotate a constructor with `@MaxMindDbConstructor` and its
+  parameters with `@MaxMindDbParameter(name = "...")`.
+- Records: if no constructor is annotated, the canonical record constructor is
+  used automatically. Record component names are used as field names.
+- Classes with a single public constructor: if no constructor is annotated,
+  that constructor is used automatically.
+- Unannotated parameters: when a parameter is not annotated, the reader falls
+  back to the parameter name. For records, this is the component name; for
+  classes, this is the Java parameter name. To use Java parameter names at
+  runtime, compile your model classes with the `-parameters` flag (Maven:
+  `maven-compiler-plugin` with `<parameters>true</parameters>`).
+  If Java parameter names are unavailable (no `-parameters`) and there is no
+  `@MaxMindDbParameter` annotation, the reader throws a
+  `ParameterNotFoundException` with guidance.
+
 You can also use the reader object to iterate over the database.
 The `reader.networks()` and `reader.networksWithin()` methods can
 be used for this purpose.
