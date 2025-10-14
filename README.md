@@ -137,6 +137,29 @@ public class Lookup {
   `@MaxMindDbParameter` annotation, the reader throws a
   `ParameterNotFoundException` with guidance.
 
+Defaults for missing values
+
+- Provide a default with
+  `@MaxMindDbParameter(name = "...", useDefault = true, defaultValue = "...")`.
+- Supports primitives, boxed types, and `String`. If `defaultValue` is empty
+  and `useDefault` is true, Java defaults are used (0, false, 0.0, empty
+  string).
+- Example:
+
+  ```java
+  @MaxMindDbConstructor
+  Example(
+      @MaxMindDbParameter(name = "count", useDefault = true, defaultValue = "0")
+      int count,
+      @MaxMindDbParameter(
+          name = "enabled",
+          useDefault = true,
+          defaultValue = "true"
+      )
+      boolean enabled
+  ) { }
+  ```
+
 You can also use the reader object to iterate over the database.
 The `reader.networks()` and `reader.networksWithin()` methods can
 be used for this purpose.

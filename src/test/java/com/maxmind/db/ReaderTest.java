@@ -1237,6 +1237,260 @@ public class ReaderTest {
         assertEquals((byte) 100, model.uint16Field);
     }
 
+    // Tests for behavior when a primitive constructor parameter is missing from the DB
+    static class MissingBooleanPrimitive {
+        boolean v;
+
+        @MaxMindDbConstructor
+        public MissingBooleanPrimitive(
+            @MaxMindDbParameter(name = "missing_key") boolean v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingBytePrimitive {
+        byte v;
+
+        @MaxMindDbConstructor
+        public MissingBytePrimitive(
+            @MaxMindDbParameter(name = "missing_key") byte v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingShortPrimitive {
+        short v;
+
+        @MaxMindDbConstructor
+        public MissingShortPrimitive(
+            @MaxMindDbParameter(name = "missing_key") short v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingIntPrimitive {
+        int v;
+
+        @MaxMindDbConstructor
+        public MissingIntPrimitive(
+            @MaxMindDbParameter(name = "missing_key") int v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingLongPrimitive {
+        long v;
+
+        @MaxMindDbConstructor
+        public MissingLongPrimitive(
+            @MaxMindDbParameter(name = "missing_key") long v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingFloatPrimitive {
+        float v;
+
+        @MaxMindDbConstructor
+        public MissingFloatPrimitive(
+            @MaxMindDbParameter(name = "missing_key") float v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingDoublePrimitive {
+        double v;
+
+        @MaxMindDbConstructor
+        public MissingDoublePrimitive(
+            @MaxMindDbParameter(name = "missing_key") double v
+        ) {
+            this.v = v;
+        }
+    }
+
+    // Positive tests: defaults via annotation when key is missing
+    static class DefaultBooleanPrimitive {
+        boolean v;
+
+        @MaxMindDbConstructor
+        public DefaultBooleanPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "true")
+            boolean v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultBytePrimitive {
+        byte v;
+
+        @MaxMindDbConstructor
+        public DefaultBytePrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "7")
+            byte v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultShortPrimitive {
+        short v;
+
+        @MaxMindDbConstructor
+        public DefaultShortPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "300")
+            short v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultIntPrimitive {
+        int v;
+
+        @MaxMindDbConstructor
+        public DefaultIntPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "-5")
+            int v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultLongPrimitive {
+        long v;
+
+        @MaxMindDbConstructor
+        public DefaultLongPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "123456789")
+            long v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultFloatPrimitive {
+        float v;
+
+        @MaxMindDbConstructor
+        public DefaultFloatPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "3.14")
+            float v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultDoublePrimitive {
+        double v;
+
+        @MaxMindDbConstructor
+        public DefaultDoublePrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "2.71828")
+            double v
+        ) {
+            this.v = v;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveDefaultsApplied(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+
+        assertTrue(this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultBooleanPrimitive.class).v);
+        assertEquals((byte) 7, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultBytePrimitive.class).v);
+        assertEquals((short) 300, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultShortPrimitive.class).v);
+        assertEquals(-5, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultIntPrimitive.class).v);
+        assertEquals(123456789L, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultLongPrimitive.class).v);
+        assertEquals(3.14f, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultFloatPrimitive.class).v, 0.0001);
+        assertEquals(2.71828, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultDoublePrimitive.class).v, 0.00001);
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveBooleanFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingBooleanPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveByteFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingBytePrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveShortFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingShortPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveIntFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingIntPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveLongFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingLongPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveFloatFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingFloatPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveDoubleFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingDoublePrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
     // Test that we cache differently depending on more than the offset.
     @ParameterizedTest
     @MethodSource("chunkSizes")
