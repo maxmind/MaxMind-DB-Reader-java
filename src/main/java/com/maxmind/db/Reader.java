@@ -203,22 +203,29 @@ public final class Reader implements Closeable {
         var traverseResult = traverseTree(rawAddress, rawAddress.length * 8);
 
         long record = traverseResult[0];
-        int pl = (int) traverseResult[1];
+        int prefixLength = (int) traverseResult[1];
 
         long nodeCount = this.metadata.nodeCount();
         var buffer = this.getBufferHolder().get();
+        var network = new Network(ipAddress, prefixLength);
         T dataRecord = null;
         if (record > nodeCount) {
             // record is a data pointer
             try {
-                dataRecord = this.resolveDataPointer(buffer, record, cls);
+                dataRecord = this.resolveDataPointer(
+                    buffer,
+                    record,
+                    cls,
+                    ipAddress,
+                    network
+                );
             } catch (DeserializationException exception) {
                 throw new DeserializationException(
                     "Error getting record for IP " + ipAddress + " -  " + exception.getMessage(),
                     exception);
             }
         }
-        return new DatabaseRecord<>(dataRecord, ipAddress, pl);
+        return new DatabaseRecord<>(dataRecord, network);
     }
 
     /**
@@ -416,7 +423,9 @@ public final class Reader implements Closeable {
     <T> T resolveDataPointer(
         Buffer buffer,
         long pointer,
-        Class<T> cls
+        Class<T> cls,
+        InetAddress lookupIp,
+        Network network
     ) throws IOException {
         long resolved = (pointer - this.metadata.nodeCount())
             + this.searchTreeSize;
@@ -433,7 +442,9 @@ public final class Reader implements Closeable {
             this.cache,
             buffer,
             this.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE,
-            this.constructors
+            this.constructors,
+            lookupIp,
+            network
         );
         return decoder.decode(resolved, cls);
     }

@@ -30,6 +30,9 @@ CHANGELOG
     match field names in the database: for records, component names are used;
     for classes, Java parameter names are used (when compiled with
     `-parameters`). Annotations still take precedence when present.
+  * Added `@MaxMindDbIpAddress` and `@MaxMindDbNetwork` annotations to inject
+    the lookup IP address and resulting network into constructors. Annotation
+    metadata is cached per type to avoid repeated reflection overhead.
 
 3.2.0 (2025-05-28)
 ------------------

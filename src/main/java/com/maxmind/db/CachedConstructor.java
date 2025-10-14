@@ -8,5 +8,7 @@ record CachedConstructor<T>(
     Class<?>[] parameterTypes,
     java.lang.reflect.Type[] parameterGenericTypes,
     Map<String, Integer> parameterIndexes,
-    Object[] parameterDefaults
+    Object[] parameterDefaults,
+    ParameterInjection[] parameterInjections,
+    boolean requiresLookupContext
 ) {}

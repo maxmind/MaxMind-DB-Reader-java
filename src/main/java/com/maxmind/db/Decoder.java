@@ -6,6 +6,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -37,12 +38,17 @@ class Decoder {
 
     private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
 
+    private final InetAddress lookupIp;
+    private final Network lookupNetwork;
+
     Decoder(NodeCache cache, Buffer buffer, long pointerBase) {
         this(
             cache,
             buffer,
             pointerBase,
-            new ConcurrentHashMap<>()
+            new ConcurrentHashMap<>(),
+            null,
+            null
         );
     }
 
@@ -52,10 +58,30 @@ class Decoder {
         long pointerBase,
         ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors
     ) {
+        this(
+            cache,
+            buffer,
+            pointerBase,
+            constructors,
+            null,
+            null
+        );
+    }
+
+    Decoder(
+        NodeCache cache,
+        Buffer buffer,
+        long pointerBase,
+        ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors,
+        InetAddress lookupIp,
+        Network lookupNetwork
+    ) {
         this.cache = cache;
         this.pointerBase = pointerBase;
         this.buffer = buffer;
         this.constructors = constructors;
+        this.lookupIp = lookupIp;
+        this.lookupNetwork = lookupNetwork;
     }
 
     private final NodeCache.Loader cacheLoader = this::decode;
@@ -134,10 +160,42 @@ class Decoder {
         var position = buffer.position();
 
         var key = new CacheKey<>(pointer, cls, genericType);
-        var o = cache.get(key, cacheLoader);
+        DecodedValue value;
+        if (requiresLookupContext(cls)) {
+            value = this.decode(key);
+        } else {
+            value = cache.get(key, cacheLoader);
+        }
 
         buffer.position(position);
-        return o;
+        return value;
+    }
+
+    private boolean requiresLookupContext(Class<?> cls) {
+        if (cls == null
+            || cls.equals(Object.class)
+            || Map.class.isAssignableFrom(cls)
+            || List.class.isAssignableFrom(cls)
+            || isSimpleType(cls)) {
+            return false;
+        }
+
+        var cached = getCachedConstructor(cls);
+        if (cached == null) {
+            cached = loadConstructorMetadata(cls);
+        }
+        return cached.requiresLookupContext();
+    }
+
+    private static boolean isSimpleType(Class<?> cls) {
+        if (cls.isPrimitive() || cls.isArray()) {
+            return true;
+        }
+        return cls.equals(String.class)
+            || Number.class.isAssignableFrom(cls)
+            || cls.equals(Boolean.class)
+            || cls.equals(Character.class)
+            || cls.equals(BigInteger.class);
     }
 
     private <T> Object decodeByType(
@@ -439,68 +497,88 @@ class Decoder {
         return map;
     }
 
-    private <T> Object decodeMapIntoObject(int size, Class<T> cls)
-        throws IOException {
-        var cachedConstructor = getCachedConstructor(cls);
-        Constructor<T> constructor;
-        Class<?>[] parameterTypes;
-        java.lang.reflect.Type[] parameterGenericTypes;
-        Map<String, Integer> parameterIndexes;
-        Object[] parameterDefaults;
-        if (cachedConstructor == null) {
-            constructor = findConstructor(cls);
+    private <T> CachedConstructor<T> loadConstructorMetadata(Class<T> cls) {
+        var cached = getCachedConstructor(cls);
+        if (cached != null) {
+            return cached;
+        }
 
-            parameterTypes = constructor.getParameterTypes();
+        var constructor = findConstructor(cls);
 
-            parameterGenericTypes = constructor.getGenericParameterTypes();
+        var parameterTypes = constructor.getParameterTypes();
+        var parameterGenericTypes = constructor.getGenericParameterTypes();
+        var parameterIndexes = new HashMap<String, Integer>();
+        var parameterDefaults = new Object[constructor.getParameterCount()];
+        var parameterInjections = new ParameterInjection[constructor.getParameterCount()];
+        boolean requiresContext = false;
 
-            parameterIndexes = new HashMap<>();
-            parameterDefaults = new Object[constructor.getParameterCount()];
-            var annotations = constructor.getParameterAnnotations();
-            for (int i = 0; i < constructor.getParameterCount(); i++) {
-                var ann = getParameterAnnotation(annotations[i]);
-                var name = ann != null ? ann.name() : null;
-                if (name == null) {
-                    // Fallbacks: record component name, then Java parameter name
-                    // (requires -parameters)
-                    if (cls.isRecord()) {
-                        name = cls.getRecordComponents()[i].getName();
-                    } else {
-                        var param = constructor.getParameters()[i];
-                        if (param.isNamePresent()) {
-                            name = param.getName();
-                        } else {
-                            throw new ParameterNotFoundException(
-                                "Parameter name for index " + i + " on class " + cls.getName()
-                                    + " is not available. Annotate with @MaxMindDbParameter "
-                                    + "or compile with -parameters.");
-                        }
-                    }
+        var annotations = constructor.getParameterAnnotations();
+        for (int i = 0; i < constructor.getParameterCount(); i++) {
+            var injection = getParameterInjection(annotations[i]);
+            parameterInjections[i] = injection;
+
+            var parameterAnnotation = getParameterAnnotation(annotations[i]);
+
+            if (injection != ParameterInjection.NONE) {
+                requiresContext = true;
+                if (parameterAnnotation != null) {
+                    throw new DeserializationException(
+                        "Parameter index " + i + " on class " + cls.getName()
+                            + " cannot have both @MaxMindDbParameter and a lookup context "
+                            + "annotation.");
                 }
-                // Prepare parsed defaults once and cache them
-                if (ann != null && ann.useDefault()) {
-                    parameterDefaults[i] = parseDefault(ann.defaultValue(), parameterTypes[i]);
-                }
-                parameterIndexes.put(name, i);
+                validateInjectionTarget(cls, i, parameterTypes[i], injection);
+                continue;
             }
 
-            this.constructors.put(
-                cls,
-                new CachedConstructor<>(
-                    constructor,
-                    parameterTypes,
-                    parameterGenericTypes,
-                    parameterIndexes,
-                    parameterDefaults
-                )
-            );
-        } else {
-            constructor = cachedConstructor.constructor();
-            parameterTypes = cachedConstructor.parameterTypes();
-            parameterGenericTypes = cachedConstructor.parameterGenericTypes();
-            parameterIndexes = cachedConstructor.parameterIndexes();
-            parameterDefaults = cachedConstructor.parameterDefaults();
+            if (parameterAnnotation != null && parameterAnnotation.useDefault()) {
+                parameterDefaults[i] =
+                    parseDefault(parameterAnnotation.defaultValue(), parameterTypes[i]);
+            }
+
+            String name = parameterAnnotation != null ? parameterAnnotation.name() : null;
+            if (name == null) {
+                if (cls.isRecord()) {
+                    name = cls.getRecordComponents()[i].getName();
+                } else {
+                    var param = constructor.getParameters()[i];
+                    if (param.isNamePresent()) {
+                        name = param.getName();
+                    } else {
+                        throw new ParameterNotFoundException(
+                            "Parameter name for index " + i + " on class " + cls.getName()
+                                + " is not available. Annotate with @MaxMindDbParameter "
+                                + "or compile with -parameters.");
+                    }
+                }
+            }
+            parameterIndexes.put(name, i);
         }
+
+        var cachedConstructor = new CachedConstructor<>(
+            constructor,
+            parameterTypes,
+            parameterGenericTypes,
+            parameterIndexes,
+            parameterDefaults,
+            parameterInjections,
+            requiresContext
+        );
+        @SuppressWarnings("unchecked")
+        var existing = (CachedConstructor<T>) this.constructors.putIfAbsent(cls, cachedConstructor);
+        return existing != null ? existing : cachedConstructor;
+    }
+
+    private <T> Object decodeMapIntoObject(int size, Class<T> cls)
+        throws IOException {
+        var cachedConstructor = loadConstructorMetadata(cls);
+
+        var constructor = cachedConstructor.constructor();
+        var parameterTypes = cachedConstructor.parameterTypes();
+        var parameterGenericTypes = cachedConstructor.parameterGenericTypes();
+        var parameterIndexes = cachedConstructor.parameterIndexes();
+        var parameterDefaults = cachedConstructor.parameterDefaults();
+        var parameterInjections = cachedConstructor.parameterInjections();
 
         var parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
@@ -519,8 +597,11 @@ class Decoder {
             ).value();
         }
 
-        // Apply cached defaults for missing parameters, if any
         for (int i = 0; i < parameters.length; i++) {
+            if (parameterInjections[i] != ParameterInjection.NONE) {
+                parameters[i] = injectParameter(parameterInjections[i], parameterTypes[i]);
+                continue;
+            }
             if (parameters[i] == null && parameterDefaults[i] != null) {
                 parameters[i] = parameterDefaults[i];
             }
@@ -546,6 +627,48 @@ class Decoder {
             throw new DeserializationException(
                 "Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors, e);
         }
+    }
+
+    private Object injectParameter(ParameterInjection injection, Class<?> parameterType) {
+        return switch (injection) {
+            case IP_ADDRESS -> getLookupIpValue(parameterType);
+            case NETWORK -> getLookupNetworkValue(parameterType);
+            case NONE -> null;
+        };
+    }
+
+    private Object getLookupIpValue(Class<?> parameterType) {
+        if (this.lookupIp == null) {
+            throw new DeserializationException(
+                "Cannot inject lookup IP address because no lookup context is available.");
+        }
+        if (String.class.equals(parameterType)) {
+            return this.lookupIp.getHostAddress();
+        }
+        if (InetAddress.class.isAssignableFrom(parameterType)) {
+            return this.lookupIp;
+        }
+        throw new DeserializationException(
+            "Unsupported parameter type " + parameterType.getName()
+                + " for @MaxMindDbIpAddress; expected java.net.InetAddress or "
+                + "java.lang.String.");
+    }
+
+    private Object getLookupNetworkValue(Class<?> parameterType) {
+        if (this.lookupNetwork == null) {
+            throw new DeserializationException(
+                "Cannot inject lookup network because no lookup context is available.");
+        }
+        if (String.class.equals(parameterType)) {
+            return this.lookupNetwork.toString();
+        }
+        if (Network.class.isAssignableFrom(parameterType)) {
+            return this.lookupNetwork;
+        }
+        throw new DeserializationException(
+            "Unsupported parameter type " + parameterType.getName()
+                + " for @MaxMindDbNetwork; expected com.maxmind.db.Network or "
+                + "java.lang.String.");
     }
 
     private <T> CachedConstructor<T> getCachedConstructor(Class<T> cls) {
@@ -607,6 +730,52 @@ class Decoder {
             return (MaxMindDbParameter) annotation;
         }
         return null;
+    }
+
+    private static ParameterInjection getParameterInjection(Annotation[] annotations) {
+        ParameterInjection injection = ParameterInjection.NONE;
+        for (var annotation : annotations) {
+            var type = annotation.annotationType();
+            if (type.equals(MaxMindDbIpAddress.class)) {
+                if (injection != ParameterInjection.NONE) {
+                    throw new DeserializationException(
+                        "Constructor parameters may have at most one lookup context annotation.");
+                }
+                injection = ParameterInjection.IP_ADDRESS;
+            } else if (type.equals(MaxMindDbNetwork.class)) {
+                if (injection != ParameterInjection.NONE) {
+                    throw new DeserializationException(
+                        "Constructor parameters may have at most one lookup context annotation.");
+                }
+                injection = ParameterInjection.NETWORK;
+            }
+        }
+        return injection;
+    }
+
+    private static void validateInjectionTarget(
+        Class<?> cls,
+        int parameterIndex,
+        Class<?> parameterType,
+        ParameterInjection injection
+    ) {
+        if (injection == ParameterInjection.IP_ADDRESS) {
+            if (!InetAddress.class.isAssignableFrom(parameterType)
+                && !String.class.equals(parameterType)) {
+                throw new DeserializationException(
+                    "Parameter index " + parameterIndex + " on class " + cls.getName()
+                        + " annotated with @MaxMindDbIpAddress must be of type "
+                        + "java.net.InetAddress or java.lang.String.");
+            }
+        } else if (injection == ParameterInjection.NETWORK) {
+            if (!Network.class.isAssignableFrom(parameterType)
+                && !String.class.equals(parameterType)) {
+                throw new DeserializationException(
+                    "Parameter index " + parameterIndex + " on class " + cls.getName()
+                        + " annotated with @MaxMindDbNetwork must be of type "
+                        + "com.maxmind.db.Network or java.lang.String.");
+            }
+        }
     }
 
     private static Object parseDefault(String value, Class<?> target) {
