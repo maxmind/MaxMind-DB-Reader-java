@@ -446,6 +446,7 @@ class Decoder {
         Class<?>[] parameterTypes;
         java.lang.reflect.Type[] parameterGenericTypes;
         Map<String, Integer> parameterIndexes;
+        Object[] parameterDefaults;
         if (cachedConstructor == null) {
             constructor = findConstructor(cls);
 
@@ -454,9 +455,11 @@ class Decoder {
             parameterGenericTypes = constructor.getGenericParameterTypes();
 
             parameterIndexes = new HashMap<>();
+            parameterDefaults = new Object[constructor.getParameterCount()];
             var annotations = constructor.getParameterAnnotations();
             for (int i = 0; i < constructor.getParameterCount(); i++) {
-                var name = getParameterName(annotations[i]);
+                var ann = getParameterAnnotation(annotations[i]);
+                var name = ann != null ? ann.name() : null;
                 if (name == null) {
                     // Fallbacks: record component name, then Java parameter name
                     // (requires -parameters)
@@ -474,6 +477,10 @@ class Decoder {
                         }
                     }
                 }
+                // Prepare parsed defaults once and cache them
+                if (ann != null && ann.useDefault()) {
+                    parameterDefaults[i] = parseDefault(ann.defaultValue(), parameterTypes[i]);
+                }
                 parameterIndexes.put(name, i);
             }
 
@@ -483,7 +490,8 @@ class Decoder {
                     constructor,
                     parameterTypes,
                     parameterGenericTypes,
-                    parameterIndexes
+                    parameterIndexes,
+                    parameterDefaults
                 )
             );
         } else {
@@ -491,6 +499,7 @@ class Decoder {
             parameterTypes = cachedConstructor.parameterTypes();
             parameterGenericTypes = cachedConstructor.parameterGenericTypes();
             parameterIndexes = cachedConstructor.parameterIndexes();
+            parameterDefaults = cachedConstructor.parameterDefaults();
         }
 
         var parameters = new Object[parameterTypes.length];
@@ -508,6 +517,13 @@ class Decoder {
                 parameterTypes[parameterIndex],
                 parameterGenericTypes[parameterIndex]
             ).value();
+        }
+
+        // Apply cached defaults for missing parameters, if any
+        for (int i = 0; i < parameters.length; i++) {
+            if (parameters[i] == null && parameterDefaults[i] != null) {
+                parameters[i] = parameterDefaults[i];
+            }
         }
 
         try {
@@ -583,15 +599,58 @@ class Decoder {
                 + "provide a record canonical constructor, or a single public constructor.");
     }
 
-    private static String getParameterName(Annotation[] annotations) {
+    private static MaxMindDbParameter getParameterAnnotation(Annotation[] annotations) {
         for (var annotation : annotations) {
             if (!annotation.annotationType().equals(MaxMindDbParameter.class)) {
                 continue;
             }
-            var paramAnnotation = (MaxMindDbParameter) annotation;
-            return paramAnnotation.name();
+            return (MaxMindDbParameter) annotation;
         }
         return null;
+    }
+
+    private static Object parseDefault(String value, Class<?> target) {
+        try {
+            if (target.equals(Boolean.TYPE) || target.equals(Boolean.class)) {
+                return value.isEmpty() ? false : Boolean.parseBoolean(value);
+            }
+            if (target.equals(Byte.TYPE) || target.equals(Byte.class)) {
+                var v = value.isEmpty() ? 0 : Integer.parseInt(value);
+                if (v < Byte.MIN_VALUE || v > Byte.MAX_VALUE) {
+                    throw new DeserializationException(
+                        "Default value out of range for byte");
+                }
+                return (byte) v;
+            }
+            if (target.equals(Short.TYPE) || target.equals(Short.class)) {
+                var v = value.isEmpty() ? 0 : Integer.parseInt(value);
+                if (v < Short.MIN_VALUE || v > Short.MAX_VALUE) {
+                    throw new DeserializationException(
+                        "Default value out of range for short");
+                }
+                return (short) v;
+            }
+            if (target.equals(Integer.TYPE) || target.equals(Integer.class)) {
+                return value.isEmpty() ? 0 : Integer.parseInt(value);
+            }
+            if (target.equals(Long.TYPE) || target.equals(Long.class)) {
+                return value.isEmpty() ? 0L : Long.parseLong(value);
+            }
+            if (target.equals(Float.TYPE) || target.equals(Float.class)) {
+                return value.isEmpty() ? 0.0f : Float.parseFloat(value);
+            }
+            if (target.equals(Double.TYPE) || target.equals(Double.class)) {
+                return value.isEmpty() ? 0.0d : Double.parseDouble(value);
+            }
+            if (target.equals(String.class)) {
+                return value;
+            }
+        } catch (NumberFormatException e) {
+            throw new DeserializationException(
+                "Invalid default '" + value + "' for type " + target.getSimpleName(), e);
+        }
+        throw new DeserializationException(
+            "Defaults are only supported for primitives, boxed types, and String.");
     }
 
     private long nextValueOffset(long offset, int numberToSkip)
