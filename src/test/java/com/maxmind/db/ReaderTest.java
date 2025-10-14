@@ -506,6 +506,9 @@ public class ReaderTest {
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
+        this.testRecordImplicitConstructor(this.testReader);
+        this.testSingleConstructorWithoutAnnotation(this.testReader);
+        this.testPojoImplicitParameters(this.testReader);
     }
 
     @ParameterizedTest
@@ -516,6 +519,9 @@ public class ReaderTest {
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
+        this.testRecordImplicitConstructor(this.testReader);
+        this.testSingleConstructorWithoutAnnotation(this.testReader);
+        this.testPojoImplicitParameters(this.testReader);
     }
 
     @ParameterizedTest
@@ -829,6 +835,65 @@ public class ReaderTest {
         ) {
             this.arrayField = arrayField;
         }
+    }
+
+    // Record-based decoding without annotations
+    record MapXRecord(List<Long> arrayX) {}
+    record MapRecord(MapXRecord mapX) {}
+    record TestRecordImplicit(MapRecord map) {}
+
+    private void testRecordImplicitConstructor(Reader reader) throws IOException {
+        var model = reader.get(InetAddress.getByName("::1.1.1.0"), TestRecordImplicit.class);
+        assertEquals(List.of(7L, 8L, 9L), model.map().mapX().arrayX());
+    }
+
+    // Single-constructor classes without @MaxMindDbConstructor
+    static class MapXPojo {
+        List<Long> arrayX;
+        String utf8StringX;
+
+        public MapXPojo(
+            @MaxMindDbParameter(name = "arrayX") List<Long> arrayX,
+            @MaxMindDbParameter(name = "utf8_stringX") String utf8StringX
+        ) {
+            this.arrayX = arrayX;
+            this.utf8StringX = utf8StringX;
+        }
+    }
+
+    static class MapContainerPojo {
+        MapXPojo mapX;
+
+        public MapContainerPojo(@MaxMindDbParameter(name = "mapX") MapXPojo mapX) {
+            this.mapX = mapX;
+        }
+    }
+
+    static class TopLevelPojo {
+        MapContainerPojo map;
+
+        public TopLevelPojo(@MaxMindDbParameter(name = "map") MapContainerPojo map) {
+            this.map = map;
+        }
+    }
+
+    private void testSingleConstructorWithoutAnnotation(Reader reader) throws IOException {
+        var pojo = reader.get(InetAddress.getByName("::1.1.1.0"), TopLevelPojo.class);
+        assertEquals(List.of(7L, 8L, 9L), pojo.map.mapX.arrayX);
+    }
+
+    // Unannotated parameters on non-record types using Java parameter names
+    static class TestPojoImplicit {
+        MapContainerPojo map;
+
+        public TestPojoImplicit(MapContainerPojo map) {
+            this.map = map;
+        }
+    }
+
+    private void testPojoImplicitParameters(Reader reader) throws IOException {
+        var model = reader.get(InetAddress.getByName("::1.1.1.0"), TestPojoImplicit.class);
+        assertEquals(List.of(7L, 8L, 9L), model.map.mapX.arrayX);
     }
 
     @ParameterizedTest

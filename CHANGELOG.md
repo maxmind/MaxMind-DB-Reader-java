@@ -22,6 +22,14 @@ CHANGELOG
     accessor methods (e.g., `binaryFormatMajorVersion()`, `databaseType()`, etc.).
   * `Network.getNetworkAddress()` and `Network.getPrefixLength()` have been
     replaced with record accessor methods `networkAddress()` and `prefixLength()`.
+* Deserialization improvements:
+  * If no constructor is annotated with `@MaxMindDbConstructor`, records now
+    use their canonical constructor automatically. For non‑record classes with
+    a single public constructor, that constructor is used by default.
+  * `@MaxMindDbParameter` annotations are now optional when parameter names
+    match field names in the database: for records, component names are used;
+    for classes, Java parameter names are used (when compiled with
+    `-parameters`). Annotations still take precedence when present.
 
 3.2.0 (2025-05-28)
 ------------------

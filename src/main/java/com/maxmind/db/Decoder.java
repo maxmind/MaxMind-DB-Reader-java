@@ -388,8 +388,25 @@ class Decoder {
             parameterIndexes = new HashMap<>();
             var annotations = constructor.getParameterAnnotations();
             for (int i = 0; i < constructor.getParameterCount(); i++) {
-                var parameterName = getParameterName(cls, i, annotations[i]);
-                parameterIndexes.put(parameterName, i);
+                var name = getParameterName(annotations[i]);
+                if (name == null) {
+                    // Fallbacks: record component name, then Java parameter name
+                    // (requires -parameters)
+                    if (cls.isRecord()) {
+                        name = cls.getRecordComponents()[i].getName();
+                    } else {
+                        var param = constructor.getParameters()[i];
+                        if (param.isNamePresent()) {
+                            name = param.getName();
+                        } else {
+                            throw new ParameterNotFoundException(
+                                "Parameter name for index " + i + " on class " + cls.getName()
+                                    + " is not available. Annotate with @MaxMindDbParameter "
+                                    + "or compile with -parameters.");
+                        }
+                    }
+                }
+                parameterIndexes.put(name, i);
             }
 
             this.constructors.put(
@@ -457,24 +474,48 @@ class Decoder {
     private static <T> Constructor<T> findConstructor(Class<T> cls)
         throws ConstructorNotFoundException {
         var constructors = cls.getConstructors();
+        // Prefer explicitly annotated constructor
         for (var constructor : constructors) {
             if (constructor.getAnnotation(MaxMindDbConstructor.class) == null) {
                 continue;
             }
             @SuppressWarnings("unchecked")
-            Constructor<T> constructor2 = (Constructor<T>) constructor;
-            return constructor2;
+            var selected = (Constructor<T>) constructor;
+            return selected;
         }
 
-        throw new ConstructorNotFoundException("No constructor on class " + cls.getName()
-            + " with the MaxMindDbConstructor annotation was found.");
+        // Fallback for records: use canonical constructor
+        if (cls.isRecord()) {
+            try {
+                var components = cls.getRecordComponents();
+                var types = new Class<?>[components.length];
+                for (int i = 0; i < components.length; i++) {
+                    types[i] = components[i].getType();
+                }
+                var c = cls.getDeclaredConstructor(types);
+                @SuppressWarnings("unchecked")
+                var selected = (Constructor<T>) c;
+                return selected;
+            } catch (NoSuchMethodException e) {
+                // ignore and continue to next fallback
+            }
+        }
+
+        // Fallback for single-constructor classes
+        if (constructors.length == 1) {
+            var only = constructors[0];
+            @SuppressWarnings("unchecked")
+            var selected = (Constructor<T>) only;
+            return selected;
+        }
+
+        throw new ConstructorNotFoundException(
+            "No usable constructor on class " + cls.getName()
+                + ". Annotate a constructor with MaxMindDbConstructor, "
+                + "provide a record canonical constructor, or a single public constructor.");
     }
 
-    private static <T> String getParameterName(
-        Class<T> cls,
-        int index,
-        Annotation[] annotations
-    ) throws ParameterNotFoundException {
+    private static String getParameterName(Annotation[] annotations) {
         for (var annotation : annotations) {
             if (!annotation.annotationType().equals(MaxMindDbParameter.class)) {
                 continue;
@@ -482,9 +523,7 @@ class Decoder {
             var paramAnnotation = (MaxMindDbParameter) annotation;
             return paramAnnotation.name();
         }
-        throw new ParameterNotFoundException(
-            "Constructor parameter " + index + " on class " + cls.getName()
-                + " is not annotated with MaxMindDbParameter.");
+        return null;
     }
 
     private long nextValueOffset(long offset, int numberToSkip)
