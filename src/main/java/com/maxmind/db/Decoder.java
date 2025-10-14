@@ -10,6 +10,13 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -161,11 +168,17 @@ class Decoder {
             case BOOLEAN:
                 return Decoder.decodeBoolean(size);
             case UTF8_STRING:
-                return this.decodeString(size);
+                var s = this.decodeString(size);
+                var temporalFromString = coerceTemporalFromString(s, cls);
+                return temporalFromString != null ? temporalFromString : s;
             case DOUBLE:
-                return this.decodeDouble(size);
+                var d = this.decodeDouble(size);
+                var temporalFromDouble = coerceTemporalFromDouble(d, cls);
+                return temporalFromDouble != null ? temporalFromDouble : d;
             case FLOAT:
-                return this.decodeFloat(size);
+                var f = this.decodeFloat(size);
+                var temporalFromFloat = coerceTemporalFromDouble(f, cls);
+                return temporalFromFloat != null ? temporalFromFloat : f;
             case BYTES:
                 return this.getByteArray(size);
             case UINT16:
@@ -176,7 +189,9 @@ class Decoder {
                 return coerceFromInt(this.decodeInt32(size), cls);
             case UINT64:
             case UINT128:
-                return this.decodeBigInteger(size);
+                var bi = this.decodeBigInteger(size);
+                var temporalFromBigInt = coerceTemporalFromBigInteger(bi, cls);
+                return temporalFromBigInt != null ? temporalFromBigInt : bi;
             default:
                 throw new InvalidDatabaseException(
                     "Unknown or unexpected type: " + type.name());
@@ -184,6 +199,10 @@ class Decoder {
     }
 
     private static Object coerceFromInt(int value, Class<?> target) {
+        var temporal = coerceTemporalFromLong((long) value, target);
+        if (temporal != null) {
+            return temporal;
+        }
         if (target.equals(Object.class)
             || target.equals(Integer.TYPE)
             || target.equals(Integer.class)) {
@@ -218,6 +237,10 @@ class Decoder {
     }
 
     private static Object coerceFromLong(long value, Class<?> target) {
+        var temporal = coerceTemporalFromLong(value, target);
+        if (temporal != null) {
+            return temporal;
+        }
         if (target.equals(Object.class) || target.equals(Long.TYPE) || target.equals(Long.class)) {
             return value;
         }
@@ -249,6 +272,108 @@ class Decoder {
             return BigInteger.valueOf(value);
         }
         return value;
+    }
+
+    private static boolean isTemporalTarget(Class<?> target) {
+        return target.equals(Instant.class)
+            || target.equals(LocalDate.class)
+            || target.equals(LocalDateTime.class)
+            || target.equals(OffsetDateTime.class)
+            || target.equals(ZonedDateTime.class);
+    }
+
+    private static Object coerceTemporalFromLong(long value, Class<?> target) {
+        if (!isTemporalTarget(target)) {
+            return null;
+        }
+        // Heuristic: >= 10^12 -> milliseconds, else seconds
+        boolean millis = Math.abs(value) >= 1_000_000_000_000L;
+        Instant instant = millis ? Instant.ofEpochMilli(value) : Instant.ofEpochSecond(value);
+        return temporalFromInstant(instant, target);
+    }
+
+    private static Object coerceTemporalFromBigInteger(BigInteger value, Class<?> target) {
+        if (!isTemporalTarget(target)) {
+            return null;
+        }
+        var abs = value.abs();
+        boolean millis = abs.compareTo(BigInteger.valueOf(1_000_000_000_000L)) >= 0;
+        Instant instant = millis
+            ? Instant.ofEpochMilli(value.longValue())
+            : Instant.ofEpochSecond(value.longValue());
+        return temporalFromInstant(instant, target);
+    }
+
+    private static Object coerceTemporalFromDouble(double value, Class<?> target) {
+        if (!isTemporalTarget(target)) {
+            return null;
+        }
+        long seconds = (long) Math.floor(value);
+        long nanos = Math.round((value - seconds) * 1_000_000_000.0);
+        Instant instant = Instant.ofEpochSecond(seconds, nanos);
+        return temporalFromInstant(instant, target);
+    }
+
+    private static Object coerceTemporalFromString(String s, Class<?> target) {
+        if (!isTemporalTarget(target)) {
+            return null;
+        }
+        try {
+            // Try exact parser for target first, with fallbacks to Instant/Offset/Zoned
+            if (target.equals(Instant.class)) {
+                try {
+                    return Instant.parse(s);
+                } catch (Exception e) {
+                    return OffsetDateTime.parse(s).toInstant();
+                }
+            }
+            if (target.equals(LocalDate.class)) {
+                try {
+                    return LocalDate.parse(s);
+                } catch (Exception e) {
+                    return OffsetDateTime.parse(s).toLocalDate();
+                }
+            }
+            if (target.equals(LocalDateTime.class)) {
+                try {
+                    return LocalDateTime.parse(s);
+                } catch (Exception e1) {
+                    try {
+                        return LocalDateTime.ofInstant(Instant.parse(s), ZoneOffset.UTC);
+                    } catch (Exception e2) {
+                        return OffsetDateTime.parse(s).toLocalDateTime();
+                    }
+                }
+            }
+            if (target.equals(OffsetDateTime.class)) {
+                return OffsetDateTime.parse(s);
+            }
+            if (target.equals(ZonedDateTime.class)) {
+                return ZonedDateTime.parse(s);
+            }
+        } catch (Exception ignore) {
+            return null;
+        }
+        return null;
+    }
+
+    private static Object temporalFromInstant(Instant instant, Class<?> target) {
+        if (target.equals(Instant.class)) {
+            return instant;
+        }
+        if (target.equals(LocalDate.class)) {
+            return LocalDateTime.ofInstant(instant, ZoneOffset.UTC).toLocalDate();
+        }
+        if (target.equals(LocalDateTime.class)) {
+            return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
+        }
+        if (target.equals(OffsetDateTime.class)) {
+            return OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
+        }
+        if (target.equals(ZonedDateTime.class)) {
+            return ZonedDateTime.ofInstant(instant, ZoneId.of("UTC"));
+        }
+        return null;
     }
 
     private String decodeString(long size) throws CharacterCodingException {

@@ -22,6 +22,7 @@ import java.net.UnknownHostException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -532,6 +533,49 @@ public class ReaderTest {
         this.testDecodingTypesIntoModelObject(this.testReader, false);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, false);
         this.testDecodingTypesIntoModelWithList(this.testReader);
+    }
+
+    static class TemporalFromUint16Model {
+        Instant when;
+
+        @MaxMindDbConstructor
+        public TemporalFromUint16Model(
+            @MaxMindDbParameter(name = "uint16") Instant when
+        ) {
+            this.when = when;
+        }
+    }
+
+    static class TemporalFromUint32LdtModel {
+        LocalDateTime when;
+
+        @MaxMindDbConstructor
+        public TemporalFromUint32LdtModel(
+            @MaxMindDbParameter(name = "uint32") LocalDateTime when
+        ) {
+            this.when = when;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testTemporalCoercionFromNumeric(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+
+        var modelInstant = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TemporalFromUint16Model.class
+        );
+        assertEquals(Instant.ofEpochSecond(100), modelInstant.when);
+
+        var modelLdt = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TemporalFromUint32LdtModel.class
+        );
+        assertEquals(
+            LocalDateTime.ofInstant(Instant.ofEpochSecond(268435456L), ZoneOffset.UTC),
+            modelLdt.when
+        );
     }
 
     private void testDecodingTypes(Reader reader, boolean booleanValue) throws IOException {
