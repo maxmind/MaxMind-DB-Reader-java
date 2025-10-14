@@ -615,6 +615,60 @@ public class ReaderTest {
             model.uint128Field);
     }
 
+    // Validate @MaxMindDbCreator for enum conversion from a string field
+    enum Greeting {
+        HELLO,
+        OTHER;
+
+        @MaxMindDbCreator
+        public static Greeting from(String s) {
+            return "hello".equalsIgnoreCase(s) ? HELLO : OTHER;
+        }
+    }
+
+    static class MapXModelEnum {
+        List<Long> arrayXField;
+        Greeting greeting;
+
+        @MaxMindDbConstructor
+        public MapXModelEnum(
+            @MaxMindDbParameter(name = "arrayX") List<Long> arrayXField,
+            @MaxMindDbParameter(name = "utf8_stringX") Greeting greeting
+        ) {
+            this.arrayXField = arrayXField;
+            this.greeting = greeting;
+        }
+    }
+
+    static class MapModelEnum {
+        MapXModelEnum mapXField;
+
+        @MaxMindDbConstructor
+        public MapModelEnum(@MaxMindDbParameter(name = "mapX") MapXModelEnum mapXField) {
+            this.mapXField = mapXField;
+        }
+    }
+
+    static class TestModelEnumCreator {
+        MapModelEnum mapField;
+
+        @MaxMindDbConstructor
+        public TestModelEnumCreator(@MaxMindDbParameter(name = "map") MapModelEnum mapField) {
+            this.mapField = mapField;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testEnumCreatorFromString(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelEnumCreator.class
+        );
+        assertEquals(Greeting.HELLO, model.mapField.mapXField.greeting);
+    }
+
     static class TestModel {
         boolean booleanField;
         byte[] bytesField;

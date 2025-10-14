@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.nio.charset.CharacterCodingException;
@@ -161,13 +162,54 @@ class Decoder {
             case BOOLEAN:
                 return Decoder.decodeBoolean(size);
             case UTF8_STRING:
-                return this.decodeString(size);
+                var s = this.decodeString(size);
+                var created = tryCreateFromScalar(cls, s);
+                if (created != null) {
+                    return created;
+                }
+                if (cls.isEnum()) {
+                    @SuppressWarnings({"rawtypes", "unchecked"})
+                    var enumClass = (Class<? extends Enum>) cls;
+                    try {
+                        // Attempt a forgiving mapping commonly needed for ConnectionType
+                        var candidate = s.trim()
+                            .replace(' ', '_')
+                            .replace('-', '_')
+                            .replace('/', '_')
+                            .toUpperCase();
+                        return Enum.valueOf(enumClass, candidate);
+                    } catch (IllegalArgumentException ignored) {
+                        // fall through to return the raw string
+                    }
+                }
+                return s;
             case DOUBLE:
-                return this.decodeDouble(size);
+                var d = this.decodeDouble(size);
+                {
+                    var created2 = tryCreateFromScalar(cls, d);
+                    if (created2 != null) {
+                        return created2;
+                    }
+                }
+                return d;
             case FLOAT:
-                return this.decodeFloat(size);
+                var f = this.decodeFloat(size);
+                {
+                    var created3 = tryCreateFromScalar(cls, f);
+                    if (created3 != null) {
+                        return created3;
+                    }
+                }
+                return f;
             case BYTES:
-                return this.getByteArray(size);
+                var bytes = this.getByteArray(size);
+                {
+                    var created4 = tryCreateFromScalar(cls, bytes);
+                    if (created4 != null) {
+                        return created4;
+                    }
+                }
+                return bytes;
             case UINT16:
                 return coerceFromInt(this.decodeUint16(size), cls);
             case UINT32:
@@ -176,7 +218,14 @@ class Decoder {
                 return coerceFromInt(this.decodeInt32(size), cls);
             case UINT64:
             case UINT128:
-                return this.decodeBigInteger(size);
+                var bi = this.decodeBigInteger(size);
+                {
+                    var created5 = tryCreateFromScalar(cls, bi);
+                    if (created5 != null) {
+                        return created5;
+                    }
+                }
+                return bi;
             default:
                 throw new InvalidDatabaseException(
                     "Unknown or unexpected type: " + type.name());
@@ -184,6 +233,11 @@ class Decoder {
     }
 
     private static Object coerceFromInt(int value, Class<?> target) {
+        // If a creator exists that accepts an Integer-compatible value, use it
+        var created = tryCreateFromScalar(target, Integer.valueOf(value));
+        if (created != null) {
+            return created;
+        }
         if (target.equals(Object.class)
             || target.equals(Integer.TYPE)
             || target.equals(Integer.class)) {
@@ -218,6 +272,10 @@ class Decoder {
     }
 
     private static Object coerceFromLong(long value, Class<?> target) {
+        var created = tryCreateFromScalar(target, Long.valueOf(value));
+        if (created != null) {
+            return created;
+        }
         if (target.equals(Object.class) || target.equals(Long.TYPE) || target.equals(Long.class)) {
             return value;
         }
@@ -249,6 +307,58 @@ class Decoder {
             return BigInteger.valueOf(value);
         }
         return value;
+    }
+
+    private static Object tryCreateFromScalar(Class<?> target, Object value) {
+        if (target.equals(Object.class)) {
+            return null;
+        }
+        if (value != null && target.isAssignableFrom(value.getClass())) {
+            return null;
+        }
+        Method creator = findSingleArgCreator(target);
+        if (creator == null) {
+            return null;
+        }
+        var paramType = creator.getParameterTypes()[0];
+        Object argument = value;
+        if (value != null && !paramType.isAssignableFrom(value.getClass())) {
+            // Minimal adaptation: allow converting to String for String parameters
+            if (paramType.equals(String.class)) {
+                argument = String.valueOf(value);
+            } else {
+                return null;
+            }
+        }
+        try {
+            return creator.invoke(null, argument);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new DeserializationException("Error invoking @MaxMindDbCreator on "
+                + target.getName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    private static Method findSingleArgCreator(Class<?> target) {
+        for (var m : target.getDeclaredMethods()) {
+            if (m.getAnnotation(MaxMindDbCreator.class) == null) {
+                continue;
+            }
+            if (!java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
+                continue;
+            }
+            if (!java.lang.reflect.Modifier.isPublic(m.getModifiers())) {
+                // To avoid module access issues, only consider public methods
+                continue;
+            }
+            if (!target.isAssignableFrom(m.getReturnType())) {
+                continue;
+            }
+            if (m.getParameterCount() != 1) {
+                continue;
+            }
+            return m;
+        }
+        return null;
     }
 
     private String decodeString(long size) throws CharacterCodingException {
