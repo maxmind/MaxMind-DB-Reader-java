@@ -55,9 +55,6 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     @Override
     public DatabaseRecord<T> next() {
         try {
-            var data = this.reader.resolveDataPointer(
-                this.buffer, this.lastNode.pointer, this.typeParameterClass);
-
             var ip = this.lastNode.ip;
             var prefixLength = this.lastNode.prefix;
 
@@ -76,7 +73,16 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                 prefixLength -= 96;
             }
 
-            return new DatabaseRecord<>(data, ipAddr, prefixLength);
+            var network = new Network(ipAddr, prefixLength);
+            var data = this.reader.resolveDataPointer(
+                this.buffer,
+                this.lastNode.pointer,
+                this.typeParameterClass,
+                ipAddr,
+                network
+            );
+
+            return new DatabaseRecord<>(data, network);
         } catch (IOException e) {
             throw new NetworksIterationException(e);
         }

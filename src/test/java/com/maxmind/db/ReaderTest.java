@@ -526,6 +526,34 @@ public class ReaderTest {
 
     @ParameterizedTest
     @MethodSource("chunkSizes")
+    public void testContextAnnotations(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            var firstIp = InetAddress.getByName("1.1.1.1");
+            var secondIp = InetAddress.getByName("1.1.1.3");
+
+            var expectedNetwork = reader.getRecord(firstIp, Map.class).network().toString();
+
+            var first = reader.get(firstIp, ContextModel.class);
+            var second = reader.get(secondIp, ContextModel.class);
+
+            assertEquals(firstIp, first.lookupIp);
+            assertEquals(firstIp.getHostAddress(), first.lookupIpString);
+            assertEquals(expectedNetwork, first.lookupNetwork.toString());
+            assertEquals(expectedNetwork, first.lookupNetworkString);
+            assertEquals(firstIp, first.lookupNetwork.ipAddress());
+            assertEquals(100, first.uint16Field);
+
+            assertEquals(secondIp, second.lookupIp);
+            assertEquals(secondIp.getHostAddress(), second.lookupIpString);
+            assertEquals(expectedNetwork, second.lookupNetwork.toString());
+            assertEquals(expectedNetwork, second.lookupNetworkString);
+            assertEquals(secondIp, second.lookupNetwork.ipAddress());
+            assertEquals(100, second.uint16Field);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
     public void testDecodingTypesPointerDecoderFile(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-pointer-decoder.mmdb"), chunkSize);
         this.testDecodingTypes(this.testReader, false);
@@ -613,6 +641,29 @@ public class ReaderTest {
         assertEquals(new BigInteger("1152921504606846976"), model.uint64Field);
         assertEquals(new BigInteger("1329227995784915872903807060280344576"),
             model.uint128Field);
+    }
+
+    static class ContextModel {
+        InetAddress lookupIp;
+        String lookupIpString;
+        Network lookupNetwork;
+        String lookupNetworkString;
+        int uint16Field;
+
+        @MaxMindDbConstructor
+        public ContextModel(
+            @MaxMindDbIpAddress InetAddress lookupIp,
+            @MaxMindDbIpAddress String lookupIpString,
+            @MaxMindDbNetwork Network lookupNetwork,
+            @MaxMindDbNetwork String lookupNetworkString,
+            @MaxMindDbParameter(name = "uint16") int uint16Field
+        ) {
+            this.lookupIp = lookupIp;
+            this.lookupIpString = lookupIpString;
+            this.lookupNetwork = lookupNetwork;
+            this.lookupNetworkString = lookupNetworkString;
+            this.uint16Field = uint16Field;
+        }
     }
 
     static class TestModel {

@@ -160,6 +160,16 @@ Defaults for missing values
   ) { }
   ```
 
+Lookup context injection
+
+- Use `@MaxMindDbIpAddress` to inject the IP address being decoded.
+  Supported parameter types are `InetAddress` and `String`.
+- Use `@MaxMindDbNetwork` to inject the network of the resulting record.
+  Supported parameter types are `Network` and `String`.
+- Context annotations cannot be combined with `@MaxMindDbParameter` on the same
+  constructor argument. Values are populated for every lookup without being
+  cached between different IPs.
+
 You can also use the reader object to iterate over the database.
 The `reader.networks()` and `reader.networksWithin()` methods can
 be used for this purpose.
