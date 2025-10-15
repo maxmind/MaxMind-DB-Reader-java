@@ -554,6 +554,49 @@ public class ReaderTest {
 
     @ParameterizedTest
     @MethodSource("chunkSizes")
+    public void testNestedContextAnnotations(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            var firstIp = InetAddress.getByName("1.1.1.1");
+            var secondIp = InetAddress.getByName("1.1.1.3");
+            var expectedNetwork = reader.getRecord(firstIp, Map.class).network().toString();
+
+            var first = reader.get(firstIp, WrapperContextOnlyModel.class);
+            var second = reader.get(secondIp, WrapperContextOnlyModel.class);
+
+            assertNotNull(first.context);
+            assertEquals(firstIp, first.context.lookupIp);
+            assertEquals(expectedNetwork, first.context.lookupNetwork.toString());
+
+            assertNotNull(second.context);
+            assertEquals(secondIp, second.context.lookupIp);
+            assertEquals(expectedNetwork, second.context.lookupNetwork.toString());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNestedContextAnnotationsWithCache(int chunkSize) throws IOException {
+        var cache = new CHMCache();
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), cache, chunkSize)) {
+            var firstIp = InetAddress.getByName("1.1.1.1");
+            var secondIp = InetAddress.getByName("1.1.1.3");
+            var expectedNetwork = reader.getRecord(firstIp, Map.class).network().toString();
+
+            var first = reader.get(firstIp, WrapperContextOnlyModel.class);
+            var second = reader.get(secondIp, WrapperContextOnlyModel.class);
+
+            assertNotNull(first.context);
+            assertEquals(firstIp, first.context.lookupIp);
+            assertEquals(expectedNetwork, first.context.lookupNetwork.toString());
+
+            assertNotNull(second.context);
+            assertEquals(secondIp, second.context.lookupIp);
+            assertEquals(expectedNetwork, second.context.lookupNetwork.toString());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
     public void testDecodingTypesPointerDecoderFile(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-pointer-decoder.mmdb"), chunkSize);
         this.testDecodingTypes(this.testReader, false);
@@ -839,6 +882,32 @@ public class ReaderTest {
             this.uint32Field = uint32Field;
             this.uint64Field = uint64Field;
             this.uint128Field = uint128Field;
+        }
+    }
+
+    static class ContextOnlyModel {
+        InetAddress lookupIp;
+        Network lookupNetwork;
+
+        @MaxMindDbConstructor
+        public ContextOnlyModel(
+            @MaxMindDbIpAddress InetAddress lookupIp,
+            @MaxMindDbNetwork Network lookupNetwork
+        ) {
+            this.lookupIp = lookupIp;
+            this.lookupNetwork = lookupNetwork;
+        }
+    }
+
+    static class WrapperContextOnlyModel {
+        ContextOnlyModel context;
+
+        @MaxMindDbConstructor
+        public WrapperContextOnlyModel(
+            @MaxMindDbParameter(name = "missing_context")
+            ContextOnlyModel context
+        ) {
+            this.context = context;
         }
     }
 

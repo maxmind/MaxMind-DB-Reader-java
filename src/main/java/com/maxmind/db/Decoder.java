@@ -555,6 +555,20 @@ class Decoder {
             parameterIndexes.put(name, i);
         }
 
+        // Check for transitive context requirements: if any non-injection parameter type
+        // itself requires context (e.g., nested objects with @MaxMindDbIpAddress annotations),
+        // then this parent class also requires context to avoid incorrect caching.
+        if (!requiresContext) {
+            for (int i = 0; i < parameterTypes.length; i++) {
+                if (parameterInjections[i] == ParameterInjection.NONE) {
+                    if (shouldInstantiateFromContext(parameterTypes[i])) {
+                        requiresContext = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         var cachedConstructor = new CachedConstructor<>(
             constructor,
             parameterTypes,
@@ -602,8 +616,15 @@ class Decoder {
                 parameters[i] = injectParameter(parameterInjections[i], parameterTypes[i]);
                 continue;
             }
-            if (parameters[i] == null && parameterDefaults[i] != null) {
+            if (parameters[i] != null) {
+                continue;
+            }
+            if (parameterDefaults[i] != null) {
                 parameters[i] = parameterDefaults[i];
+                continue;
+            }
+            if (shouldInstantiateFromContext(parameterTypes[i])) {
+                parameters[i] = instantiateWithLookupContext(parameterTypes[i]);
             }
         }
 
@@ -627,6 +648,77 @@ class Decoder {
             throw new DeserializationException(
                 "Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors, e);
         }
+    }
+
+    private boolean shouldInstantiateFromContext(Class<?> parameterType) {
+        if (parameterType == null
+            || parameterType.isPrimitive()
+            || isSimpleType(parameterType)
+            || Map.class.isAssignableFrom(parameterType)
+            || List.class.isAssignableFrom(parameterType)) {
+            return false;
+        }
+        return requiresLookupContext(parameterType);
+    }
+
+    private Object instantiateWithLookupContext(Class<?> parameterType) {
+        var metadata = loadConstructorMetadata(parameterType);
+        if (metadata == null || !metadata.requiresLookupContext()) {
+            return null;
+        }
+
+        var ctor = metadata.constructor();
+        var types = metadata.parameterTypes();
+        var defaults = metadata.parameterDefaults();
+        var injections = metadata.parameterInjections();
+        var args = new Object[types.length];
+
+        for (int i = 0; i < args.length; i++) {
+            if (injections[i] != ParameterInjection.NONE) {
+                args[i] = injectParameter(injections[i], types[i]);
+            } else if (defaults[i] != null) {
+                args[i] = defaults[i];
+            } else if (types[i].isPrimitive()) {
+                args[i] = primitiveDefault(types[i]);
+            } else {
+                args[i] = null;
+            }
+        }
+
+        try {
+            return ctor.newInstance(args);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new DeserializationException(
+                "Error creating object of type: " + parameterType.getName(), e);
+        }
+    }
+
+    private static Object primitiveDefault(Class<?> type) {
+        if (type.equals(Boolean.TYPE)) {
+            return false;
+        }
+        if (type.equals(Byte.TYPE)) {
+            return (byte) 0;
+        }
+        if (type.equals(Short.TYPE)) {
+            return (short) 0;
+        }
+        if (type.equals(Integer.TYPE)) {
+            return 0;
+        }
+        if (type.equals(Long.TYPE)) {
+            return 0L;
+        }
+        if (type.equals(Float.TYPE)) {
+            return 0.0f;
+        }
+        if (type.equals(Double.TYPE)) {
+            return 0.0d;
+        }
+        if (type.equals(Character.TYPE)) {
+            return '\0';
+        }
+        return null;
     }
 
     private Object injectParameter(ParameterInjection injection, Class<?> parameterType) {
