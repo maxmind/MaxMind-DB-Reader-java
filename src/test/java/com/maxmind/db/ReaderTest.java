@@ -597,6 +597,51 @@ public class ReaderTest {
 
     @ParameterizedTest
     @MethodSource("chunkSizes")
+    public void testCreatorMethod(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            // Test with IP that has boolean=true
+            var ipTrue = InetAddress.getByName("1.1.1.1");
+            var resultTrue = reader.get(ipTrue, CreatorMethodModel.class);
+            assertNotNull(resultTrue);
+            assertNotNull(resultTrue.enumField);
+            assertEquals(BooleanEnum.TRUE_VALUE, resultTrue.enumField);
+
+            // Test with IP that has boolean=false
+            var ipFalse = InetAddress.getByName("::");
+            var resultFalse = reader.get(ipFalse, CreatorMethodModel.class);
+            assertNotNull(resultFalse);
+            assertNotNull(resultFalse.enumField);
+            assertEquals(BooleanEnum.FALSE_VALUE, resultFalse.enumField);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testCreatorMethodWithString(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            // The database has utf8_stringX="hello" in map.mapX at this IP
+            var ip = InetAddress.getByName("1.1.1.1");
+
+            // Get the nested map containing utf8_stringX to verify the raw data
+            var record = reader.get(ip, Map.class);
+            var map = (Map<?, ?>) record.get("map");
+            assertNotNull(map);
+            var mapX = (Map<?, ?>) map.get("mapX");
+            assertNotNull(mapX);
+            assertEquals("hello", mapX.get("utf8_stringX"));
+
+            // Now test that the creator method converts "hello" to StringEnum.HELLO
+            var result = reader.get(ip, StringEnumModel.class);
+            assertNotNull(result);
+            assertNotNull(result.map);
+            assertNotNull(result.map.mapX);
+            assertNotNull(result.map.mapX.stringEnumField);
+            assertEquals(StringEnum.HELLO, result.map.mapX.stringEnumField);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
     public void testDecodingTypesPointerDecoderFile(int chunkSize) throws IOException {
         this.testReader = new Reader(getFile("MaxMind-DB-test-pointer-decoder.mmdb"), chunkSize);
         this.testDecodingTypes(this.testReader, false);
@@ -908,6 +953,97 @@ public class ReaderTest {
             ContextOnlyModel context
         ) {
             this.context = context;
+        }
+    }
+
+    enum BooleanEnum {
+        TRUE_VALUE,
+        FALSE_VALUE,
+        UNKNOWN;
+
+        @MaxMindDbCreator
+        public static BooleanEnum fromBoolean(Boolean b) {
+            if (b == null) {
+                return UNKNOWN;
+            }
+            return b ? TRUE_VALUE : FALSE_VALUE;
+        }
+    }
+
+    enum StringEnum {
+        HELLO("hello"),
+        GOODBYE("goodbye"),
+        UNKNOWN("unknown");
+
+        private final String value;
+
+        StringEnum(String value) {
+            this.value = value;
+        }
+
+        @MaxMindDbCreator
+        public static StringEnum fromString(String s) {
+            if (s == null) {
+                return UNKNOWN;
+            }
+            return switch (s) {
+                case "hello" -> HELLO;
+                case "goodbye" -> GOODBYE;
+                default -> UNKNOWN;
+            };
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
+    static class CreatorMethodModel {
+        BooleanEnum enumField;
+
+        @MaxMindDbConstructor
+        public CreatorMethodModel(
+            @MaxMindDbParameter(name = "boolean")
+            BooleanEnum enumField
+        ) {
+            this.enumField = enumField;
+        }
+    }
+
+    static class MapXWithEnum {
+        StringEnum stringEnumField;
+
+        @MaxMindDbConstructor
+        public MapXWithEnum(
+            @MaxMindDbParameter(name = "utf8_stringX")
+            StringEnum stringEnumField
+        ) {
+            this.stringEnumField = stringEnumField;
+        }
+    }
+
+    static class MapWithEnum {
+        MapXWithEnum mapX;
+
+        @MaxMindDbConstructor
+        public MapWithEnum(
+            @MaxMindDbParameter(name = "mapX")
+            MapXWithEnum mapX
+        ) {
+            this.mapX = mapX;
+        }
+    }
+
+    static class StringEnumModel {
+        MapWithEnum map;
+
+        @MaxMindDbConstructor
+        public StringEnumModel(
+            @MaxMindDbParameter(name = "map")
+            MapWithEnum map
+        ) {
+            this.map = map;
         }
     }
 

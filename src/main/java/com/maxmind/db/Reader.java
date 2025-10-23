@@ -28,6 +28,7 @@ public final class Reader implements Closeable {
     private final AtomicReference<BufferHolder> bufferHolderReference;
     private final NodeCache cache;
     private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
+    private final ConcurrentHashMap<Class<?>, CachedCreator> creators;
 
     /**
      * The file mode to use when opening a MaxMind DB.
@@ -166,6 +167,7 @@ public final class Reader implements Closeable {
         this.ipV4Start = this.findIpV4StartNode(buffer);
 
         this.constructors = new ConcurrentHashMap<>();
+        this.creators = new ConcurrentHashMap<>();
     }
 
     /**
@@ -443,6 +445,7 @@ public final class Reader implements Closeable {
             buffer,
             this.searchTreeSize + DATA_SECTION_SEPARATOR_SIZE,
             this.constructors,
+            this.creators,
             lookupIp,
             network
         );

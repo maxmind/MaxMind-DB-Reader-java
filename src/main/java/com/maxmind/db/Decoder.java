@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -38,6 +40,8 @@ class Decoder {
 
     private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
 
+    private final ConcurrentHashMap<Class<?>, CachedCreator> creators;
+
     private final InetAddress lookupIp;
     private final Network lookupNetwork;
 
@@ -46,6 +50,7 @@ class Decoder {
             cache,
             buffer,
             pointerBase,
+            new ConcurrentHashMap<>(),
             new ConcurrentHashMap<>(),
             null,
             null
@@ -63,6 +68,7 @@ class Decoder {
             buffer,
             pointerBase,
             constructors,
+            new ConcurrentHashMap<>(),
             null,
             null
         );
@@ -73,6 +79,7 @@ class Decoder {
         Buffer buffer,
         long pointerBase,
         ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors,
+        ConcurrentHashMap<Class<?>, CachedCreator> creators,
         InetAddress lookupIp,
         Network lookupNetwork
     ) {
@@ -80,6 +87,7 @@ class Decoder {
         this.pointerBase = pointerBase;
         this.buffer = buffer;
         this.constructors = constructors;
+        this.creators = creators;
         this.lookupIp = lookupIp;
         this.lookupNetwork = lookupNetwork;
     }
@@ -217,9 +225,11 @@ class Decoder {
                 }
                 return this.decodeArray(size, cls, elementClass);
             case BOOLEAN:
-                return Decoder.decodeBoolean(size);
+                Boolean bool = Decoder.decodeBoolean(size);
+                return convertValue(bool, cls);
             case UTF8_STRING:
-                return this.decodeString(size);
+                String str = this.decodeString(size);
+                return convertValue(str, cls);
             case DOUBLE:
                 return this.decodeDouble(size);
             case FLOAT:
@@ -653,6 +663,7 @@ class Decoder {
     private boolean shouldInstantiateFromContext(Class<?> parameterType) {
         if (parameterType == null
             || parameterType.isPrimitive()
+            || parameterType.isEnum()
             || isSimpleType(parameterType)
             || Map.class.isAssignableFrom(parameterType)
             || List.class.isAssignableFrom(parameterType)) {
@@ -868,6 +879,74 @@ class Decoder {
                         + "com.maxmind.db.Network or java.lang.String.");
             }
         }
+    }
+
+    /**
+     * Converts a decoded value to the target type using a creator method if available.
+     * If no creator method is found, returns the original value.
+     */
+    private Object convertValue(Object value, Class<?> targetType) {
+        if (value == null || targetType == null
+            || targetType == Object.class
+            || targetType.isInstance(value)) {
+            return value;
+        }
+
+        CachedCreator creator = getCachedCreator(targetType);
+        if (creator == null) {
+            return value;
+        }
+
+        if (!creator.parameterType().isInstance(value)) {
+            return value;
+        }
+
+        try {
+            return creator.method().invoke(null, value);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new DeserializationException(
+                "Error invoking creator method " + creator.method().getName()
+                    + " on class " + targetType.getName(), e);
+        }
+    }
+
+    private CachedCreator getCachedCreator(Class<?> cls) {
+        CachedCreator cached = this.creators.get(cls);
+        if (cached != null) {
+            return cached;
+        }
+
+        CachedCreator creator = findCreatorMethod(cls);
+        if (creator != null) {
+            this.creators.putIfAbsent(cls, creator);
+        }
+        return creator;
+    }
+
+    private static CachedCreator findCreatorMethod(Class<?> cls) {
+        Method[] methods = cls.getDeclaredMethods();
+        for (Method method : methods) {
+            if (!method.isAnnotationPresent(MaxMindDbCreator.class)) {
+                continue;
+            }
+            if (!Modifier.isStatic(method.getModifiers())) {
+                throw new DeserializationException(
+                    "Creator method " + method.getName() + " on class " + cls.getName()
+                        + " must be static.");
+            }
+            if (method.getParameterCount() != 1) {
+                throw new DeserializationException(
+                    "Creator method " + method.getName() + " on class " + cls.getName()
+                        + " must have exactly one parameter.");
+            }
+            if (!cls.isAssignableFrom(method.getReturnType())) {
+                throw new DeserializationException(
+                    "Creator method " + method.getName() + " on class " + cls.getName()
+                        + " must return " + cls.getName() + " or a subtype.");
+            }
+            return new CachedCreator(method, method.getParameterTypes()[0]);
+        }
+        return null;
     }
 
     private static Object parseDefault(String value, Class<?> target) {

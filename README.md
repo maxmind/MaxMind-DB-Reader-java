@@ -170,6 +170,38 @@ Lookup context injection
   constructor argument. Values are populated for every lookup without being
   cached between different IPs.
 
+Custom deserialization
+
+- Use `@MaxMindDbCreator` to mark a static factory method or constructor that
+  should be used for custom deserialization of a type from a MaxMind DB file.
+- This annotation is similar to Jackson's `@JsonCreator` and is useful for
+  types that need custom deserialization logic, such as enums with non-standard
+  string representations or types that require special initialization.
+- The annotation can be applied to both constructors and static factory methods.
+- Example with an enum:
+
+  ```java
+  public enum ConnectionType {
+      DIALUP("Dialup"),
+      CABLE_DSL("Cable/DSL");
+
+      private final String name;
+
+      ConnectionType(String name) {
+          this.name = name;
+      }
+
+      @MaxMindDbCreator
+      public static ConnectionType fromString(String s) {
+          return switch (s) {
+              case "Dialup" -> DIALUP;
+              case "Cable/DSL" -> CABLE_DSL;
+              default -> null;
+          };
+      }
+  }
+  ```
+
 You can also use the reader object to iterate over the database.
 The `reader.networks()` and `reader.networksWithin()` methods can
 be used for this purpose.
