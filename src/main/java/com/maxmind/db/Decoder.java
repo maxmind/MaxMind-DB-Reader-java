@@ -244,6 +244,13 @@ class Decoder {
                 return coerceFromInt(this.decodeInt32(size), cls);
             case UINT64:
             case UINT128:
+                // Optimization: for typed fields, avoid BigInteger allocation when
+                // value fits in long. Keep Object.class behavior unchanged for
+                // backward compatibility.
+                if (size < 8 && !cls.equals(Object.class)) {
+                    return coerceFromLong(this.decodeLong(size), cls);
+                }
+                // Size >= 8 bytes or Object.class target: use BigInteger
                 return coerceFromBigInteger(this.decodeBigInteger(size), cls);
             default:
                 throw new InvalidDatabaseException(
