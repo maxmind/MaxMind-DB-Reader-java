@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 
@@ -1397,12 +1396,12 @@ public class ReaderTest {
     }
 
     static class TestModelVector {
-        Vector<Long> arrayField;
+        ArrayList<Long> arrayField;
 
         @MaxMindDbConstructor
         public TestModelVector(
             @MaxMindDbParameter(name = "array")
-            Vector<Long> arrayField
+            ArrayList<Long> arrayField
         ) {
         this.arrayField = arrayField;
         }

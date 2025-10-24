@@ -3,9 +3,10 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.Iterator;
-import java.util.Stack;
 
 /**
  * Instances of this class provide an iterator over the networks in a database.
@@ -15,7 +16,7 @@ import java.util.Stack;
  */
 public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Reader reader;
-    private final Stack<NetworkNode> nodes;
+    private final Deque<NetworkNode> nodes;
     private NetworkNode lastNode;
     private final boolean includeAliasedNetworks;
     private final Buffer buffer; /* Stores the buffer for Next() calls */
@@ -39,7 +40,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         this.reader = reader;
         this.includeAliasedNetworks = includeAliasedNetworks;
         this.buffer = reader.getBufferHolder().get();
-        this.nodes = new Stack<>();
+        this.nodes = new ArrayDeque<>();
         this.typeParameterClass = typeParameterClass;
         for (NetworkNode node : nodes) {
             this.nodes.push(node);
