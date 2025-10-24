@@ -290,7 +290,7 @@ class Decoder {
             return value;
         }
         if (target.equals(Integer.TYPE) || target.equals(Integer.class)) {
-            if (value < 0 || value > Integer.MAX_VALUE) {
+            if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
                 throw new DeserializationException("Value " + value + " out of range for int");
             }
             return (int) value;
