@@ -1,6 +1,7 @@
 package com.maxmind.db;
 
 import com.maxmind.db.Reader.FileMode;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +13,10 @@ import java.util.ArrayList;
 final class BufferHolder {
     // DO NOT PASS OUTSIDE THIS CLASS. Doing so will remove thread safety.
     private final Buffer buffer;
+
+    // Reasonable I/O buffer size for reading from InputStream.
+    // This is separate from chunk size which determines MultiBuffer chunk allocation.
+    private static final int IO_BUFFER_SIZE = 16 * 1024; // 16KB
 
     BufferHolder(File database, FileMode mode) throws IOException {
         this(database, mode, MultiBuffer.DEFAULT_CHUNK_SIZE);
@@ -78,29 +83,49 @@ final class BufferHolder {
         if (null == stream) {
             throw new NullPointerException("Unable to use a NULL InputStream");
         }
-        var chunks = new ArrayList<ByteBuffer>();
-        var total = 0L;
-        var tmp = new byte[chunkSize];
+
+        // Read data from the stream in chunks to support databases >2GB.
+        // Invariant: All chunks except the last are exactly chunkSize bytes.
+        var chunks = new ArrayList<byte[]>();
+        var currentChunkStream = new ByteArrayOutputStream();
+        var tmp = new byte[IO_BUFFER_SIZE];
         int read;
 
         while (-1 != (read = stream.read(tmp))) {
-            var chunk = ByteBuffer.allocate(read);
-            chunk.put(tmp, 0, read);
-            chunk.flip();
-            chunks.add(chunk);
-            total += read;
+            var offset = 0;
+            while (offset < read) {
+                var spaceInCurrentChunk = chunkSize - currentChunkStream.size();
+                var toWrite = Math.min(spaceInCurrentChunk, read - offset);
+
+                currentChunkStream.write(tmp, offset, toWrite);
+                offset += toWrite;
+
+                // When chunk is exactly full, save it and start a new one.
+                // This guarantees all non-final chunks are exactly chunkSize.
+                if (currentChunkStream.size() == chunkSize) {
+                    chunks.add(currentChunkStream.toByteArray());
+                    currentChunkStream = new ByteArrayOutputStream();
+                }
+            }
         }
 
-        if (total <= chunkSize) {
-            var data = new byte[(int) total];
-            var pos = 0;
-            for (var chunk : chunks) {
-                System.arraycopy(chunk.array(), 0, data, pos, chunk.capacity());
-                pos += chunk.capacity();
-            }
-            this.buffer = SingleBuffer.wrap(data);
+        // Handle last partial chunk (could be empty if total is multiple of chunkSize)
+        if (currentChunkStream.size() > 0) {
+            chunks.add(currentChunkStream.toByteArray());
+        }
+
+        if (chunks.size() == 1) {
+            // For databases that fit in a single chunk, use SingleBuffer
+            this.buffer = SingleBuffer.wrap(chunks.get(0));
         } else {
-            this.buffer = new MultiBuffer(chunks.toArray(new ByteBuffer[0]), chunkSize);
+            // For large databases, wrap chunks in ByteBuffers and use MultiBuffer
+            // Guaranteed: chunks[0..n-2] all have length == chunkSize
+            // chunks[n-1] may have length < chunkSize
+            var buffers = new ByteBuffer[chunks.size()];
+            for (var i = 0; i < chunks.size(); i++) {
+                buffers[i] = ByteBuffer.wrap(chunks.get(i));
+            }
+            this.buffer = new MultiBuffer(buffers, chunkSize);
         }
     }
 
