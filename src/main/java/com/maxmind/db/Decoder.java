@@ -244,7 +244,7 @@ class Decoder {
                 return coerceFromInt(this.decodeInt32(size), cls);
             case UINT64:
             case UINT128:
-                return this.decodeBigInteger(size);
+                return coerceFromBigInteger(this.decodeBigInteger(size), cls);
             default:
                 throw new InvalidDatabaseException(
                     "Unknown or unexpected type: " + type.name());
@@ -315,6 +315,47 @@ class Decoder {
         }
         if (target.equals(BigInteger.class)) {
             return BigInteger.valueOf(value);
+        }
+        return value;
+    }
+
+    private static Object coerceFromBigInteger(BigInteger value, Class<?> target) {
+        if (target.equals(Object.class) || target.equals(BigInteger.class)) {
+            return value;
+        }
+        if (target.equals(Long.TYPE) || target.equals(Long.class)) {
+            if (value.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0
+                || value.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+                throw new DeserializationException("Value " + value + " out of range for long");
+            }
+            return value.longValue();
+        }
+        if (target.equals(Integer.TYPE) || target.equals(Integer.class)) {
+            if (value.compareTo(BigInteger.valueOf(Integer.MIN_VALUE)) < 0
+                || value.compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0) {
+                throw new DeserializationException("Value " + value + " out of range for int");
+            }
+            return value.intValue();
+        }
+        if (target.equals(Short.TYPE) || target.equals(Short.class)) {
+            if (value.compareTo(BigInteger.valueOf(Short.MIN_VALUE)) < 0
+                || value.compareTo(BigInteger.valueOf(Short.MAX_VALUE)) > 0) {
+                throw new DeserializationException("Value " + value + " out of range for short");
+            }
+            return value.shortValue();
+        }
+        if (target.equals(Byte.TYPE) || target.equals(Byte.class)) {
+            if (value.compareTo(BigInteger.valueOf(Byte.MIN_VALUE)) < 0
+                || value.compareTo(BigInteger.valueOf(Byte.MAX_VALUE)) > 0) {
+                throw new DeserializationException("Value " + value + " out of range for byte");
+            }
+            return value.byteValue();
+        }
+        if (target.equals(Double.TYPE) || target.equals(Double.class)) {
+            return value.doubleValue();
+        }
+        if (target.equals(Float.TYPE) || target.equals(Float.class)) {
+            return value.floatValue();
         }
         return value;
     }

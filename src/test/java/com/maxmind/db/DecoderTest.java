@@ -475,4 +475,105 @@ public class DecoderTest {
         }
     }
 
+    @Test
+    public void testUint64Coercion() throws IOException {
+        // Test data: small UINT64 values that fit in smaller types
+        var testData = largeUint(64);
+
+        var cache = new CHMCache();
+
+        // Test UINT64(0) → Byte
+        var zeroBytes = testData.get(BigInteger.ZERO);
+        var buffer = SingleBuffer.wrap(zeroBytes);
+        var decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals((byte) 0, decoder.decode(0, Byte.class), "UINT64(0) should coerce to byte");
+
+        // Test UINT64(500) → Long
+        buffer = SingleBuffer.wrap(testData.get(BigInteger.valueOf(500)));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(500L, decoder.decode(0, Long.class), "UINT64(500) should coerce to long");
+
+        // Test UINT64(500) → Integer
+        buffer = SingleBuffer.wrap(testData.get(BigInteger.valueOf(500)));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(500, decoder.decode(0, Integer.class), "UINT64(500) should coerce to int");
+
+        // Test UINT64(500) → Short
+        buffer = SingleBuffer.wrap(testData.get(BigInteger.valueOf(500)));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals((short) 500, decoder.decode(0, Short.class), "UINT64(500) should coerce to short");
+
+        // Test UINT64(500) → Byte (should fail - out of range)
+        buffer = SingleBuffer.wrap(testData.get(BigInteger.valueOf(500)));
+        decoder = new TestDecoder(cache, buffer, 0);
+        var finalDecoder1 = decoder;
+        var ex1 = assertThrows(DeserializationException.class,
+            () -> finalDecoder1.decode(0, Byte.class),
+            "UINT64(500) should not fit in byte");
+        assertThat(ex1.getMessage(), containsString("out of range for byte"));
+
+        // Test UINT64(2^64-1) → Long (should fail - too large)
+        var maxUint64 = BigInteger.valueOf(2).pow(64).subtract(BigInteger.ONE);
+        buffer = SingleBuffer.wrap(testData.get(maxUint64));
+        decoder = new TestDecoder(cache, buffer, 0);
+        var finalDecoder2 = decoder;
+        var ex2 = assertThrows(DeserializationException.class,
+            () -> finalDecoder2.decode(0, Long.class),
+            "UINT64(2^64-1) should not fit in long");
+        assertThat(ex2.getMessage(), containsString("out of range for long"));
+
+        // Test UINT64(2^64-1) → BigInteger (should work)
+        buffer = SingleBuffer.wrap(testData.get(maxUint64));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(maxUint64, decoder.decode(0, BigInteger.class),
+            "UINT64(2^64-1) should decode to BigInteger");
+
+        // Test UINT64(10872) → Float
+        buffer = SingleBuffer.wrap(testData.get(BigInteger.valueOf(10872)));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(10872.0f, decoder.decode(0, Float.class), 0.001f,
+            "UINT64(10872) should coerce to float");
+
+        // Test UINT64(10872) → Double
+        buffer = SingleBuffer.wrap(testData.get(BigInteger.valueOf(10872)));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(10872.0, decoder.decode(0, Double.class), 0.001,
+            "UINT64(10872) should coerce to double");
+    }
+
+    @Test
+    public void testUint128Coercion() throws IOException {
+        // Test data: UINT128 values
+        var testData = largeUint(128);
+
+        var cache = new CHMCache();
+
+        // Test UINT128(0) → Long
+        var zeroBytes = testData.get(BigInteger.ZERO);
+        var buffer = SingleBuffer.wrap(zeroBytes);
+        var decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(0L, decoder.decode(0, Long.class), "UINT128(0) should coerce to long");
+
+        // Test UINT128(500) → Integer
+        buffer = SingleBuffer.wrap(testData.get(BigInteger.valueOf(500)));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(500, decoder.decode(0, Integer.class), "UINT128(500) should coerce to int");
+
+        // Test UINT128(2^128-1) → Long (should fail - way too large)
+        var maxUint128 = BigInteger.valueOf(2).pow(128).subtract(BigInteger.ONE);
+        buffer = SingleBuffer.wrap(testData.get(maxUint128));
+        decoder = new TestDecoder(cache, buffer, 0);
+        var finalDecoder = decoder;
+        var ex = assertThrows(DeserializationException.class,
+            () -> finalDecoder.decode(0, Long.class),
+            "UINT128(2^128-1) should not fit in long");
+        assertThat(ex.getMessage(), containsString("out of range for long"));
+
+        // Test UINT128(2^128-1) → BigInteger (should work)
+        buffer = SingleBuffer.wrap(testData.get(maxUint128));
+        decoder = new TestDecoder(cache, buffer, 0);
+        assertEquals(maxUint128, decoder.decode(0, BigInteger.class),
+            "UINT128(2^128-1) should decode to BigInteger");
+    }
+
 }
