@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 
@@ -506,6 +505,9 @@ public class ReaderTest {
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
+        this.testRecordImplicitConstructor(this.testReader);
+        this.testSingleConstructorWithoutAnnotation(this.testReader);
+        this.testPojoImplicitParameters(this.testReader);
     }
 
     @ParameterizedTest
@@ -516,6 +518,125 @@ public class ReaderTest {
         this.testDecodingTypesIntoModelObject(this.testReader, true);
         this.testDecodingTypesIntoModelObjectBoxed(this.testReader, true);
         this.testDecodingTypesIntoModelWithList(this.testReader);
+        this.testRecordImplicitConstructor(this.testReader);
+        this.testSingleConstructorWithoutAnnotation(this.testReader);
+        this.testPojoImplicitParameters(this.testReader);
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testContextAnnotations(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            var firstIp = InetAddress.getByName("1.1.1.1");
+            var secondIp = InetAddress.getByName("1.1.1.3");
+
+            var expectedNetwork = reader.getRecord(firstIp, Map.class).network().toString();
+
+            var first = reader.get(firstIp, ContextModel.class);
+            var second = reader.get(secondIp, ContextModel.class);
+
+            assertEquals(firstIp, first.lookupIp);
+            assertEquals(firstIp.getHostAddress(), first.lookupIpString);
+            assertEquals(expectedNetwork, first.lookupNetwork.toString());
+            assertEquals(expectedNetwork, first.lookupNetworkString);
+            assertEquals(firstIp, first.lookupNetwork.ipAddress());
+            assertEquals(100, first.uint16Field);
+
+            assertEquals(secondIp, second.lookupIp);
+            assertEquals(secondIp.getHostAddress(), second.lookupIpString);
+            assertEquals(expectedNetwork, second.lookupNetwork.toString());
+            assertEquals(expectedNetwork, second.lookupNetworkString);
+            assertEquals(secondIp, second.lookupNetwork.ipAddress());
+            assertEquals(100, second.uint16Field);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNestedContextAnnotations(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            var firstIp = InetAddress.getByName("1.1.1.1");
+            var secondIp = InetAddress.getByName("1.1.1.3");
+            var expectedNetwork = reader.getRecord(firstIp, Map.class).network().toString();
+
+            var first = reader.get(firstIp, WrapperContextOnlyModel.class);
+            var second = reader.get(secondIp, WrapperContextOnlyModel.class);
+
+            assertNotNull(first.context);
+            assertEquals(firstIp, first.context.lookupIp);
+            assertEquals(expectedNetwork, first.context.lookupNetwork.toString());
+
+            assertNotNull(second.context);
+            assertEquals(secondIp, second.context.lookupIp);
+            assertEquals(expectedNetwork, second.context.lookupNetwork.toString());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNestedContextAnnotationsWithCache(int chunkSize) throws IOException {
+        var cache = new CHMCache();
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), cache, chunkSize)) {
+            var firstIp = InetAddress.getByName("1.1.1.1");
+            var secondIp = InetAddress.getByName("1.1.1.3");
+            var expectedNetwork = reader.getRecord(firstIp, Map.class).network().toString();
+
+            var first = reader.get(firstIp, WrapperContextOnlyModel.class);
+            var second = reader.get(secondIp, WrapperContextOnlyModel.class);
+
+            assertNotNull(first.context);
+            assertEquals(firstIp, first.context.lookupIp);
+            assertEquals(expectedNetwork, first.context.lookupNetwork.toString());
+
+            assertNotNull(second.context);
+            assertEquals(secondIp, second.context.lookupIp);
+            assertEquals(expectedNetwork, second.context.lookupNetwork.toString());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testCreatorMethod(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            // Test with IP that has boolean=true
+            var ipTrue = InetAddress.getByName("1.1.1.1");
+            var resultTrue = reader.get(ipTrue, CreatorMethodModel.class);
+            assertNotNull(resultTrue);
+            assertNotNull(resultTrue.enumField);
+            assertEquals(BooleanEnum.TRUE_VALUE, resultTrue.enumField);
+
+            // Test with IP that has boolean=false
+            var ipFalse = InetAddress.getByName("::");
+            var resultFalse = reader.get(ipFalse, CreatorMethodModel.class);
+            assertNotNull(resultFalse);
+            assertNotNull(resultFalse.enumField);
+            assertEquals(BooleanEnum.FALSE_VALUE, resultFalse.enumField);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testCreatorMethodWithString(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize)) {
+            // The database has utf8_stringX="hello" in map.mapX at this IP
+            var ip = InetAddress.getByName("1.1.1.1");
+
+            // Get the nested map containing utf8_stringX to verify the raw data
+            var record = reader.get(ip, Map.class);
+            var map = (Map<?, ?>) record.get("map");
+            assertNotNull(map);
+            var mapX = (Map<?, ?>) map.get("mapX");
+            assertNotNull(mapX);
+            assertEquals("hello", mapX.get("utf8_stringX"));
+
+            // Now test that the creator method converts "hello" to StringEnum.HELLO
+            var result = reader.get(ip, StringEnumModel.class);
+            assertNotNull(result);
+            assertNotNull(result.map);
+            assertNotNull(result.map.mapX);
+            assertNotNull(result.map.mapX.stringEnumField);
+            assertEquals(StringEnum.HELLO, result.map.mapX.stringEnumField);
+        }
     }
 
     @ParameterizedTest
@@ -607,6 +728,29 @@ public class ReaderTest {
         assertEquals(new BigInteger("1152921504606846976"), model.uint64Field);
         assertEquals(new BigInteger("1329227995784915872903807060280344576"),
             model.uint128Field);
+    }
+
+    static class ContextModel {
+        InetAddress lookupIp;
+        String lookupIpString;
+        Network lookupNetwork;
+        String lookupNetworkString;
+        int uint16Field;
+
+        @MaxMindDbConstructor
+        public ContextModel(
+            @MaxMindDbIpAddress InetAddress lookupIp,
+            @MaxMindDbIpAddress String lookupIpString,
+            @MaxMindDbNetwork Network lookupNetwork,
+            @MaxMindDbNetwork String lookupNetworkString,
+            @MaxMindDbParameter(name = "uint16") int uint16Field
+        ) {
+            this.lookupIp = lookupIp;
+            this.lookupIpString = lookupIpString;
+            this.lookupNetwork = lookupNetwork;
+            this.lookupNetworkString = lookupNetworkString;
+            this.uint16Field = uint16Field;
+        }
     }
 
     static class TestModel {
@@ -785,6 +929,123 @@ public class ReaderTest {
         }
     }
 
+    static class ContextOnlyModel {
+        InetAddress lookupIp;
+        Network lookupNetwork;
+
+        @MaxMindDbConstructor
+        public ContextOnlyModel(
+            @MaxMindDbIpAddress InetAddress lookupIp,
+            @MaxMindDbNetwork Network lookupNetwork
+        ) {
+            this.lookupIp = lookupIp;
+            this.lookupNetwork = lookupNetwork;
+        }
+    }
+
+    static class WrapperContextOnlyModel {
+        ContextOnlyModel context;
+
+        @MaxMindDbConstructor
+        public WrapperContextOnlyModel(
+            @MaxMindDbParameter(name = "missing_context")
+            ContextOnlyModel context
+        ) {
+            this.context = context;
+        }
+    }
+
+    enum BooleanEnum {
+        TRUE_VALUE,
+        FALSE_VALUE,
+        UNKNOWN;
+
+        @MaxMindDbCreator
+        public static BooleanEnum fromBoolean(Boolean b) {
+            if (b == null) {
+                return UNKNOWN;
+            }
+            return b ? TRUE_VALUE : FALSE_VALUE;
+        }
+    }
+
+    enum StringEnum {
+        HELLO("hello"),
+        GOODBYE("goodbye"),
+        UNKNOWN("unknown");
+
+        private final String value;
+
+        StringEnum(String value) {
+            this.value = value;
+        }
+
+        @MaxMindDbCreator
+        public static StringEnum fromString(String s) {
+            if (s == null) {
+                return UNKNOWN;
+            }
+            return switch (s) {
+                case "hello" -> HELLO;
+                case "goodbye" -> GOODBYE;
+                default -> UNKNOWN;
+            };
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
+    static class CreatorMethodModel {
+        BooleanEnum enumField;
+
+        @MaxMindDbConstructor
+        public CreatorMethodModel(
+            @MaxMindDbParameter(name = "boolean")
+            BooleanEnum enumField
+        ) {
+            this.enumField = enumField;
+        }
+    }
+
+    static class MapXWithEnum {
+        StringEnum stringEnumField;
+
+        @MaxMindDbConstructor
+        public MapXWithEnum(
+            @MaxMindDbParameter(name = "utf8_stringX")
+            StringEnum stringEnumField
+        ) {
+            this.stringEnumField = stringEnumField;
+        }
+    }
+
+    static class MapWithEnum {
+        MapXWithEnum mapX;
+
+        @MaxMindDbConstructor
+        public MapWithEnum(
+            @MaxMindDbParameter(name = "mapX")
+            MapXWithEnum mapX
+        ) {
+            this.mapX = mapX;
+        }
+    }
+
+    static class StringEnumModel {
+        MapWithEnum map;
+
+        @MaxMindDbConstructor
+        public StringEnumModel(
+            @MaxMindDbParameter(name = "map")
+            MapWithEnum map
+        ) {
+            this.map = map;
+        }
+    }
+
     static class MapModelBoxed {
         MapXModelBoxed mapXField;
 
@@ -829,6 +1090,65 @@ public class ReaderTest {
         ) {
             this.arrayField = arrayField;
         }
+    }
+
+    // Record-based decoding without annotations
+    record MapXRecord(List<Long> arrayX) {}
+    record MapRecord(MapXRecord mapX) {}
+    record TestRecordImplicit(MapRecord map) {}
+
+    private void testRecordImplicitConstructor(Reader reader) throws IOException {
+        var model = reader.get(InetAddress.getByName("::1.1.1.0"), TestRecordImplicit.class);
+        assertEquals(List.of(7L, 8L, 9L), model.map().mapX().arrayX());
+    }
+
+    // Single-constructor classes without @MaxMindDbConstructor
+    static class MapXPojo {
+        List<Long> arrayX;
+        String utf8StringX;
+
+        public MapXPojo(
+            @MaxMindDbParameter(name = "arrayX") List<Long> arrayX,
+            @MaxMindDbParameter(name = "utf8_stringX") String utf8StringX
+        ) {
+            this.arrayX = arrayX;
+            this.utf8StringX = utf8StringX;
+        }
+    }
+
+    static class MapContainerPojo {
+        MapXPojo mapX;
+
+        public MapContainerPojo(@MaxMindDbParameter(name = "mapX") MapXPojo mapX) {
+            this.mapX = mapX;
+        }
+    }
+
+    static class TopLevelPojo {
+        MapContainerPojo map;
+
+        public TopLevelPojo(@MaxMindDbParameter(name = "map") MapContainerPojo map) {
+            this.map = map;
+        }
+    }
+
+    private void testSingleConstructorWithoutAnnotation(Reader reader) throws IOException {
+        var pojo = reader.get(InetAddress.getByName("::1.1.1.0"), TopLevelPojo.class);
+        assertEquals(List.of(7L, 8L, 9L), pojo.map.mapX.arrayX);
+    }
+
+    // Unannotated parameters on non-record types using Java parameter names
+    static class TestPojoImplicit {
+        MapContainerPojo map;
+
+        public TestPojoImplicit(MapContainerPojo map) {
+            this.map = map;
+        }
+    }
+
+    private void testPojoImplicitParameters(Reader reader) throws IOException {
+        var model = reader.get(InetAddress.getByName("::1.1.1.0"), TestPojoImplicit.class);
+        assertEquals(List.of(7L, 8L, 9L), model.map.mapX.arrayX);
     }
 
     @ParameterizedTest
@@ -1076,15 +1396,354 @@ public class ReaderTest {
     }
 
     static class TestModelVector {
-        Vector<Long> arrayField;
+        ArrayList<Long> arrayField;
 
         @MaxMindDbConstructor
         public TestModelVector(
             @MaxMindDbParameter(name = "array")
-            Vector<Long> arrayField
+            ArrayList<Long> arrayField
         ) {
-            this.arrayField = arrayField;
+        this.arrayField = arrayField;
         }
+    }
+
+    // Positive tests for primitive constructor parameters
+    static class TestModelPrimitivesBasic {
+        boolean booleanField;
+        double doubleField;
+        float floatField;
+        int int32Field;
+        long uint32Field;
+
+        @MaxMindDbConstructor
+        public TestModelPrimitivesBasic(
+            @MaxMindDbParameter(name = "boolean") boolean booleanField,
+            @MaxMindDbParameter(name = "double") double doubleField,
+            @MaxMindDbParameter(name = "float") float floatField,
+            @MaxMindDbParameter(name = "int32") int int32Field,
+            @MaxMindDbParameter(name = "uint32") long uint32Field
+        ) {
+            this.booleanField = booleanField;
+            this.doubleField = doubleField;
+            this.floatField = floatField;
+            this.int32Field = int32Field;
+            this.uint32Field = uint32Field;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testPrimitiveConstructorParamsBasicWorks(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+
+        var model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelPrimitivesBasic.class
+        );
+
+        assertTrue(model.booleanField);
+        assertEquals(42.123456, model.doubleField, 0.000000001);
+        assertEquals(1.1, model.floatField, 0.000001);
+        assertEquals(-268435456, model.int32Field);
+        assertEquals(268435456L, model.uint32Field);
+    }
+
+    static class TestModelShortPrimitive {
+        short uint16Field;
+
+        @MaxMindDbConstructor
+        public TestModelShortPrimitive(
+            @MaxMindDbParameter(name = "uint16") short uint16Field
+        ) {
+            this.uint16Field = uint16Field;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testPrimitiveConstructorParamShortWorks(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelShortPrimitive.class
+        );
+        assertEquals((short) 100, model.uint16Field);
+    }
+
+    static class TestModelBytePrimitive {
+        byte uint16Field;
+
+        @MaxMindDbConstructor
+        public TestModelBytePrimitive(
+            @MaxMindDbParameter(name = "uint16") byte uint16Field
+        ) {
+            this.uint16Field = uint16Field;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testPrimitiveConstructorParamByteWorks(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var model = this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"),
+            TestModelBytePrimitive.class
+        );
+        assertEquals((byte) 100, model.uint16Field);
+    }
+
+    // Tests for behavior when a primitive constructor parameter is missing from the DB
+    static class MissingBooleanPrimitive {
+        boolean v;
+
+        @MaxMindDbConstructor
+        public MissingBooleanPrimitive(
+            @MaxMindDbParameter(name = "missing_key") boolean v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingBytePrimitive {
+        byte v;
+
+        @MaxMindDbConstructor
+        public MissingBytePrimitive(
+            @MaxMindDbParameter(name = "missing_key") byte v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingShortPrimitive {
+        short v;
+
+        @MaxMindDbConstructor
+        public MissingShortPrimitive(
+            @MaxMindDbParameter(name = "missing_key") short v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingIntPrimitive {
+        int v;
+
+        @MaxMindDbConstructor
+        public MissingIntPrimitive(
+            @MaxMindDbParameter(name = "missing_key") int v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingLongPrimitive {
+        long v;
+
+        @MaxMindDbConstructor
+        public MissingLongPrimitive(
+            @MaxMindDbParameter(name = "missing_key") long v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingFloatPrimitive {
+        float v;
+
+        @MaxMindDbConstructor
+        public MissingFloatPrimitive(
+            @MaxMindDbParameter(name = "missing_key") float v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class MissingDoublePrimitive {
+        double v;
+
+        @MaxMindDbConstructor
+        public MissingDoublePrimitive(
+            @MaxMindDbParameter(name = "missing_key") double v
+        ) {
+            this.v = v;
+        }
+    }
+
+    // Positive tests: defaults via annotation when key is missing
+    static class DefaultBooleanPrimitive {
+        boolean v;
+
+        @MaxMindDbConstructor
+        public DefaultBooleanPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "true")
+            boolean v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultBytePrimitive {
+        byte v;
+
+        @MaxMindDbConstructor
+        public DefaultBytePrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "7")
+            byte v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultShortPrimitive {
+        short v;
+
+        @MaxMindDbConstructor
+        public DefaultShortPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "300")
+            short v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultIntPrimitive {
+        int v;
+
+        @MaxMindDbConstructor
+        public DefaultIntPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "-5")
+            int v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultLongPrimitive {
+        long v;
+
+        @MaxMindDbConstructor
+        public DefaultLongPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "123456789")
+            long v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultFloatPrimitive {
+        float v;
+
+        @MaxMindDbConstructor
+        public DefaultFloatPrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "3.14")
+            float v
+        ) {
+            this.v = v;
+        }
+    }
+
+    static class DefaultDoublePrimitive {
+        double v;
+
+        @MaxMindDbConstructor
+        public DefaultDoublePrimitive(
+            @MaxMindDbParameter(name = "missing_key", useDefault = true, defaultValue = "2.71828")
+            double v
+        ) {
+            this.v = v;
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveDefaultsApplied(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+
+        assertTrue(this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultBooleanPrimitive.class).v);
+        assertEquals((byte) 7, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultBytePrimitive.class).v);
+        assertEquals((short) 300, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultShortPrimitive.class).v);
+        assertEquals(-5, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultIntPrimitive.class).v);
+        assertEquals(123456789L, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultLongPrimitive.class).v);
+        assertEquals(3.14f, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultFloatPrimitive.class).v, 0.0001);
+        assertEquals(2.71828, this.testReader.get(
+            InetAddress.getByName("::1.1.1.0"), DefaultDoublePrimitive.class).v, 0.00001);
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveBooleanFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingBooleanPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveByteFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingBytePrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveShortFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingShortPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveIntFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingIntPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveLongFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingLongPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveFloatFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingFloatPrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMissingPrimitiveDoubleFails(int chunkSize) throws IOException {
+        this.testReader = new Reader(getFile("MaxMind-DB-test-decoder.mmdb"), chunkSize);
+        var ex = assertThrows(DeserializationException.class,
+            () -> this.testReader.get(InetAddress.getByName("::1.1.1.0"), MissingDoublePrimitive.class));
+        assertThat(ex.getMessage(), containsString("Error creating object"));
+        assertThat(ex.getCause().getCause().getClass(), equalTo(IllegalArgumentException.class));
     }
 
     // Test that we cache differently depending on more than the offset.

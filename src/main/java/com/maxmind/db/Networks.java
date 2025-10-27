@@ -3,9 +3,10 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.Iterator;
-import java.util.Stack;
 
 /**
  * Instances of this class provide an iterator over the networks in a database.
@@ -15,7 +16,7 @@ import java.util.Stack;
  */
 public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     private final Reader reader;
-    private final Stack<NetworkNode> nodes;
+    private final Deque<NetworkNode> nodes;
     private NetworkNode lastNode;
     private final boolean includeAliasedNetworks;
     private final Buffer buffer; /* Stores the buffer for Next() calls */
@@ -39,7 +40,7 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
         this.reader = reader;
         this.includeAliasedNetworks = includeAliasedNetworks;
         this.buffer = reader.getBufferHolder().get();
-        this.nodes = new Stack<>();
+        this.nodes = new ArrayDeque<>();
         this.typeParameterClass = typeParameterClass;
         for (NetworkNode node : nodes) {
             this.nodes.push(node);
@@ -55,9 +56,6 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     @Override
     public DatabaseRecord<T> next() {
         try {
-            var data = this.reader.resolveDataPointer(
-                this.buffer, this.lastNode.pointer, this.typeParameterClass);
-
             var ip = this.lastNode.ip;
             var prefixLength = this.lastNode.prefix;
 
@@ -76,7 +74,16 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
                 prefixLength -= 96;
             }
 
-            return new DatabaseRecord<>(data, ipAddr, prefixLength);
+            var network = new Network(ipAddr, prefixLength);
+            var data = this.reader.resolveDataPointer(
+                this.buffer,
+                this.lastNode.pointer,
+                this.typeParameterClass,
+                ipAddr,
+                network
+            );
+
+            return new DatabaseRecord<>(data, network);
         } catch (IOException e) {
             throw new NetworksIterationException(e);
         }
