@@ -83,8 +83,8 @@ public class Lookup {
             DatabaseRecord<LookupResult> record
                 = reader.getRecord(address, LookupResult.class);
 
-            System.out.println(record.getData().getCountry().getIsoCode());
-            System.out.println(record.getNetwork());
+            System.out.println(record.data().getCountry().getIsoCode());
+            System.out.println(record.network());
         }
     }
 
@@ -214,7 +214,7 @@ while(networks.hasNext()) {
     DatabaseRecord<Map<String, String>> iteration = networks.next();
 
     // Get the data.
-    Map<String, String> data = iteration.getData();
+    Map<String, String> data = iteration.data();
 
     // The IP Address
     InetAddress ipAddress = InetAddress.getByName(data.get("ip"));

@@ -1,8 +1,11 @@
 CHANGELOG
 =========
 
-4.0.0
+4.0.0 (2025-11-10)
 ------------------
+
+**This is a major release with several breaking changes. Please see
+[UPGRADING.md](UPGRADING.md) for detailed migration instructions.**
 
 * Java 17 or greater is now required.
 * Added support for MaxMind DB files larger than 2GB. The library now uses
