@@ -2,7 +2,7 @@
 layout: default
 title: MaxMind DB Java API
 language: java
-version: v3.2.0
+version: v4.0.0
 ---
 
 # MaxMind DB Reader #
@@ -23,7 +23,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>3.2.0</version>
+        <version>4.0.0</version>
     </dependency>
 ```
 
@@ -36,7 +36,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:3.2.0'
+    compile 'com.maxmind.db:maxmind-db:4.0.0'
 }
 ```
 
@@ -90,8 +90,8 @@ public class Lookup {
             DatabaseRecord<LookupResult> record
                 = reader.getRecord(address, LookupResult.class);
 
-            System.out.println(record.getData().getCountry().getIsoCode());
-            System.out.println(record.getNetwork());
+            System.out.println(record.data().getCountry().getIsoCode());
+            System.out.println(record.network());
         }
     }
 
@@ -127,8 +127,90 @@ public class Lookup {
 }
 ```
 
-You can also use the reader object to iterate over the database. 
-The `reader.networks()` and `reader.networksWithin()` methods can 
+### Constructor and parameter selection
+
+- Preferred: annotate a constructor with `@MaxMindDbConstructor` and its
+  parameters with `@MaxMindDbParameter(name = "...")`.
+- Records: if no constructor is annotated, the canonical record constructor is
+  used automatically. Record component names are used as field names.
+- Classes with a single public constructor: if no constructor is annotated,
+  that constructor is used automatically.
+- Unannotated parameters: when a parameter is not annotated, the reader falls
+  back to the parameter name. For records, this is the component name; for
+  classes, this is the Java parameter name. To use Java parameter names at
+  runtime, compile your model classes with the `-parameters` flag (Maven:
+  `maven-compiler-plugin` with `<parameters>true</parameters>`).
+  If Java parameter names are unavailable (no `-parameters`) and there is no
+  `@MaxMindDbParameter` annotation, the reader throws a
+  `ParameterNotFoundException` with guidance.
+
+Defaults for missing values
+
+- Provide a default with
+  `@MaxMindDbParameter(name = "...", useDefault = true, defaultValue = "...")`.
+- Supports primitives, boxed types, and `String`. If `defaultValue` is empty
+  and `useDefault` is true, Java defaults are used (0, false, 0.0, empty
+  string).
+- Example:
+
+  ```java
+  @MaxMindDbConstructor
+  Example(
+      @MaxMindDbParameter(name = "count", useDefault = true, defaultValue = "0")
+      int count,
+      @MaxMindDbParameter(
+          name = "enabled",
+          useDefault = true,
+          defaultValue = "true"
+      )
+      boolean enabled
+  ) { }
+  ```
+
+Lookup context injection
+
+- Use `@MaxMindDbIpAddress` to inject the IP address being decoded.
+  Supported parameter types are `InetAddress` and `String`.
+- Use `@MaxMindDbNetwork` to inject the network of the resulting record.
+  Supported parameter types are `Network` and `String`.
+- Context annotations cannot be combined with `@MaxMindDbParameter` on the same
+  constructor argument. Values are populated for every lookup without being
+  cached between different IPs.
+
+Custom deserialization
+
+- Use `@MaxMindDbCreator` to mark a static factory method or constructor that
+  should be used for custom deserialization of a type from a MaxMind DB file.
+- This annotation is similar to Jackson's `@JsonCreator` and is useful for
+  types that need custom deserialization logic, such as enums with non-standard
+  string representations or types that require special initialization.
+- The annotation can be applied to both constructors and static factory methods.
+- Example with an enum:
+
+  ```java
+  public enum ConnectionType {
+      DIALUP("Dialup"),
+      CABLE_DSL("Cable/DSL");
+
+      private final String name;
+
+      ConnectionType(String name) {
+          this.name = name;
+      }
+
+      @MaxMindDbCreator
+      public static ConnectionType fromString(String s) {
+          return switch (s) {
+              case "Dialup" -> DIALUP;
+              case "Cable/DSL" -> CABLE_DSL;
+              default -> null;
+          };
+      }
+  }
+  ```
+
+You can also use the reader object to iterate over the database.
+The `reader.networks()` and `reader.networksWithin()` methods can
 be used for this purpose.
 
 ```java
@@ -139,7 +221,7 @@ while(networks.hasNext()) {
     DatabaseRecord<Map<String, String>> iteration = networks.next();
 
     // Get the data.
-    Map<String, String> data = iteration.getData();
+    Map<String, String> data = iteration.data();
 
     // The IP Address
     InetAddress ipAddress = InetAddress.getByName(data.get("ip"));
@@ -214,7 +296,7 @@ specific to this reader, please [contact MaxMind support](https://www.maxmind.co
 
 ## Requirements  ##
 
-This API requires Java 11 or greater.
+This API requires Java 17 or greater.
 
 ## Contributing ##
 
@@ -227,6 +309,6 @@ The MaxMind DB Reader API uses [Semantic Versioning](https://semver.org/).
 
 ## Copyright and License ##
 
-This software is Copyright (c) 2014-2022 by MaxMind, Inc.
+This software is Copyright (c) 2014-2025 by MaxMind, Inc.
 
 This is free software, licensed under the Apache License, Version 2.0.
