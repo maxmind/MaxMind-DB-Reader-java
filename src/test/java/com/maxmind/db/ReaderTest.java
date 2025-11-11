@@ -2001,7 +2001,6 @@ public class ReaderTest {
         }
     }
 
-    // XXX - logic could be combined with above
     private void testIpV6(Reader reader, File file) throws IOException {
         var subnets = new String[] {"::1:ffff:ffff", "::2:0:0",
             "::2:0:40", "::2:0:50", "::2:0:58"};

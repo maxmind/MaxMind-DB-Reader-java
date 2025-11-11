@@ -16,7 +16,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>3.2.0</version>
+        <version>4.0.0</version>
     </dependency>
 ```
 
@@ -29,7 +29,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:3.2.0'
+    compile 'com.maxmind.db:maxmind-db:4.0.0'
 }
 ```
 
@@ -83,8 +83,8 @@ public class Lookup {
             DatabaseRecord<LookupResult> record
                 = reader.getRecord(address, LookupResult.class);
 
-            System.out.println(record.getData().getCountry().getIsoCode());
-            System.out.println(record.getNetwork());
+            System.out.println(record.data().getCountry().getIsoCode());
+            System.out.println(record.network());
         }
     }
 
@@ -214,7 +214,7 @@ while(networks.hasNext()) {
     DatabaseRecord<Map<String, String>> iteration = networks.next();
 
     // Get the data.
-    Map<String, String> data = iteration.getData();
+    Map<String, String> data = iteration.data();
 
     // The IP Address
     InetAddress ipAddress = InetAddress.getByName(data.get("ip"));
