@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+4.0.1 (2025-12-02)
+------------------
+
+* `DecodedValue` is now a public class again, allowing custom `NodeCache`
+  implementations to be created. The class was inadvertently made
+  package-private in 4.0.0. Reported by Alexandros Leventakis. GitHub #321.
+
 4.0.0 (2025-11-10)
 ------------------
 
