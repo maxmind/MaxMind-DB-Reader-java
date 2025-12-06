@@ -30,6 +30,9 @@ class Decoder {
 
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + (1 << 11), 0};
 
+    // Sentinel to cache "no creator method exists" to avoid repeated method scanning
+    private static final CachedCreator NO_CREATOR = new CachedCreator(null, null);
+
     private final NodeCache cache;
 
     private final long pointerBase;
@@ -184,7 +187,14 @@ class Decoder {
             || cls.equals(Object.class)
             || Map.class.isAssignableFrom(cls)
             || List.class.isAssignableFrom(cls)
+            || cls.isEnum()
             || isSimpleType(cls)) {
+            return false;
+        }
+
+        // Non-enum classes with @MaxMindDbCreator don't require lookup context
+        // since they just convert simple values (strings, booleans, etc.)
+        if (getCachedCreator(cls) != null) {
             return false;
         }
 
@@ -960,14 +970,15 @@ class Decoder {
 
     private CachedCreator getCachedCreator(Class<?> cls) {
         CachedCreator cached = this.creators.get(cls);
+        if (cached == NO_CREATOR) {
+            return null;  // Known to have no creator
+        }
         if (cached != null) {
             return cached;
         }
 
         CachedCreator creator = findCreatorMethod(cls);
-        if (creator != null) {
-            this.creators.putIfAbsent(cls, creator);
-        }
+        this.creators.putIfAbsent(cls, creator != null ? creator : NO_CREATOR);
         return creator;
     }
 

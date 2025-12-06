@@ -2042,6 +2042,110 @@ public class ReaderTest {
         }
     }
 
+    // =========================================================================
+    // Tests for enum with @MaxMindDbCreator when data is stored via pointer
+    // See: https://github.com/maxmind/GeoIP2-java/issues/644
+    // =========================================================================
+
+    /**
+     * Enum with @MaxMindDbCreator for converting string values.
+     * This simulates how ConnectionType enum works in geoip2.
+     */
+    enum ConnectionTypeEnum {
+        DIALUP("Dialup"),
+        CABLE_DSL("Cable/DSL"),
+        CORPORATE("Corporate"),
+        CELLULAR("Cellular"),
+        SATELLITE("Satellite"),
+        UNKNOWN("Unknown");
+
+        private final String name;
+
+        ConnectionTypeEnum(String name) {
+            this.name = name;
+        }
+
+        @MaxMindDbCreator
+        public static ConnectionTypeEnum fromString(String s) {
+            if (s == null) {
+                return UNKNOWN;
+            }
+            return switch (s) {
+                case "Dialup" -> DIALUP;
+                case "Cable/DSL" -> CABLE_DSL;
+                case "Corporate" -> CORPORATE;
+                case "Cellular" -> CELLULAR;
+                case "Satellite" -> SATELLITE;
+                default -> UNKNOWN;
+            };
+        }
+    }
+
+    /**
+     * Model class that uses the ConnectionTypeEnum for the connection_type field.
+     */
+    static class TraitsModel {
+        ConnectionTypeEnum connectionType;
+
+        @MaxMindDbConstructor
+        public TraitsModel(
+            @MaxMindDbParameter(name = "connection_type")
+            ConnectionTypeEnum connectionType
+        ) {
+            this.connectionType = connectionType;
+        }
+    }
+
+    /**
+     * Top-level model for Enterprise database records.
+     */
+    static class EnterpriseModel {
+        TraitsModel traits;
+
+        @MaxMindDbConstructor
+        public EnterpriseModel(
+            @MaxMindDbParameter(name = "traits")
+            TraitsModel traits
+        ) {
+            this.traits = traits;
+        }
+    }
+
+    /**
+     * This test passes because IP 74.209.24.0 has connection_type stored inline.
+     */
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testEnumCreatorWithInlineData(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("GeoIP2-Enterprise-Test.mmdb"), chunkSize)) {
+            var ip = InetAddress.getByName("74.209.24.0");
+            var result = reader.get(ip, EnterpriseModel.class);
+            assertNotNull(result);
+            assertNotNull(result.traits);
+            assertEquals(ConnectionTypeEnum.CABLE_DSL, result.traits.connectionType);
+        }
+    }
+
+    /**
+     * This test verifies that enums with @MaxMindDbCreator work correctly when
+     * the data is stored via a pointer (common for deduplication in databases).
+     *
+     * <p>Previously, this would throw ConstructorNotFoundException because
+     * requiresLookupContext() called loadConstructorMetadata() before checking
+     * for creator methods.
+     */
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testEnumCreatorWithPointerData(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("GeoIP2-Enterprise-Test.mmdb"), chunkSize)) {
+            var ip = InetAddress.getByName("89.160.20.112");
+            var result = reader.get(ip, EnterpriseModel.class);
+            assertNotNull(result);
+            assertNotNull(result.traits);
+            assertEquals(ConnectionTypeEnum.CORPORATE, result.traits.connectionType);
+        }
+    }
+
     static File getFile(String name) {
         return new File(ReaderTest.class.getResource("/maxmind-db/test-data/" + name).getFile());
     }

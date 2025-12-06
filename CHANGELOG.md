@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+4.0.2
+------------------
+
+* Fixed a bug where enums with `@MaxMindDbCreator` would throw
+  `ConstructorNotFoundException` when the data was stored via a pointer
+  in the database. This commonly occurred with deduplicated data in larger
+  databases. Reported by Fabrice Bacchella. GitHub #644 in GeoIP2-java.
+
 4.0.1 (2025-12-02)
 ------------------
 
