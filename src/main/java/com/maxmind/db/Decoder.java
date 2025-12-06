@@ -706,16 +706,66 @@ class Decoder {
             var sbErrors = new StringBuilder();
             for (var key : parameterIndexes.keySet()) {
                 var index = parameterIndexes.get(key);
-                if (parameters[index] != null
-                    && !parameters[index].getClass().isAssignableFrom(parameterTypes[index])) {
-                    sbErrors.append(" argument type mismatch in " + key + " MMDB Type: "
-                        + parameters[index].getClass().getCanonicalName()
-                        + " Java Type: " + parameterTypes[index].getCanonicalName());
+                if (parameters[index] == null && parameterTypes[index].isPrimitive()) {
+                    sbErrors.append(" null value for primitive ")
+                        .append(parameterTypes[index].getName())
+                        .append(" parameter '").append(key).append("'.");
+                } else if (parameters[index] != null
+                    && !isAssignableType(parameters[index].getClass(), parameterTypes[index])) {
+                    sbErrors.append(" argument type mismatch in ").append(key)
+                        .append(" MMDB Type: ")
+                        .append(parameters[index].getClass().getCanonicalName())
+                        .append(" Java Type: ")
+                        .append(parameterTypes[index].getCanonicalName())
+                        .append(".");
                 }
             }
             throw new DeserializationException(
-                "Error creating object of type: " + cls.getSimpleName() + " - " + sbErrors, e);
+                "Error creating object of type: " + cls.getSimpleName() + " -" + sbErrors, e);
         }
+    }
+
+    /**
+     * Checks if an actual type can be assigned to an expected type,
+     * accounting for primitive/boxed equivalents (e.g., Boolean to boolean).
+     */
+    private static boolean isAssignableType(Class<?> actual, Class<?> expected) {
+        if (expected.isAssignableFrom(actual)) {
+            return true;
+        }
+        // Check primitive/boxed equivalents for auto-unboxing
+        if (expected.isPrimitive()) {
+            return actual.equals(boxedType(expected));
+        }
+        return false;
+    }
+
+    private static Class<?> boxedType(Class<?> primitive) {
+        if (primitive == boolean.class) {
+            return Boolean.class;
+        }
+        if (primitive == byte.class) {
+            return Byte.class;
+        }
+        if (primitive == short.class) {
+            return Short.class;
+        }
+        if (primitive == int.class) {
+            return Integer.class;
+        }
+        if (primitive == long.class) {
+            return Long.class;
+        }
+        if (primitive == float.class) {
+            return Float.class;
+        }
+        if (primitive == double.class) {
+            return Double.class;
+        }
+        if (primitive == char.class) {
+            return Character.class;
+        }
+        return primitive;
     }
 
     private boolean shouldInstantiateFromContext(Class<?> parameterType) {

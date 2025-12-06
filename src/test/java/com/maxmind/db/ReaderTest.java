@@ -2146,6 +2146,44 @@ public class ReaderTest {
         }
     }
 
+    // Model class with primitive double field for testing null-to-primitive error messages
+    static class IpRiskModelWithPrimitive {
+        public final double ipRisk;
+
+        @MaxMindDbConstructor
+        public IpRiskModelWithPrimitive(
+            @MaxMindDbParameter(name = "ip_risk") double ipRisk
+        ) {
+            this.ipRisk = ipRisk;
+        }
+    }
+
+    /**
+     * Tests that error messages correctly report null-to-primitive issues instead of
+     * misleading boxed/primitive type mismatch messages.
+     *
+     * <p>IP 11.1.2.3 in the IP Risk test database doesn't have an ip_risk field.
+     * When deserializing to a model with a primitive double, the error message should
+     * correctly identify "null value for primitive double" rather than reporting
+     * misleading Boolean/boolean mismatches.
+     */
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNullToPrimitiveErrorMessage(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("GeoIP2-IP-Risk-Test.mmdb"), chunkSize)) {
+            var ip = InetAddress.getByName("11.1.2.3");
+
+            var exception = assertThrows(DeserializationException.class,
+                () -> reader.get(ip, IpRiskModelWithPrimitive.class));
+
+            // Error message should mention null value for primitive, not type mismatch
+            assertTrue(exception.getMessage().contains("null value for primitive double"),
+                "Error message should identify null-to-primitive issue: " + exception.getMessage());
+            assertTrue(exception.getMessage().contains("ip_risk"),
+                "Error message should name the problematic parameter: " + exception.getMessage());
+        }
+    }
+
     static File getFile(String name) {
         return new File(ReaderTest.class.getResource("/maxmind-db/test-data/" + name).getFile());
     }
