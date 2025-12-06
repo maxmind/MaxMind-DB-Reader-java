@@ -493,8 +493,8 @@ public class ReaderTest {
 
     private void testNoIpV4SearchTree(Reader reader) throws IOException {
 
-        assertEquals("::0/64", reader.get(InetAddress.getByName("1.1.1.1"), String.class));
-        assertEquals("::0/64", reader.get(InetAddress.getByName("192.1.1.1"), String.class));
+        assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"), String.class));
+        assertEquals("::/64", reader.get(InetAddress.getByName("192.1.1.1"), String.class));
     }
 
     @ParameterizedTest
