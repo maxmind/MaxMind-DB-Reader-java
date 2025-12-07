@@ -493,8 +493,8 @@ public class ReaderTest {
 
     private void testNoIpV4SearchTree(Reader reader) throws IOException {
 
-        assertEquals("::0/64", reader.get(InetAddress.getByName("1.1.1.1"), String.class));
-        assertEquals("::0/64", reader.get(InetAddress.getByName("192.1.1.1"), String.class));
+        assertEquals("::/64", reader.get(InetAddress.getByName("1.1.1.1"), String.class));
+        assertEquals("::/64", reader.get(InetAddress.getByName("192.1.1.1"), String.class));
     }
 
     @ParameterizedTest
@@ -2039,6 +2039,148 @@ public class ReaderTest {
 
         for (String ip : new String[] {"1.1.1.33", "255.254.253.123", "89fa::"}) {
             assertNull(reader.get(InetAddress.getByName(ip), Map.class));
+        }
+    }
+
+    // =========================================================================
+    // Tests for enum with @MaxMindDbCreator when data is stored via pointer
+    // See: https://github.com/maxmind/GeoIP2-java/issues/644
+    // =========================================================================
+
+    /**
+     * Enum with @MaxMindDbCreator for converting string values.
+     * This simulates how ConnectionType enum works in geoip2.
+     */
+    enum ConnectionTypeEnum {
+        DIALUP("Dialup"),
+        CABLE_DSL("Cable/DSL"),
+        CORPORATE("Corporate"),
+        CELLULAR("Cellular"),
+        SATELLITE("Satellite"),
+        UNKNOWN("Unknown");
+
+        private final String name;
+
+        ConnectionTypeEnum(String name) {
+            this.name = name;
+        }
+
+        @MaxMindDbCreator
+        public static ConnectionTypeEnum fromString(String s) {
+            if (s == null) {
+                return UNKNOWN;
+            }
+            return switch (s) {
+                case "Dialup" -> DIALUP;
+                case "Cable/DSL" -> CABLE_DSL;
+                case "Corporate" -> CORPORATE;
+                case "Cellular" -> CELLULAR;
+                case "Satellite" -> SATELLITE;
+                default -> UNKNOWN;
+            };
+        }
+    }
+
+    /**
+     * Model class that uses the ConnectionTypeEnum for the connection_type field.
+     */
+    static class TraitsModel {
+        ConnectionTypeEnum connectionType;
+
+        @MaxMindDbConstructor
+        public TraitsModel(
+            @MaxMindDbParameter(name = "connection_type")
+            ConnectionTypeEnum connectionType
+        ) {
+            this.connectionType = connectionType;
+        }
+    }
+
+    /**
+     * Top-level model for Enterprise database records.
+     */
+    static class EnterpriseModel {
+        TraitsModel traits;
+
+        @MaxMindDbConstructor
+        public EnterpriseModel(
+            @MaxMindDbParameter(name = "traits")
+            TraitsModel traits
+        ) {
+            this.traits = traits;
+        }
+    }
+
+    /**
+     * This test passes because IP 74.209.24.0 has connection_type stored inline.
+     */
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testEnumCreatorWithInlineData(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("GeoIP2-Enterprise-Test.mmdb"), chunkSize)) {
+            var ip = InetAddress.getByName("74.209.24.0");
+            var result = reader.get(ip, EnterpriseModel.class);
+            assertNotNull(result);
+            assertNotNull(result.traits);
+            assertEquals(ConnectionTypeEnum.CABLE_DSL, result.traits.connectionType);
+        }
+    }
+
+    /**
+     * This test verifies that enums with @MaxMindDbCreator work correctly when
+     * the data is stored via a pointer (common for deduplication in databases).
+     *
+     * <p>Previously, this would throw ConstructorNotFoundException because
+     * requiresLookupContext() called loadConstructorMetadata() before checking
+     * for creator methods.
+     */
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testEnumCreatorWithPointerData(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("GeoIP2-Enterprise-Test.mmdb"), chunkSize)) {
+            var ip = InetAddress.getByName("89.160.20.112");
+            var result = reader.get(ip, EnterpriseModel.class);
+            assertNotNull(result);
+            assertNotNull(result.traits);
+            assertEquals(ConnectionTypeEnum.CORPORATE, result.traits.connectionType);
+        }
+    }
+
+    // Model class with primitive double field for testing null-to-primitive error messages
+    static class IpRiskModelWithPrimitive {
+        public final double ipRisk;
+
+        @MaxMindDbConstructor
+        public IpRiskModelWithPrimitive(
+            @MaxMindDbParameter(name = "ip_risk") double ipRisk
+        ) {
+            this.ipRisk = ipRisk;
+        }
+    }
+
+    /**
+     * Tests that error messages correctly report null-to-primitive issues instead of
+     * misleading boxed/primitive type mismatch messages.
+     *
+     * <p>IP 11.1.2.3 in the IP Risk test database doesn't have an ip_risk field.
+     * When deserializing to a model with a primitive double, the error message should
+     * correctly identify "null value for primitive double" rather than reporting
+     * misleading Boolean/boolean mismatches.
+     */
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testNullToPrimitiveErrorMessage(int chunkSize) throws IOException {
+        try (var reader = new Reader(getFile("GeoIP2-IP-Risk-Test.mmdb"), chunkSize)) {
+            var ip = InetAddress.getByName("11.1.2.3");
+
+            var exception = assertThrows(DeserializationException.class,
+                () -> reader.get(ip, IpRiskModelWithPrimitive.class));
+
+            // Error message should mention null value for primitive, not type mismatch
+            assertTrue(exception.getMessage().contains("null value for primitive double"),
+                "Error message should identify null-to-primitive issue: " + exception.getMessage());
+            assertTrue(exception.getMessage().contains("ip_risk"),
+                "Error message should name the problematic parameter: " + exception.getMessage());
         }
     }
 
