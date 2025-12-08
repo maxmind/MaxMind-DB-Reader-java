@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.0.2
+4.0.2 (2025-12-08)
 ------------------
 
 * Fixed a bug where enums with `@MaxMindDbCreator` would throw

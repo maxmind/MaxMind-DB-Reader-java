@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.maxmind.db</groupId>
     <artifactId>maxmind-db</artifactId>
-    <version>4.0.1</version>
+    <version>4.0.2</version>
     <packaging>jar</packaging>
     <name>MaxMind DB Reader</name>
     <description>Reader for MaxMind DB</description>
