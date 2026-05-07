@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.maxmind.db.Reader.FileMode;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -72,6 +73,24 @@ public class ReaderTest {
             for (int ipVersion : new int[] {4, 6}) {
                 var file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
                 try (var reader = new Reader(file, chunkSize)) {
+                    this.testMetadata(reader, ipVersion, recordSize);
+                    if (ipVersion == 4) {
+                        this.testIpV4(reader, file);
+                    } else {
+                        this.testIpV6(reader, file);
+                    }
+                }
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testMemoryMode(int chunkSize) throws IOException {
+        for (long recordSize : new long[] {24, 28, 32}) {
+            for (int ipVersion : new int[] {4, 6}) {
+                var file = getFile("MaxMind-DB-test-ipv" + ipVersion + "-" + recordSize + ".mmdb");
+                try (var reader = new Reader(file, FileMode.MEMORY, chunkSize)) {
                     this.testMetadata(reader, ipVersion, recordSize);
                     if (ipVersion == 4) {
                         this.testIpV4(reader, file);
