@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+4.1.0
+------------------
+
+* Fixed unbounded off-heap memory growth when initializing the reader in
+  `FileMode.MEMORY`. The previous implementation read the database via
+  `FileChannel.read()` into a heap buffer, which causes the JDK to cache
+  temporary direct ByteBuffers in per-thread storage
+  (`sun.nio.ch.Util.BufferCache`). Repeated initialization across different
+  threads could grow this cache without bound. The reader now uses
+  `FileInputStream` for `MEMORY` mode, which bypasses the cache.
+  `FileMode.MEMORY_MAPPED` was unaffected.
+
 4.0.2 (2025-12-08)
 ------------------
 
