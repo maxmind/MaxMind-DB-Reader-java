@@ -59,8 +59,12 @@ public final class Reader implements Closeable {
     }
 
     Reader(File database, int chunkSize) throws IOException {
+        this(database, FileMode.MEMORY_MAPPED, chunkSize);
+    }
+
+    Reader(File database, FileMode fileMode, int chunkSize) throws IOException {
         this(
-            new BufferHolder(database, FileMode.MEMORY_MAPPED, chunkSize),
+            new BufferHolder(database, fileMode, chunkSize),
             database.getName(),
             NoCache.getInstance()
         );

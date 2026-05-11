@@ -1,6 +1,25 @@
 CHANGELOG
 =========
 
+4.1.0
+------------------
+
+* Fixed unbounded off-heap memory growth when initializing the reader in
+  `FileMode.MEMORY`. The previous implementation read the database via
+  `FileChannel.read()` into a heap buffer, which causes the JDK to cache
+  temporary direct ByteBuffers in per-thread storage
+  (`sun.nio.ch.Util.BufferCache`). Repeated initialization across different
+  threads could grow this cache without bound. The reader now uses
+  `FileInputStream` for `MEMORY` mode, which bypasses the cache.
+  `FileMode.MEMORY_MAPPED` was unaffected.
+* Fixed a latent short-read bug in the multi-chunk `FileMode.MEMORY`
+  load path introduced in 4.0.0. `FileChannel.read(ByteBuffer)` is not
+  contractually obligated to fully fill the destination buffer; a
+  short read could have caused silent truncation of an in-memory
+  database. Affects databases larger than ~2GB (the default chunk
+  size). The new chunked read loop retries until each chunk is fully
+  populated.
+
 4.0.2 (2025-12-08)
 ------------------
 
