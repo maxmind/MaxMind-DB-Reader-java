@@ -31,7 +31,9 @@ final class BufferHolder {
             // mode that would mean chunkSize bytes of off-heap memory held per loader
             // thread for the JVM's lifetime.
             try (FileInputStream stream = new FileInputStream(database)) {
-                long size = database.length();
+                // Size from the open fd (fstat) so it's atomic with the open;
+                // getChannel().size() does not populate the buffer cache.
+                long size = stream.getChannel().size();
                 var name = database.getName();
                 if (size <= chunkSize) {
                     this.buffer = SingleBuffer.wrap(readFully(stream, (int) size, name));
