@@ -29,7 +29,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:4.1.0'
+    implementation 'com.maxmind.db:maxmind-db:4.1.0'
 }
 ```
 
