@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.1.0
+4.1.0 (2026-05-12)
 ------------------
 
 * Fixed unbounded off-heap memory growth when initializing the reader in
