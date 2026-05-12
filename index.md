@@ -2,7 +2,7 @@
 layout: default
 title: MaxMind DB Java API
 language: java
-version: v4.0.2
+version: v4.1.0
 ---
 
 # MaxMind DB Reader #
@@ -23,7 +23,7 @@ To do this, add the dependency to your pom.xml:
     <dependency>
         <groupId>com.maxmind.db</groupId>
         <artifactId>maxmind-db</artifactId>
-        <version>4.0.2</version>
+        <version>4.1.0</version>
     </dependency>
 ```
 
@@ -36,7 +36,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compile 'com.maxmind.db:maxmind-db:4.0.2'
+    compile 'com.maxmind.db:maxmind-db:4.1.0'
 }
 ```
 
@@ -309,6 +309,6 @@ The MaxMind DB Reader API uses [Semantic Versioning](https://semver.org/).
 
 ## Copyright and License ##
 
-This software is Copyright (c) 2014-2025 by MaxMind, Inc.
+This software is Copyright (c) 2014-2026 by MaxMind, Inc.
 
 This is free software, licensed under the Apache License, Version 2.0.
