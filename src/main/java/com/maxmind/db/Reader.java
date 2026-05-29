@@ -48,7 +48,7 @@ public final class Reader implements Closeable {
 
     /**
      * Constructs a Reader for the MaxMind DB format, with no caching. The file
-     * passed to it must be a valid MaxMind DB file such as a GeoIP2 database
+     * passed to it must be a valid MaxMind DB file such as a GeoIP database
      * file.
      *
      * @param database the MaxMind DB file to use.
@@ -73,7 +73,7 @@ public final class Reader implements Closeable {
     /**
      * Constructs a Reader for the MaxMind DB format, with the specified backing
      * cache. The file passed to it must be a valid MaxMind DB file such as a
-     * GeoIP2 database file.
+     * GeoIP database file.
      *
      * @param database the MaxMind DB file to use.
      * @param cache    backing cache instance
@@ -124,7 +124,7 @@ public final class Reader implements Closeable {
 
     /**
      * Constructs a Reader for the MaxMind DB format, with no caching. The file
-     * passed to it must be a valid MaxMind DB file such as a GeoIP2 database
+     * passed to it must be a valid MaxMind DB file such as a GeoIP database
      * file.
      *
      * @param database the MaxMind DB file to use.
@@ -138,7 +138,7 @@ public final class Reader implements Closeable {
     /**
      * Constructs a Reader for the MaxMind DB format, with the specified backing
      * cache. The file passed to it must be a valid MaxMind DB file such as a
-     * GeoIP2 database file.
+     * GeoIP database file.
      *
      * @param database the MaxMind DB file to use.
      * @param fileMode the mode to open the file with.
