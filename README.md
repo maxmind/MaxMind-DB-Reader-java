@@ -35,7 +35,7 @@ dependencies {
 
 ## Usage ##
 
-*Note:* For accessing MaxMind GeoIP2 databases, we generally recommend using
+*Note:* For accessing MaxMind GeoIP databases, we generally recommend using
 the [GeoIP2 Java API](https://maxmind.github.io/GeoIP2-java/) rather than using
 this package directly.
 
