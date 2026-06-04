@@ -252,4 +252,4 @@ To help identify code that needs updating, you can search your codebase for:
 If you encounter issues during the upgrade, please check:
 
 - [GitHub Issues](https://github.com/maxmind/MaxMind-DB-Reader-java/issues)
-- [MaxMind Support](https://www.maxmind.com/en/support)
+- [MaxMind Support](https://support.maxmind.com/knowledge-base)

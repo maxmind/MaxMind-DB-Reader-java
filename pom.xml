@@ -7,17 +7,17 @@
     <packaging>jar</packaging>
     <name>MaxMind DB Reader</name>
     <description>Reader for MaxMind DB</description>
-    <url>http://dev.maxmind.com/</url>
+    <url>https://dev.maxmind.com/</url>
     <licenses>
         <license>
             <name>Apache License 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.html</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
     <organization>
         <name>MaxMind, Inc.</name>
-        <url>http://www.maxmind.com/</url>
+        <url>https://www.maxmind.com/en/home</url>
     </organization>
     <scm>
         <url>https://github.com/maxmind/MaxMind-DB-Reader-java</url>
