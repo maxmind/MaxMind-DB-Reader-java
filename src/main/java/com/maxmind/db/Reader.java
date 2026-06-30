@@ -245,11 +245,11 @@ public final class Reader implements Closeable {
      * in an IPv6 database. networks() iterates over the canonical locations and
      * not the aliases. To include the aliases, you can set includeAliasedNetworks to true.
      *
-     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
+     * @param <T> Represents the data type(e.g., Map, HashMap, etc.).
      * @param typeParameterClass The type of data returned by the iterator.
      * @return Networks The Networks iterator.
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
-     * @throws ClosedDatabaseException Exception for a closed databased.
+     * @throws ClosedDatabaseException Exception for a closed database.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public <T> Networks<T> networks(Class<T> typeParameterClass) throws
@@ -264,11 +264,11 @@ public final class Reader implements Closeable {
      * separately. To set the iteration over the IPv4 networks once, use the
      * includeAliasedNetworks option.
      *
-     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
+     * @param <T> Represents the data type(e.g., Map, HashMap, etc.).
      * @param includeAliasedNetworks Enable including aliased networks.
      * @return Networks The Networks iterator.
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
-     * @throws ClosedDatabaseException Exception for a closed databased.
+     * @throws ClosedDatabaseException Exception for a closed database.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public <T> Networks<T> networks(
@@ -331,13 +331,13 @@ public final class Reader implements Closeable {
      * separately. To only iterate over the IPv4 networks once, use the
      * includeAliasedNetworks option.
      *
-     * @param <T> Represents the data type(e.g., Map, HastMap, etc.).
+     * @param <T> Represents the data type(e.g., Map, HashMap, etc.).
      * @param network Specifies the network to be iterated.
      * @param includeAliasedNetworks Boolean for including aliased networks.
      * @param typeParameterClass The type of data returned by the iterator.
      * @return Networks
      * @throws InvalidNetworkException Exception for using an IPv6 network in ipv4-only database.
-     * @throws ClosedDatabaseException Exception for a closed databased.
+     * @throws ClosedDatabaseException Exception for a closed database.
      * @throws InvalidDatabaseException Exception for an invalid database.
      */
     public <T> Networks<T> networksWithin(
