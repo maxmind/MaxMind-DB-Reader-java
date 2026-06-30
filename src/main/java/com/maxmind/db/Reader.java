@@ -38,10 +38,15 @@ public final class Reader implements Closeable {
          * The default file mode. This maps the database to virtual memory. This
          * often provides similar performance to loading the database into real
          * memory without the overhead.
+         *
+         * <p>On Windows, a live memory mapping may prevent the database file
+         * from being renamed, replaced, or deleted until the mapped buffer is
+         * garbage collected.
          */
         MEMORY_MAPPED,
         /**
-         * Loads the database into memory when the reader is constructed.
+         * Loads the database into memory when the reader is constructed. This
+         * avoids keeping a live memory mapping of the database file.
          */
         MEMORY
     }
@@ -497,10 +502,12 @@ public final class Reader implements Closeable {
      * </p>
      * <p>
      * If you are using <code>FileMode.MEMORY_MAPPED</code>, this will
-     * <em>not</em> unmap the underlying file due to a limitation in Java's
-     * <code>MappedByteBuffer</code>. It will however set the reference to
-     * the buffer to <code>null</code>, allowing the garbage collector to
-     * collect it.
+     * release this reader's reference to the mapped buffer, allowing the
+     * garbage collector to collect it when no other references remain. Java
+     * does not provide a supported way to unmap a
+     * <code>MappedByteBuffer</code> immediately. On Windows, this means the
+     * database file may remain unavailable for rename, replacement, or
+     * deletion until the mapped buffer is garbage collected.
      * </p>
      *
      * @throws IOException if an I/O error occurs.
