@@ -27,8 +27,8 @@ public class CHMCache implements NodeCache {
      * Creates a new cache with the specified capacity.
      *
      * @param capacity
-     *            the maximum number of elements the cache can hold before
-     *            starting to evict them
+     *            the maximum number of elements the cache can hold before it
+     *            stops accepting new entries
      */
     public CHMCache(int capacity) {
         this.capacity = capacity;

@@ -48,9 +48,9 @@ public final class Networks<T> implements Iterator<DatabaseRecord<T>> {
     }
 
     /**
-     * Returns the next DataRecord.
+     * Returns the next DatabaseRecord.
      *
-     * @return The next DataRecord.
+     * @return The next DatabaseRecord.
      * @throws NetworksIterationException An exception when iterating over the networks.
      */
     @Override

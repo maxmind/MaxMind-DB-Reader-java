@@ -41,10 +41,10 @@ this package directly.
 
 To use the API, you must first create a `Reader` object. The constructor for
 the reader object takes a `File` representing your MaxMind DB. Optionally you
-may pass a second parameter with a `FileMode` with a value of `MEMORY_MAP` or
-`MEMORY`. The default mode is `MEMORY_MAP`, which maps the file to virtual
-memory. This often provides performance comparable to loading the file into
-real memory with `MEMORY`.
+may pass a second parameter with a `FileMode` with a value of `MEMORY_MAPPED`
+or `MEMORY`. The default mode is `MEMORY_MAPPED`, which maps the file to
+virtual memory. This often provides performance comparable to loading the file
+into real memory with `MEMORY`.
 
 To look up an IP address, pass the address as an `InetAddress` to the `get`
 method on `Reader`, along with the class of the object you want to
@@ -251,16 +251,22 @@ threads.
 
 ### File Lock on Windows ###
 
-By default, this API uses the `MEMORY_MAP` mode, which memory maps the file.
-On Windows, this may create an exclusive lock on the file that prevents it
-from being renamed or deleted. Due to the implementation of memory mapping in
-Java, this lock will not be released when the `DatabaseReader` is closed; it
-will only be released when the object and the `MappedByteBuffer` it uses are
-garbage collected. Older JVM versions may also not release the lock on exit.
+By default, this API uses the `MEMORY_MAPPED` mode, which memory maps the file.
+On Windows, a live memory mapping may prevent the file from being renamed,
+replaced, or deleted. This is not a Java `FileLock`, but it can have similar
+effects when updating a database file in place.
 
-To work around this problem, use the `MEMORY` mode or try upgrading your JVM
-version. You may also call `System.gc()` after dereferencing the
-`DatabaseReader` object to encourage the JVM to garbage collect sooner.
+Closing the `Reader` releases this library's reference to the mapped buffer,
+but Java does not provide a supported way to unmap the underlying
+`MappedByteBuffer` immediately. The mapping remains valid until the buffer
+becomes unreachable and is garbage collected. Any outstanding lookup or
+`Networks` iterator may also keep a duplicate buffer reachable.
+
+To avoid this behavior, use the `MEMORY` mode. If you must use
+`MEMORY_MAPPED`, close and dereference the `Reader` and any iterators that were
+created from it before replacing the file. You may call `System.gc()` to
+encourage earlier cleanup, but garbage collection is not guaranteed to run
+immediately.
 
 ### Packaging Database in a JAR ###
 
