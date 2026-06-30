@@ -1,4 +1,4 @@
-<!doctype html><html lang=en><head><meta name=generator content="Hugo 0.161.1"><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>MaxMind DB Java API</title><link rel=stylesheet href=/MaxMind-DB-Reader-java/css/main.281d4a083c59f78015bdb60748317bf7d39ad62d8c9c6cead28bce0cc0794b5e.css integrity="sha256-KB1KCDxZ94AVvbYHSDF799Oa1i2MnGzq0ovODMB5S14=" crossorigin=anonymous></head><body><nav class=page-nav><a href=/MaxMind-DB-Reader-java/ class=active aria-current=page>Overview</a>
+<!doctype html><html lang=en><head><meta name=generator content="Hugo 0.163.3"><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>MaxMind DB Java API</title><link rel=stylesheet href=/MaxMind-DB-Reader-java/css/main.281d4a083c59f78015bdb60748317bf7d39ad62d8c9c6cead28bce0cc0794b5e.css integrity="sha256-KB1KCDxZ94AVvbYHSDF799Oa1i2MnGzq0ovODMB5S14=" crossorigin=anonymous></head><body><nav class=page-nav><a href=/MaxMind-DB-Reader-java/ class=active aria-current=page>Overview</a>
 <a href=/MaxMind-DB-Reader-java/doc/latest/>API documentation</a></nav><main><h1 id=maxmind-db-reader>MaxMind DB Reader<a class=heading-anchor href=#maxmind-db-reader aria-label="Link to MaxMind DB Reader">#</a></h1><h2 id=description>Description<a class=heading-anchor href=#description aria-label="Link to Description">#</a></h2><p>This is the Java API for reading MaxMind DB files. MaxMind DB is a binary file
 format that stores data indexed by IP address subnets (IPv4 or IPv6).</p><h2 id=installation>Installation<a class=heading-anchor href=#installation aria-label="Link to Installation">#</a></h2><h3 id=maven>Maven<a class=heading-anchor href=#maven aria-label="Link to Maven">#</a></h3><p>We recommend installing this package with <a href=https://maven.apache.org/>Maven</a>.
 To do this, add the dependency to your pom.xml:</p><div class=highlight><pre tabindex=0 style=background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-xml data-lang=xml><span style=display:flex><span>    <span style=color:#0550ae>&lt;dependency&gt;</span>
@@ -16,10 +16,10 @@ dependencies {
 the <a href=https://maxmind.github.io/GeoIP2-java/>GeoIP2 Java API</a> rather than using
 this package directly.</p><p>To use the API, you must first create a <code>Reader</code> object. The constructor for
 the reader object takes a <code>File</code> representing your MaxMind DB. Optionally you
-may pass a second parameter with a <code>FileMode</code> with a value of <code>MEMORY_MAP</code> or
-<code>MEMORY</code>. The default mode is <code>MEMORY_MAP</code>, which maps the file to virtual
-memory. This often provides performance comparable to loading the file into
-real memory with <code>MEMORY</code>.</p><p>To look up an IP address, pass the address as an <code>InetAddress</code> to the <code>get</code>
+may pass a second parameter with a <code>FileMode</code> with a value of <code>MEMORY_MAPPED</code>
+or <code>MEMORY</code>. The default mode is <code>MEMORY_MAPPED</code>, which maps the file to
+virtual memory. This often provides performance comparable to loading the file
+into real memory with <code>MEMORY</code>.</p><p>To look up an IP address, pass the address as an <code>InetAddress</code> to the <code>get</code>
 method on <code>Reader</code>, along with the class of the object you want to
 deserialize into. This method will create an instance of the class and
 populate it. See examples below.</p><p>We recommend reusing the <code>Reader</code> object rather than creating a new one for
@@ -158,14 +158,18 @@ a small (~2MB) memory overhead.</p><p>Usage:</p><div class=highlight><pre tabind
 during the lookup. If you mutate the objects, the mutated objects will be
 returned from the cache on subsequent lookups.</p><h2 id=multi-threaded-use>Multi-Threaded Use<a class=heading-anchor href=#multi-threaded-use aria-label="Link to Multi-Threaded Use">#</a></h2><p>This API fully supports use in multi-threaded applications. In such
 applications, we suggest creating one <code>Reader</code> object and sharing that among
-threads.</p><h2 id=common-problems>Common Problems<a class=heading-anchor href=#common-problems aria-label="Link to Common Problems">#</a></h2><h3 id=file-lock-on-windows>File Lock on Windows<a class=heading-anchor href=#file-lock-on-windows aria-label="Link to File Lock on Windows">#</a></h3><p>By default, this API uses the <code>MEMORY_MAP</code> mode, which memory maps the file.
-On Windows, this may create an exclusive lock on the file that prevents it
-from being renamed or deleted. Due to the implementation of memory mapping in
-Java, this lock will not be released when the <code>DatabaseReader</code> is closed; it
-will only be released when the object and the <code>MappedByteBuffer</code> it uses are
-garbage collected. Older JVM versions may also not release the lock on exit.</p><p>To work around this problem, use the <code>MEMORY</code> mode or try upgrading your JVM
-version. You may also call <code>System.gc()</code> after dereferencing the
-<code>DatabaseReader</code> object to encourage the JVM to garbage collect sooner.</p><h3 id=packaging-database-in-a-jar>Packaging Database in a JAR<a class=heading-anchor href=#packaging-database-in-a-jar aria-label="Link to Packaging Database in a JAR">#</a></h3><p>If you are packaging the database file as a resource in a JAR file using
+threads.</p><h2 id=common-problems>Common Problems<a class=heading-anchor href=#common-problems aria-label="Link to Common Problems">#</a></h2><h3 id=file-lock-on-windows>File Lock on Windows<a class=heading-anchor href=#file-lock-on-windows aria-label="Link to File Lock on Windows">#</a></h3><p>By default, this API uses the <code>MEMORY_MAPPED</code> mode, which memory maps the file.
+On Windows, a live memory mapping may prevent the file from being renamed,
+replaced, or deleted. This is not a Java <code>FileLock</code>, but it can have similar
+effects when updating a database file in place.</p><p>Closing the <code>Reader</code> releases this library&rsquo;s reference to the mapped buffer,
+but Java does not provide a supported way to unmap the underlying
+<code>MappedByteBuffer</code> immediately. The mapping remains valid until the buffer
+becomes unreachable and is garbage collected. Any outstanding lookup or
+<code>Networks</code> iterator may also keep a duplicate buffer reachable.</p><p>To avoid this behavior, use the <code>MEMORY</code> mode. If you must use
+<code>MEMORY_MAPPED</code>, close and dereference the <code>Reader</code> and any iterators that were
+created from it before replacing the file. You may call <code>System.gc()</code> to
+encourage earlier cleanup, but garbage collection is not guaranteed to run
+immediately.</p><h3 id=packaging-database-in-a-jar>Packaging Database in a JAR<a class=heading-anchor href=#packaging-database-in-a-jar aria-label="Link to Packaging Database in a JAR">#</a></h3><p>If you are packaging the database file as a resource in a JAR file using
 Maven, you must
 <a href=https://maven.apache.org/plugins/maven-resources-plugin/examples/binaries-filtering.html>disable binary file filtering</a>.
 Failure to do so will result in <code>InvalidDatabaseException</code> exceptions being
