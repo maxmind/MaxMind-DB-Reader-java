@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+4.1.1
+------------------
+
+* Fixed decoding of data pointers with offsets of 2 GiB or greater. The
+  pointer payload was decoded into an `int`, so such offsets were
+  sign-extended to a negative value and rejected by `Buffer.position()`
+  with an `IllegalArgumentException`. Every record past the 2 GiB
+  boundary was unreachable in databases larger than 2 GiB, which have
+  been supported since 4.0.0.
+
 4.1.0 (2026-05-12)
 ------------------
 
