@@ -133,7 +133,7 @@ class Decoder {
         if (type.equals(Type.POINTER)) {
             var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
             var base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
-            var packed = this.decodeInteger(base, pointerSize);
+            var packed = Decoder.decodeLong(this.buffer, base, pointerSize);
             var pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
 
             return decodePointer(pointer, cls, genericType);
