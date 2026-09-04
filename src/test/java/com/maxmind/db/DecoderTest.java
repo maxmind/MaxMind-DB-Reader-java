@@ -25,7 +25,7 @@ public class DecoderTest {
 
     @Test
     public void testDecodedValueStoresMaximumCosts() {
-        var value = new DecodedValue(null).costs(1 << 16, 1L << 21, TEST_MAX_DEPTH);
+        var value = new DecodedValue(null, 1 << 16, 1L << 21, TEST_MAX_DEPTH);
         assertEquals(1 << 16, value.values());
         assertEquals(1L << 21, value.payloadBytes());
         assertEquals(TEST_MAX_DEPTH, value.depth());

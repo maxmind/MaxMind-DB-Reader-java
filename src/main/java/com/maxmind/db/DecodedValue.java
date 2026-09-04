@@ -8,46 +8,48 @@ public final class DecodedValue {
     private static final int VALUES_SHIFT = 30;
     private static final long PAYLOAD_MASK = (1L << 22) - 1;
 
-    Object value;
+    final Object value;
+    // A NodeCache is user-supplied and may publish this instance to another
+    // thread without a happens-before edge. Set the costs in the constructor
+    // so a reader cannot see a zero budget charge for a non-empty value.
+    private final long costs;
 
-    DecodedValue(Object value) {
+    DecodedValue(Object value, int values, long payloadBytes, int depth) {
         this.value = value;
+        this.costs = ((long) values << VALUES_SHIFT)
+            | (payloadBytes << PAYLOAD_SHIFT)
+            | depth;
     }
 
     Object value() {
-        if (value instanceof CostedValue costedValue) {
-            return costedValue.value();
-        }
         return value;
     }
 
     int values() {
-        return (int) (costs() >>> VALUES_SHIFT);
+        return values(costs());
+    }
+
+    static int values(long costs) {
+        return (int) (costs >>> VALUES_SHIFT);
     }
 
     long payloadBytes() {
-        return (costs() >>> PAYLOAD_SHIFT) & PAYLOAD_MASK;
+        return payloadBytes(costs());
+    }
+
+    static long payloadBytes(long costs) {
+        return (costs >>> PAYLOAD_SHIFT) & PAYLOAD_MASK;
     }
 
     int depth() {
-        return (int) (costs() & 0xFF);
+        return depth(costs());
     }
 
-    DecodedValue costs(int values, long payloadBytes, int depth) {
-        var costs = ((long) values << VALUES_SHIFT)
-            | (payloadBytes << PAYLOAD_SHIFT)
-            | depth;
-        this.value = new CostedValue(this.value, costs);
-        return this;
+    static int depth(long costs) {
+        return (int) (costs & 0xFF);
     }
 
-    private long costs() {
-        if (value instanceof CostedValue costedValue) {
-            return costedValue.costs();
-        }
-        return 0;
-    }
-
-    private record CostedValue(Object value, long costs) {
+    long costs() {
+        return this.costs;
     }
 }

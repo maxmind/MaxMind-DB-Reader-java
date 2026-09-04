@@ -19,6 +19,7 @@ CHANGELOG
   `InvalidDatabaseException`. See [UPGRADING.md](UPGRADING.md) for details.
   * Oversized integer encodings are rejected.
   * Truncated payloads and malformed UTF-8 are rejected.
+* Improved decoder performance and reduced per-lookup allocation.
 
 4.1.0 (2026-05-12)
 ------------------
