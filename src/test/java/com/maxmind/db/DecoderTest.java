@@ -359,6 +359,106 @@ public class DecoderTest {
     }
 
     @Test
+    public void testOversizedIntegersAreRejectedBeforePayloadRead() {
+        var invalidIntegers = Map.of(
+            "uint16", new byte[] {(byte) 0xA3},
+            "uint32", new byte[] {(byte) 0xC5},
+            "int32", new byte[] {0x05, 0x01},
+            "uint64", new byte[] {0x09, 0x02},
+            "uint128", new byte[] {0x11, 0x03}
+        );
+
+        for (var invalidInteger : invalidIntegers.entrySet()) {
+            var decoder = new Decoder(
+                NoCache.getInstance(),
+                SingleBuffer.wrap(invalidInteger.getValue()),
+                0
+            );
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class)
+            );
+            assertThat(ex.getMessage(), containsString(
+                "invalid size of " + invalidInteger.getKey()));
+        }
+    }
+
+    @Test
+    public void testTruncatedIntegersAreRejectedAsInvalidDatabase() {
+        var headers = List.of(
+            new byte[] {(byte) 0xA1},
+            new byte[] {(byte) 0xC1},
+            new byte[] {0x01, 0x01},
+            new byte[] {0x01, 0x02},
+            new byte[] {0x01, 0x03}
+        );
+
+        for (var header : headers) {
+            var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(header), 0);
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class)
+            );
+            assertThat(ex.getMessage(), containsString("extends beyond the end"));
+        }
+    }
+
+    @Test
+    public void testPointerBackedOversizedIntegerIsRejectedBeforePayloadRead() {
+        // A uint32 control byte can declare a 16,843,036-byte payload. The
+        // pointer target must be rejected before the decoder enters that loop.
+        var data = new byte[] {
+            (byte) 0xDF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+            0x20, 0x00
+        };
+        for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache())) {
+            var decoder = new Decoder(cache, SingleBuffer.wrap(data), 0);
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(4, Object.class)
+            );
+            assertThat(ex.getMessage(), containsString("invalid size of uint32"));
+        }
+    }
+
+    @Test
+    public void testSkippedOversizedIntegersAreRejected() {
+        var invalidIntegers = Map.of(
+            "uint16", new byte[] {(byte) 0xA3, 0, 0, 0},
+            "uint32", new byte[] {(byte) 0xC5, 0, 0, 0, 0, 0},
+            "int32", new byte[] {0x05, 0x01, 0, 0, 0, 0, 0},
+            "uint64", new byte[] {0x09, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            "uint128", new byte[] {
+                0x11, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            }
+        );
+
+        for (var invalidInteger : invalidIntegers.entrySet()) {
+            var out = new ByteArrayOutputStream();
+            out.write(0xE2); // map with two key/value pairs
+            out.write(0x47); // seven-byte UTF-8 string
+            out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+            out.writeBytes(invalidInteger.getValue());
+            out.write(0x45); // five-byte UTF-8 string
+            out.writeBytes("known".getBytes(StandardCharsets.UTF_8));
+            out.write(0x42); // two-byte UTF-8 string
+            out.writeBytes("ok".getBytes(StandardCharsets.UTF_8));
+
+            var decoder = new Decoder(
+                NoCache.getInstance(),
+                SingleBuffer.wrap(out.toByteArray()),
+                0
+            );
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, KnownFieldModel.class)
+            );
+            assertThat(ex.getMessage(), containsString(
+                "invalid size of " + invalidInteger.getKey()));
+        }
+    }
+
+    @Test
     public void testDoubles() throws IOException {
         DecoderTest
             .testTypeDecoding(Type.DOUBLE, DecoderTest.doubles());
@@ -932,6 +1032,32 @@ public class DecoderTest {
         var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
         var result = (List<?>) decoder.decode(top, Object.class);
         assertEquals(32, result.size());
+    }
+
+    @Test
+    public void testBigIntegerDoesNotConsumeStringAndBytesBudget() throws IOException {
+        var payloadSize = 1 << 21;
+        var out = new ByteArrayOutputStream();
+        out.write(0x02); // extended type, two elements
+        out.write(0x04); // array
+        out.write(0x10); // 16-byte extended value
+        out.write(0x03); // uint128
+        out.writeBytes(new byte[16]);
+
+        out.write(0x9F); // bytes, size code 31
+        var encodedSize = payloadSize - 65_821;
+        out.write((encodedSize >>> 16) & 0xFF);
+        out.write((encodedSize >>> 8) & 0xFF);
+        out.write(encodedSize & 0xFF);
+        out.writeBytes(new byte[payloadSize]);
+
+        var decoder = new Decoder(
+            NoCache.getInstance(),
+            SingleBuffer.wrap(out.toByteArray()),
+            0
+        );
+        var result = (List<?>) decoder.decode(0, Object.class);
+        assertEquals(2, result.size());
     }
 
     public static final class StackProbe {
