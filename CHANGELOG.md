@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.1.1
+4.2.0
 ------------------
 
 * Fixed decoding of data pointers with offsets of 2 GiB or greater. The
@@ -10,6 +10,9 @@ CHANGELOG
   with an `IllegalArgumentException`. Every record past the 2 GiB
   boundary was unreachable in databases larger than 2 GiB, which have
   been supported since 4.0.0.
+* Added decoder limits to prevent excessive CPU and memory use from crafted
+  databases: 65,536 decoded or skipped values and 128 nested containers per
+  operation. Exceeding a limit throws `InvalidDatabaseException`.
 
 4.1.0 (2026-05-12)
 ------------------
