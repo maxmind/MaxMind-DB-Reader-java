@@ -14,6 +14,7 @@ CHANGELOG
   databases: 65,536 decoded or skipped values, 128 nested containers, and 2 MiB
   of encoded string and bytes payload per operation. Exceeding a limit throws
   `InvalidDatabaseException`.
+  * Oversized integer encodings are rejected.
   * Truncated payloads and malformed UTF-8 are rejected.
 
 4.1.0 (2026-05-12)

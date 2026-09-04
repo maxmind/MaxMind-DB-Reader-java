@@ -277,15 +277,11 @@ class Decoder {
     }
 
     // Charge a string or bytes payload against the per-operation budget before
-    // it is materialized. A payload amplification points many pointers at one
-    // large value; because the budget is charged every time the value is decoded,
-    // and a shared pointer target is re-decoded per referencing pointer, N
-    // pointers to an S-byte value are charged N*S and rejected once the total
-    // exceeds the limit. Charging before allocation also bounds an oversized
-    // variable-length integer, whose declared size the decoder would otherwise
-    // copy before range-checking. The comparison is against the remaining budget
-    // so it cannot overflow. The limit is inclusive: a total exactly at the limit
-    // is allowed.
+    // it is materialized. A payload amplification points many pointers at one large
+    // value. A cache miss that re-decodes the target charges its payload again;
+    // a cache hit reuses the completed value without materializing it again. The
+    // comparison is against the remaining budget so it cannot overflow. The
+    // limit is inclusive: a total exactly at the limit is allowed.
     private void chargePayload(long length) throws InvalidDatabaseException {
         if (length > this.payloadRemaining) {
             throw new InvalidDatabaseException(
@@ -359,25 +355,44 @@ class Decoder {
             case BYTES:
                 return this.getByteArray(size);
             case UINT16:
+                this.checkIntegerSize("uint16", size, 2);
                 return coerceFromInt(this.decodeUint16(size), cls);
             case UINT32:
+                this.checkIntegerSize("uint32", size, 4);
                 return coerceFromLong(this.decodeUint32(size), cls);
             case INT32:
+                this.checkIntegerSize("int32", size, 4);
                 return coerceFromInt(this.decodeInt32(size), cls);
             case UINT64:
+                this.checkIntegerSize("uint64", size, 8);
+                return this.decodeLargeUint(size, cls);
             case UINT128:
-                // Optimization: for typed fields, avoid BigInteger allocation when
-                // value fits in long. Keep Object.class behavior unchanged for
-                // backward compatibility.
-                if (size < 8 && !cls.equals(Object.class)) {
-                    return coerceFromLong(this.decodeLong(size), cls);
-                }
-                // Size >= 8 bytes or Object.class target: use BigInteger
-                return coerceFromBigInteger(this.decodeBigInteger(size), cls);
+                this.checkIntegerSize("uint128", size, 16);
+                return this.decodeLargeUint(size, cls);
             default:
                 throw new InvalidDatabaseException(
                     "Unknown or unexpected type: " + type.name());
         }
+    }
+
+    private Object decodeLargeUint(int size, Class<?> cls)
+        throws InvalidDatabaseException {
+        // For typed fields, avoid BigInteger allocation when the value fits in
+        // long. Keep Object.class behavior unchanged for backward compatibility.
+        if (size < 8 && !cls.equals(Object.class)) {
+            return coerceFromLong(this.decodeLong(size), cls);
+        }
+        return coerceFromBigInteger(this.decodeBigInteger(size), cls);
+    }
+
+    private void checkIntegerSize(String type, int size, int maximum)
+        throws InvalidDatabaseException {
+        if (size > maximum) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "invalid size of " + type + ".");
+        }
+        this.checkDataSize(size);
     }
 
     private static Object coerceFromInt(int value, Class<?> target) {
@@ -544,7 +559,7 @@ class Decoder {
     }
 
     private BigInteger decodeBigInteger(int size) throws InvalidDatabaseException {
-        var bytes = this.getByteArray(size);
+        var bytes = Decoder.getByteArray(this.buffer, size);
         return new BigInteger(1, bytes);
     }
 
@@ -1268,6 +1283,26 @@ class Decoder {
                     }
                     break;
                 case BOOLEAN:
+                    break;
+                case UINT16:
+                    this.checkIntegerSize("uint16", size, 2);
+                    offset += size;
+                    break;
+                case UINT32:
+                    this.checkIntegerSize("uint32", size, 4);
+                    offset += size;
+                    break;
+                case INT32:
+                    this.checkIntegerSize("int32", size, 4);
+                    offset += size;
+                    break;
+                case UINT64:
+                    this.checkIntegerSize("uint64", size, 8);
+                    offset += size;
+                    break;
+                case UINT128:
+                    this.checkIntegerSize("uint128", size, 16);
+                    offset += size;
                     break;
                 default:
                     offset += size;
