@@ -11,8 +11,10 @@ CHANGELOG
   boundary was unreachable in databases larger than 2 GiB, which have
   been supported since 4.0.0.
 * Added decoder limits to prevent excessive CPU and memory use from crafted
-  databases: 65,536 decoded or skipped values and 128 nested containers per
-  operation. Exceeding a limit throws `InvalidDatabaseException`.
+  databases: 65,536 decoded or skipped values, 128 nested containers, and 2 MiB
+  of encoded string and bytes payload per operation. Exceeding a limit throws
+  `InvalidDatabaseException`.
+  * Truncated payloads and malformed UTF-8 are rejected.
 
 4.1.0 (2026-05-12)
 ------------------

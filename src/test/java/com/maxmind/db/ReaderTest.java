@@ -2268,6 +2268,50 @@ public class ReaderTest {
         }
     }
 
+    // A crafted database can point many data-section pointers at one large
+    // string or bytes value. The value count stays low, but a decoder that
+    // copies each pointer's target materializes N times its size. Decoding must
+    // reject each of these before it exhausts memory.
+    @Test
+    public void testPayloadAmplificationIsRejected() throws IOException {
+        var fixtures = new String[] {
+            "MaxMind-DB-test-payload-amplification-dos.mmdb",
+            "MaxMind-DB-test-payload-amplification-dos-string.mmdb",
+            "MaxMind-DB-test-payload-amplification-dos-worst-case.mmdb",
+            "MaxMind-DB-test-decoder-payload-limit-over.mmdb",
+        };
+        var ip = InetAddress.getByName("1.1.1.1");
+        for (var fixture : fixtures) {
+            try (var reader = new Reader(getFile(fixture))) {
+                var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> reader.get(ip, Object.class),
+                    fixture + " should be rejected");
+                assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+            }
+        }
+    }
+
+    // A payload total that lands exactly on the 2 MiB limit is valid and must
+    // still decode, so the bound does not reject legitimate data.
+    @Test
+    public void testPayloadAtLimitDecodes() throws IOException {
+        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder-payload-limit.mmdb"))) {
+            var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
+            assertNotNull(value);
+        }
+    }
+
+    // Metadata is decoded while the database is opened, so the payload bound must
+    // cover that path too. This fixture amplifies a string through the metadata.
+    @Test
+    public void testMetadataPayloadAmplificationIsRejected() {
+        var ex = assertThrows(
+            InvalidDatabaseException.class,
+            () -> new Reader(getFile("MaxMind-DB-test-metadata-payload-limit.mmdb")));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+    }
+
     static File getFile(String name) {
         return new File(ReaderTest.class.getResource("/maxmind-db/test-data/" + name).getFile());
     }
