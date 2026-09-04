@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.1.1
+4.2.0
 ------------------
 
 * Fixed decoding of data pointers with offsets of 2 GiB or greater. The
@@ -10,6 +10,18 @@ CHANGELOG
   with an `IllegalArgumentException`. Every record past the 2 GiB
   boundary was unreachable in databases larger than 2 GiB, which have
   been supported since 4.0.0.
+* Bounded the resources that the decoder spends on a single decode operation. A
+  crafted database could nest data-section pointers to shared targets so that
+  decoding one record cost exponential time and memory. Each decode is now
+  limited to 65,536 decoded or skipped values under this reader's work
+  accounting and 128 levels of container nesting. The value limit follows the
+  MaxMind DB specification's resource guidance; the lower depth limit and exact
+  value accounting are specific to this reader.
+  * Exceeding a limit throws an `InvalidDatabaseException`.
+  * A data-section pointer whose target is another pointer is rejected, as
+    required by the MaxMind DB format.
+  * Metadata decoding uses both limits. Skipped fields use the value and depth
+    limits.
 
 4.1.0 (2026-05-12)
 ------------------

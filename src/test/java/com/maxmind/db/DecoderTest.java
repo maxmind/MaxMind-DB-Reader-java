@@ -6,17 +6,22 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"boxing", "static-method"})
 public class DecoderTest {
+
+    private static final int TEST_MAX_DEPTH = 128;
 
     private static Map<Integer, byte[]> int32() {
         int max = (2 << 30) - 1;
@@ -406,6 +411,364 @@ public class DecoderTest {
                 () -> decoder.decode(0, String.class));
         assertThat(ex.getMessage(),
                 containsString("The MaxMind DB file's data section contains bad data"));
+    }
+
+    private static void writePointer1(ByteArrayOutputStream out, int target) {
+        // One-byte-payload pointer (type 1, pointer_size 1) with base 0.
+        out.write((1 << 5) | ((target >> 8) & 0x7));
+        out.write(target & 0xFF);
+    }
+
+    private static void writePointer(ByteArrayOutputStream out, int target) {
+        if (target < 1 << 11) {
+            writePointer1(out, target);
+            return;
+        }
+
+        var packed = target - (1 << 11);
+        out.write((1 << 5) | (1 << 3) | ((packed >> 16) & 0x7));
+        out.write((packed >> 8) & 0xFF);
+        out.write(packed & 0xFF);
+    }
+
+    private static void writeArrayHeader(ByteArrayOutputStream out, int size) {
+        if (size < 29) {
+            out.write(size);
+            out.write(0x04);
+            return;
+        }
+        if (size < 285) {
+            out.write(29);
+            out.write(0x04);
+            out.write(size - 29);
+            return;
+        }
+
+        var encoded = size - 285;
+        out.write(30);
+        out.write(0x04);
+        out.write((encoded >> 8) & 0xFF);
+        out.write(encoded & 0xFF);
+    }
+
+    private static void writeMapHeader(ByteArrayOutputStream out, int size) {
+        if (size <= 28) {
+            out.write(0xE0 | size);
+            return;
+        }
+        if (size <= 284) {
+            out.write(0xFD);
+            out.write(size - 29);
+            return;
+        }
+        out.write(0xFE);
+        var encoded = size - 285;
+        out.write((encoded >>> 8) & 0xFF);
+        out.write(encoded & 0xFF);
+    }
+
+    private static byte[] unknownFieldWithFlatArray(int size) {
+        var out = new ByteArrayOutputStream();
+        out.write(0xE1); // map with one key/value pair
+        out.write(0x47); // seven-byte UTF-8 string
+        out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+        writeArrayHeader(out, size);
+        for (var i = 0; i < size; i++) {
+            out.write(0xA0); // uint16 with value 0
+        }
+        return out.toByteArray();
+    }
+
+    private static byte[] unknownFieldWithFlatMap(int size) {
+        var out = new ByteArrayOutputStream();
+        out.write(0xE1); // map with one key/value pair
+        out.write(0x47); // seven-byte UTF-8 string
+        out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+        writeMapHeader(out, size);
+        for (var i = 0; i < size; i++) {
+            out.write(0x40); // empty UTF-8 string key
+            out.write(0xA0); // uint16 with value 0
+        }
+        return out.toByteArray();
+    }
+
+    private static byte[] nestedArrays(int depth) {
+        var out = new ByteArrayOutputStream();
+        for (var i = 0; i < depth; i++) {
+            out.write(0x01); // extended type, one element
+            out.write(0x04); // array
+        }
+        out.write(0xA0); // uint16 with value 0
+        return out.toByteArray();
+    }
+
+    private static byte[] nestedMaps(int depth) {
+        var out = new ByteArrayOutputStream();
+        for (var i = 0; i < depth; i++) {
+            out.write(0xE1); // map with one key/value pair
+            out.write(0x40); // empty UTF-8 string key
+        }
+        out.write(0xA0); // uint16 with value 0
+        return out.toByteArray();
+    }
+
+    private record EncodedValue(byte[] data, int offset) {
+    }
+
+    private static EncodedValue pointerNestedArrays(int depth) {
+        var out = new ByteArrayOutputStream();
+        out.write(0xA0); // uint16 with value 0
+        var previous = 0;
+        for (var i = 0; i < depth; i++) {
+            var offset = out.size();
+            out.write(0x01); // extended type, one element
+            out.write(0x04); // array
+            writePointer(out, previous);
+            previous = offset;
+        }
+        return new EncodedValue(out.toByteArray(), previous);
+    }
+
+    private static EncodedValue pointerNestedMaps(int depth) {
+        var out = new ByteArrayOutputStream();
+        out.write(0xA0); // uint16 with value 0
+        var previous = 0;
+        for (var i = 0; i < depth; i++) {
+            var offset = out.size();
+            out.write(0xE1); // map with one key/value pair
+            out.write(0x40); // empty UTF-8 string key
+            writePointer(out, previous);
+            previous = offset;
+        }
+        return new EncodedValue(out.toByteArray(), previous);
+    }
+
+    private static byte[] inlineArray(int size) {
+        var out = new ByteArrayOutputStream();
+        writeArrayHeader(out, size);
+        for (var i = 0; i < size; i++) {
+            out.write(0xA0); // uint16 with value 0
+        }
+        return out.toByteArray();
+    }
+
+    @Test
+    public void testPointerFanOutIsBounded() throws IOException {
+        // A data section of nested arrays, each holding two pointers to the
+        // node below, would cost 2**depth decode operations. The decoder bounds
+        // the number of values it decodes per lookup and rejects the database.
+        var depth = 100;
+        var out = new ByteArrayOutputStream();
+        out.write(0xA0); // leaf: uint16 with value 0
+        var prev = 0;
+        for (var i = 0; i < depth; i++) {
+            var offset = out.size();
+            out.write(0x02);
+            out.write(0x04);
+            writePointer1(out, prev);
+            writePointer1(out, prev);
+            prev = offset;
+        }
+
+        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(out.toByteArray()), 0);
+        var top = prev;
+        assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(top, Object.class));
+    }
+
+    @Test
+    public void testPointerFreeContainerDepthIsBounded() throws IOException {
+        var atLimit = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(nestedArrays(TEST_MAX_DEPTH)), 0);
+        atLimit.decode(0, Object.class);
+
+        var overLimit = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(nestedArrays(TEST_MAX_DEPTH + 1)), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> overLimit.decode(0, Object.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum depth"));
+    }
+
+    @Test
+    public void testPointerBackedContainerDepthIsBounded() throws IOException {
+        var atLimit = pointerNestedArrays(TEST_MAX_DEPTH);
+        var decoderAtLimit = new Decoder(NoCache.getInstance(),
+            SingleBuffer.wrap(atLimit.data()), 0);
+        decoderAtLimit.decode(atLimit.offset(), Object.class);
+
+        var overLimit = pointerNestedArrays(TEST_MAX_DEPTH + 1);
+        var decoderOverLimit = new Decoder(NoCache.getInstance(),
+            SingleBuffer.wrap(overLimit.data()), 0);
+        var ex = assertThrows(
+            InvalidDatabaseException.class,
+            () -> decoderOverLimit.decode(overLimit.offset(), Object.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum depth"));
+    }
+
+    @Test
+    public void testContainerDepthFitsReducedThreadStack() throws Exception {
+        runProbe("-Xss512k", StackProbe.class);
+    }
+
+    private static void runProbe(String vmArgument, Class<?> probe) throws Exception {
+        var executable = System.getProperty("os.name").startsWith("Windows")
+            ? "java.exe"
+            : "java";
+        var java = Path.of(System.getProperty("java.home"), "bin", executable).toString();
+        var classPath = System.getProperty(
+            "surefire.test.class.path",
+            System.getProperty("java.class.path")
+        );
+        var modulePath = System.getProperty("jdk.module.path");
+        if (modulePath != null && !modulePath.isBlank()) {
+            classPath = String.join(System.getProperty("path.separator"), classPath, modulePath);
+        }
+        var process = new ProcessBuilder(
+            java,
+            vmArgument,
+            "-cp",
+            classPath,
+            probe.getName()
+        ).redirectErrorStream(true).start();
+
+        if (!process.waitFor(15, TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            throw new AssertionError(probe.getSimpleName() + " did not finish within 15 seconds");
+        }
+        var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, process.exitValue(), output);
+    }
+
+    @Test
+    public void testJavaValueCountBoundary() throws IOException {
+        var atLimit = new Decoder(NoCache.getInstance(),
+            SingleBuffer.wrap(inlineArray(65_535)), 0);
+        var result = (List<?>) atLimit.decode(0, Object.class);
+        assertEquals(65_535, result.size());
+
+        var overLimit = new Decoder(NoCache.getInstance(),
+            SingleBuffer.wrap(inlineArray(65_536)), 0);
+        var ex = assertThrows(
+            InvalidDatabaseException.class,
+            () -> overLimit.decode(0, Object.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+    }
+
+    @Test
+    public void testUnknownFieldValueCountIsBounded() {
+        var out = new ByteArrayOutputStream();
+        out.write(0xE1); // map with one key/value pair
+        out.write(0x47); // seven-byte UTF-8 string
+        out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+        out.write(0x1E); // extended type, two-byte size
+        out.write(0x04); // array
+        out.write(0xFE); // size = 65,535
+        out.write(0xE2);
+        for (var i = 0; i < 65_535; i++) {
+            out.write(0xA0); // uint16 with value 0
+        }
+
+        var decoder = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(out.toByteArray()), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, EmptyModel.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+    }
+
+    @Test
+    public void testUnknownFieldDepthIsBounded() {
+        var value = nestedArrays(TEST_MAX_DEPTH);
+        var out = new ByteArrayOutputStream();
+        out.write(0xE1); // map with one key/value pair
+        out.write(0x47); // seven-byte UTF-8 string
+        out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+        out.writeBytes(value);
+
+        var decoder = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(out.toByteArray()), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, EmptyModel.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum depth"));
+    }
+
+    @Test
+    public void testCyclicPointerThrows() {
+        // A pointer to itself must throw a catchable InvalidDatabaseException
+        // rather than recursing until the stack overflows.
+        var decoder = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(new byte[] {0x20, 0x00}), 0);
+        assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class));
+    }
+
+    @Test
+    public void testAcyclicPointerToPointerThrows() {
+        // The pointer chain terminates at a scalar, but pointer-to-pointer is
+        // illegal regardless of whether the chain forms a cycle.
+        var decoder = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(new byte[] {0x20, 0x02, 0x20, 0x04, (byte) 0xA0}), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class));
+        assertThat(ex.getMessage(), containsString("pointer to a pointer"));
+    }
+
+    public static final class StackProbe {
+        private StackProbe() {
+        }
+
+        public static void main(String[] args) throws IOException {
+            decode(nestedArrays(TEST_MAX_DEPTH), 0);
+            decode(nestedMaps(TEST_MAX_DEPTH), 0);
+
+            var pointerArray = pointerNestedArrays(TEST_MAX_DEPTH);
+            decode(pointerArray.data(), pointerArray.offset());
+            var pointerMap = pointerNestedMaps(TEST_MAX_DEPTH);
+            decode(pointerMap.data(), pointerMap.offset());
+
+            expectDepthRejection(nestedArrays(TEST_MAX_DEPTH + 1), 0);
+            expectDepthRejection(nestedMaps(TEST_MAX_DEPTH + 1), 0);
+
+            pointerArray = pointerNestedArrays(TEST_MAX_DEPTH + 1);
+            expectDepthRejection(pointerArray.data(), pointerArray.offset());
+            pointerMap = pointerNestedMaps(TEST_MAX_DEPTH + 1);
+            expectDepthRejection(pointerMap.data(), pointerMap.offset());
+
+            decodeUnknown(unknownFieldWithFlatArray(65_532));
+            decodeUnknown(unknownFieldWithFlatMap(32_766));
+        }
+
+        private static void decode(byte[] data, int offset) throws IOException {
+            var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
+            decoder.decode(offset, Object.class);
+        }
+
+        private static void expectDepthRejection(byte[] data, int offset) throws IOException {
+            try {
+                decode(data, offset);
+                throw new AssertionError("over-depth container decoded without rejection");
+            } catch (InvalidDatabaseException e) {
+                if (!e.getMessage().contains("exceeds the maximum depth")) {
+                    throw e;
+                }
+            }
+        }
+
+        private static void decodeUnknown(byte[] data) throws IOException {
+            var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
+            decoder.decode(0, EmptyModel.class);
+        }
+    }
+
+    public static final class EmptyModel {
+        @MaxMindDbConstructor
+        public EmptyModel() {
+        }
     }
 
     private static <T> void testTypeDecoding(Type type, Map<T, byte[]> tests)

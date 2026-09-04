@@ -35,6 +35,21 @@ class Decoder {
 
     private final NodeCache cache;
 
+    // Per-operation resource limits. The MaxMind DB specification recommends
+    // depth and value limits, but permits equivalent reader-specific accounting.
+    // This decoder charges each decode invocation, including a pointer and its
+    // uncached target, so the value limit bounds actual decoder work rather than
+    // the specification's example flat value count. Container depth, together
+    // with rejecting illegal pointer-to-pointer values, bounds recursive calls.
+    // The lower depth limit leaves room on a 512 KiB thread stack even for
+    // pointer-backed maps, which use more Java frames per logical container
+    // than inline values. A Decoder serves one decode operation on one thread,
+    // so these fields need no synchronization.
+    private static final int MAX_DEPTH = 128;
+    private static final int MAX_VALUES = 1 << 16;
+    private int depth;
+    private int valuesRemaining = MAX_VALUES;
+
     private final long pointerBase;
 
     private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
@@ -104,6 +119,8 @@ class Decoder {
                     + "pointer larger than the database.");
         }
 
+        this.valuesRemaining = MAX_VALUES;
+        this.depth = 0;
         this.buffer.position(offset);
         return cls.cast(decode(cls, null).value());
     }
@@ -115,7 +132,6 @@ class Decoder {
                 "The MaxMind DB file's data section contains bad data: "
                     + "pointer larger than the database.");
         }
-
         this.buffer.position(offset);
         Class<T> cls = key.cls();
         return decode(cls, key.type());
@@ -123,6 +139,10 @@ class Decoder {
 
     private <T> DecodedValue decode(Class<T> cls, java.lang.reflect.Type genericType)
         throws IOException {
+        if (--this.valuesRemaining < 0) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum number of values");
+        }
         var ctrlByte = 0xFF & this.buffer.get();
 
         var type = Type.fromControlByte(ctrlByte);
@@ -168,6 +188,16 @@ class Decoder {
 
     DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
             throws IOException {
+        // A pointer to another pointer is illegal per the specification. It also
+        // lets a pointer cycle recurse without ever entering a container, which
+        // the depth limit would not catch, so reject it here. Container cycles
+        // and over-deep data are bounded by the depth limit in decodeByType.
+        if (pointer < buffer.capacity()
+            && Type.fromControlByte(0xFF & buffer.get(pointer)) == Type.POINTER) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains a pointer to a pointer");
+        }
+
         var position = buffer.position();
 
         var key = new CacheKey<>(pointer, cls, genericType);
@@ -223,8 +253,15 @@ class Decoder {
         java.lang.reflect.Type genericType
     ) throws IOException {
         switch (type) {
-            case MAP:
-                return this.decodeMap(size, cls, genericType);
+            case MAP: {
+                if (++this.depth > MAX_DEPTH) {
+                    throw new InvalidDatabaseException(
+                        "The MaxMind DB file's data section exceeds the maximum depth");
+                }
+                var map = this.decodeMap(size, cls, genericType);
+                this.depth--;
+                return map;
+            }
             case ARRAY:
                 Class<?> elementClass = Object.class;
                 if (genericType instanceof ParameterizedType ptype) {
@@ -233,7 +270,13 @@ class Decoder {
                         elementClass = (Class<?>) actualTypes[0];
                     }
                 }
-                return this.decodeArray(size, cls, elementClass);
+                if (++this.depth > MAX_DEPTH) {
+                    throw new InvalidDatabaseException(
+                        "The MaxMind DB file's data section exceeds the maximum depth");
+                }
+                var array = this.decodeArray(size, cls, elementClass);
+                this.depth--;
+                return array;
             case BOOLEAN:
                 Boolean bool = Decoder.decodeBoolean(size);
                 return convertValue(bool, cls);
@@ -1104,35 +1147,55 @@ class Decoder {
 
     private long nextValueOffset(long offset, int numberToSkip)
         throws InvalidDatabaseException {
-        if (numberToSkip == 0) {
-            return offset;
+        // Iterate over siblings so a large flat unknown value cannot exhaust
+        // the Java stack. Recursion is only used to track structural nesting,
+        // which is bounded by the same limit as normal decoding.
+        for (var i = 0; i < numberToSkip; i++) {
+            if (--this.valuesRemaining < 0) {
+                throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section exceeds the maximum number of values");
+            }
+
+            var ctrlData = this.getCtrlData(offset);
+            var ctrlByte = ctrlData.ctrlByte();
+            var size = ctrlData.size();
+            offset = ctrlData.offset();
+
+            switch (ctrlData.type()) {
+                case POINTER:
+                    var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+                    offset += pointerSize;
+                    break;
+                case MAP:
+                    if (++this.depth > MAX_DEPTH) {
+                        throw new InvalidDatabaseException(
+                            "The MaxMind DB file's data section exceeds the maximum depth");
+                    }
+                    try {
+                        offset = this.nextValueOffset(offset, 2 * size);
+                    } finally {
+                        this.depth--;
+                    }
+                    break;
+                case ARRAY:
+                    if (++this.depth > MAX_DEPTH) {
+                        throw new InvalidDatabaseException(
+                            "The MaxMind DB file's data section exceeds the maximum depth");
+                    }
+                    try {
+                        offset = this.nextValueOffset(offset, size);
+                    } finally {
+                        this.depth--;
+                    }
+                    break;
+                case BOOLEAN:
+                    break;
+                default:
+                    offset += size;
+                    break;
+            }
         }
-
-        var ctrlData = this.getCtrlData(offset);
-        var ctrlByte = ctrlData.ctrlByte();
-        var size = ctrlData.size();
-        offset = ctrlData.offset();
-
-        var type = ctrlData.type();
-        switch (type) {
-            case POINTER:
-                var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
-                offset += pointerSize;
-                break;
-            case MAP:
-                numberToSkip += 2 * size;
-                break;
-            case ARRAY:
-                numberToSkip += size;
-                break;
-            case BOOLEAN:
-                break;
-            default:
-                offset += size;
-                break;
-        }
-
-        return nextValueOffset(offset, numberToSkip - 1);
+        return offset;
     }
 
     private CtrlData getCtrlData(long offset)

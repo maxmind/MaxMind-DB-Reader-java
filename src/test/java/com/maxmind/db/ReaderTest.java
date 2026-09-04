@@ -2203,6 +2203,71 @@ public class ReaderTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("chunkSizes")
+    public void testPointerFanOutIsRejected(int chunkSize) throws IOException {
+        var fixtures = new String[] {
+            "MaxMind-DB-test-pointer-decoder-dos.mmdb",
+            "MaxMind-DB-test-pointer-decoder-dos-ipv6.mmdb",
+        };
+        var addresses = new String[] {"1.1.1.1", "2001:db8::1"};
+        for (var i = 0; i < fixtures.length; i++) {
+            var fixture = fixtures[i];
+            try (var reader = new Reader(getFile(fixture), chunkSize)) {
+                var address = InetAddress.getByName(addresses[i]);
+                var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> reader.get(address, Object.class),
+                    fixture + " should be rejected");
+                assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+            }
+        }
+    }
+
+    @Test
+    public void testPointerFanOutIsRejectedForMemoryAndStreamReaders() throws IOException {
+        var fixture = "MaxMind-DB-test-pointer-decoder-dos.mmdb";
+        var address = InetAddress.getByName("1.1.1.1");
+        try (var memoryReader = new Reader(getFile(fixture), FileMode.MEMORY, 512)) {
+            assertThrows(
+                InvalidDatabaseException.class,
+                () -> memoryReader.get(address, Object.class));
+        }
+        try (var streamReader = new Reader(getStream(fixture), 512)) {
+            assertThrows(
+                InvalidDatabaseException.class,
+                () -> streamReader.get(address, Object.class));
+        }
+    }
+
+    @Test
+    public void testPointerFanOutUsesCachedTargets() throws IOException {
+        var fixture = "MaxMind-DB-test-pointer-decoder-dos.mmdb";
+        try (var reader = new Reader(getFile(fixture), new CHMCache())) {
+            var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
+            assertNotNull(value);
+        }
+    }
+
+    @Test
+    public void testSharedValueFixturesUseJavaWorkAccounting() throws IOException {
+        var fixtures = new String[] {
+            "MaxMind-DB-test-decoder-value-limit.mmdb",
+            "MaxMind-DB-test-decoder-value-limit-over.mmdb",
+            "MaxMind-DB-test-decoder-value-limit-pointer-heavy.mmdb",
+        };
+        var address = InetAddress.getByName("1.1.1.1");
+        for (var fixture : fixtures) {
+            try (var reader = new Reader(getFile(fixture))) {
+                var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> reader.get(address, Object.class),
+                    fixture + " should be rejected under Java work accounting");
+                assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+            }
+        }
+    }
+
     static File getFile(String name) {
         return new File(ReaderTest.class.getResource("/maxmind-db/test-data/" + name).getFile());
     }
