@@ -23,11 +23,11 @@ CHANGELOG
   holds. Each decode is now limited to 65,536 decoded or skipped values under
   this reader's work accounting, 128 levels of container nesting, and 2 MiB of
   encoded string and bytes payload. The value limit follows the MaxMind DB
-  specification's resource guidance; the lower depth limit, payload limit, and
+  specification's resource guidance. The lower depth limit, payload limit, and
   exact value accounting are specific to this reader.
   * Exceeding a limit throws an `InvalidDatabaseException`.
-  * A data-section pointer whose target is another pointer is rejected, as
-    required by the MaxMind DB format.
+  * The decoder rejects a data-section pointer whose target is another pointer,
+    as required by the MaxMind DB format.
   * Metadata decoding uses all limits. Skipped fields use the value and depth
     limits without materializing their payload.
   * Cached pointer targets retain their logical value, depth, and payload cost.
@@ -37,8 +37,8 @@ CHANGELOG
     reading their payload.
   * The decoder reports truncated string and bytes values, and malformed UTF-8
     strings, as invalid database data.
-  * Declared map and array sizes are checked before their children are decoded,
-    and collection preallocation is capped so nested crafted sizes cannot
+  * The decoder checks declared map and array sizes before decoding their
+    children. It caps collection preallocation so nested crafted sizes cannot
     exhaust the heap before a decoder limit rejects them.
 
 4.1.0 (2026-05-12)
