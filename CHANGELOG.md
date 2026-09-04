@@ -12,16 +12,22 @@ CHANGELOG
   been supported since 4.0.0.
 * Bounded the resources that the decoder spends on a single decode operation. A
   crafted database could nest data-section pointers to shared targets so that
-  decoding one record cost exponential time and memory. Each decode is now
-  limited to 65,536 decoded or skipped values under this reader's work
-  accounting and 128 levels of container nesting. The value limit follows the
-  MaxMind DB specification's resource guidance; the lower depth limit and exact
-  value accounting are specific to this reader.
+  decoding one record cost exponential time and memory, or point many times at
+  one large value so that decoding materialized far more data than the file
+  holds. Each decode is now limited to 65,536 decoded or skipped values under
+  this reader's work accounting, 128 levels of container nesting, and 2 MiB of
+  encoded string and bytes payload. The value limit follows the MaxMind DB
+  specification's resource guidance; the lower depth limit, payload limit, and
+  exact value accounting are specific to this reader.
   * Exceeding a limit throws an `InvalidDatabaseException`.
   * A data-section pointer whose target is another pointer is rejected, as
     required by the MaxMind DB format.
-  * Metadata decoding uses both limits. Skipped fields use the value and depth
-    limits.
+  * Metadata decoding uses all limits. Skipped fields use the value and depth
+    limits without materializing their payload.
+  * Cached pointer targets are reused without being charged as newly decoded or
+    materialized. Uncached targets are charged each time they are decoded.
+  * The decoder reports truncated string and bytes values, and malformed UTF-8
+    strings, as invalid database data.
   * Declared map and array sizes are checked before their children are decoded,
     and collection preallocation is capped so nested crafted sizes cannot
     exhaust the heap before a decoder limit rejects them.

@@ -41,12 +41,15 @@ class Decoder {
     // uncached target, so the value limit bounds actual decoder work rather than
     // the specification's example flat value count. Container depth, together
     // with rejecting illegal pointer-to-pointer values, bounds recursive calls.
+    // The payload limit bounds encoded string and bytes data materialized by
+    // this Java decoder.
     // The lower depth limit leaves room on a 512 KiB thread stack even for
     // pointer-backed maps, which use more Java frames per logical container
     // than inline values. A Decoder serves one decode operation on one thread,
     // so these fields need no synchronization.
     private static final int MAX_DEPTH = 128;
     private static final int MAX_VALUES = 1 << 16;
+    private static final long MAX_PAYLOAD_BYTES = 1 << 21;
 
     // A collection's declared size is its logical child count, but it is not
     // proof that the input contains that many decodable children. When deriving
@@ -55,6 +58,7 @@ class Decoder {
     private static final int MAX_INITIAL_COLLECTION_CAPACITY = 128;
     private int depth;
     private int valuesRemaining = MAX_VALUES;
+    private long payloadRemaining = MAX_PAYLOAD_BYTES;
 
     private final long pointerBase;
 
@@ -126,6 +130,7 @@ class Decoder {
         }
 
         this.valuesRemaining = MAX_VALUES;
+        this.payloadRemaining = MAX_PAYLOAD_BYTES;
         this.depth = 0;
         this.buffer.position(offset);
         return cls.cast(decode(cls, null).value());
@@ -257,7 +262,7 @@ class Decoder {
     // exhaust memory. valueCount is the number of encoded values the container
     // declares (an array of N declares N, a map of N declares 2N).
     private void checkContainerSize(long valueCount) throws InvalidDatabaseException {
-        // A container cannot decode more values than the per-lookup budget
+        // A container cannot decode more values than the per-operation budget
         // allows, so reject an oversized declaration before allocating for it
         // rather than after the per-value limit stops the decode.
         if (valueCount > this.valuesRemaining) {
@@ -268,6 +273,33 @@ class Decoder {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
                     + "a container declares more entries than the data section can hold");
+        }
+    }
+
+    // Charge a string or bytes payload against the per-operation budget before
+    // it is materialized. A payload amplification points many pointers at one
+    // large value; because the budget is charged every time the value is decoded,
+    // and a shared pointer target is re-decoded per referencing pointer, N
+    // pointers to an S-byte value are charged N*S and rejected once the total
+    // exceeds the limit. Charging before allocation also bounds an oversized
+    // variable-length integer, whose declared size the decoder would otherwise
+    // copy before range-checking. The comparison is against the remaining budget
+    // so it cannot overflow. The limit is inclusive: a total exactly at the limit
+    // is allowed.
+    private void chargePayload(long length) throws InvalidDatabaseException {
+        if (length > this.payloadRemaining) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum payload size");
+        }
+        this.checkDataSize(length);
+        this.payloadRemaining -= length;
+    }
+
+    private void checkDataSize(long length) throws InvalidDatabaseException {
+        if (length > this.buffer.capacity() - this.buffer.position()) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "a value extends beyond the end of the data section.");
         }
     }
 
@@ -457,12 +489,18 @@ class Decoder {
         return value;
     }
 
-    private String decodeString(long size) throws CharacterCodingException {
+    private String decodeString(long size) throws IOException {
+        this.chargePayload(size);
         var oldLimit = buffer.limit();
-        buffer.limit(buffer.position() + size);
-        var s = buffer.decode(utfDecoder);
-        buffer.limit(oldLimit);
-        return s;
+        try {
+            buffer.limit(buffer.position() + size);
+            return buffer.decode(utfDecoder);
+        } catch (CharacterCodingException e) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains an invalid UTF-8 string", e);
+        } finally {
+            buffer.limit(oldLimit);
+        }
     }
 
     private int decodeUint16(int size) {
@@ -505,7 +543,7 @@ class Decoder {
         return integer;
     }
 
-    private BigInteger decodeBigInteger(int size) {
+    private BigInteger decodeBigInteger(int size) throws InvalidDatabaseException {
         var bytes = this.getByteArray(size);
         return new BigInteger(1, bytes);
     }
@@ -1283,7 +1321,8 @@ class Decoder {
         return new CtrlData(type, ctrlByte, offset, size);
     }
 
-    private byte[] getByteArray(int length) {
+    private byte[] getByteArray(int length) throws InvalidDatabaseException {
+        this.chargePayload(length);
         return Decoder.getByteArray(this.buffer, length);
     }
 

@@ -798,6 +798,142 @@ public class DecoderTest {
         }
     }
 
+    // Writes a large scalar (bytes or string) at offset 0, followed by an array
+    // of pointerCount one-byte pointers that all target it. Every pointer
+    // re-decodes the shared value, so the decoder is charged its size once per
+    // pointer even though the value count stays tiny.
+    private static byte[] sharedScalarFanOut(int scalarType, int scalarSize, int pointerCount) {
+        var out = new ByteArrayOutputStream();
+        // Scalar header: size code 30 covers 285..65820 bytes.
+        out.write((scalarType << 5) | 30);
+        var encoded = scalarSize - 285;
+        out.write((encoded >> 8) & 0xFF);
+        out.write(encoded & 0xFF);
+        for (var i = 0; i < scalarSize; i++) {
+            out.write(0);
+        }
+        // Array header (extended type 11), size code 29 covers 29..284 entries.
+        out.write(29);
+        out.write(0x04);
+        out.write(pointerCount - 29);
+        for (var i = 0; i < pointerCount; i++) {
+            writePointer1(out, 0);
+        }
+        return out.toByteArray();
+    }
+
+    @Test
+    public void testPayloadAmplificationIsBounded() throws IOException {
+        // 33 pointers to a 65,536-byte value would materialize just over 2 MiB,
+        // one byte value at a time, while the value count stays tiny. Only the
+        // payload byte bound rejects this.
+        var scalarSize = 1 << 16;
+        var data = sharedScalarFanOut(4, scalarSize, 33);
+        var top = 3 + scalarSize;
+        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(top, Object.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+    }
+
+    @Test
+    public void testPayloadAmplificationIsBoundedAfterCacheFills() {
+        var scalarSize = 1 << 16;
+        var data = sharedScalarFanOut(4, scalarSize, 33);
+        var top = 3 + scalarSize;
+        var decoder = new Decoder(new CHMCache(0), SingleBuffer.wrap(data), 0);
+        var ex = assertThrows(
+            InvalidDatabaseException.class,
+            () -> decoder.decode(top, Object.class)
+        );
+        assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+    }
+
+    @Test
+    public void testOverBudgetPayloadHeadersAreRejectedBeforePayloadRead() {
+        var overBudgetHeaders = List.of(
+            new byte[] {0x5F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF},
+            new byte[] {(byte) 0x9F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}
+        );
+        for (var header : overBudgetHeaders) {
+            var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(header), 0);
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class)
+            );
+            assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+        }
+    }
+
+    @Test
+    public void testTruncatedPayloadsAreRejectedAsInvalidDatabase() {
+        var headers = List.of(
+            new byte[] {0x41},
+            new byte[] {(byte) 0x81}
+        );
+        for (var header : headers) {
+            var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(header), 0);
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class)
+            );
+            assertThat(ex.getMessage(), containsString("extends beyond the end"));
+        }
+    }
+
+    @Test
+    public void testInvalidStringDoesNotChangeBufferLimit() throws IOException {
+        var data = new byte[] {0x41, (byte) 0xFF, 0x41, 'a'};
+        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
+
+        var ex = assertThrows(
+            InvalidDatabaseException.class,
+            () -> decoder.decode(0, Object.class)
+        );
+        assertThat(ex.getMessage(), containsString("invalid UTF-8 string"));
+        assertEquals("a", decoder.decode(2, Object.class));
+    }
+
+    @Test
+    public void testSkippedPayloadDoesNotConsumeMaterializationBudget() throws IOException {
+        var payloadSize = (1 << 21) + 1;
+        var out = new ByteArrayOutputStream();
+        out.write(0xE2); // map with two key/value pairs
+        out.write(0x47); // seven-byte UTF-8 string
+        out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+        out.write(0x5F); // UTF-8 string, size code 31
+        var encodedSize = payloadSize - 65_821;
+        out.write((encodedSize >>> 16) & 0xFF);
+        out.write((encodedSize >>> 8) & 0xFF);
+        out.write(encodedSize & 0xFF);
+        out.writeBytes(new byte[payloadSize]);
+        out.write(0x45); // five-byte UTF-8 string
+        out.writeBytes("known".getBytes(StandardCharsets.UTF_8));
+        out.write(0x42); // two-byte UTF-8 string
+        out.writeBytes("ok".getBytes(StandardCharsets.UTF_8));
+
+        var decoder = new Decoder(
+            NoCache.getInstance(),
+            SingleBuffer.wrap(out.toByteArray()),
+            0
+        );
+        var result = decoder.decode(0, KnownFieldModel.class);
+        assertEquals("ok", result.known());
+    }
+
+    @Test
+    public void testPayloadAtLimitIsAccepted() throws IOException {
+        // 32 pointers to a 65,536-byte value materialize exactly 2 MiB, at the
+        // inclusive limit, so the record must still decode.
+        var scalarSize = 1 << 16;
+        var data = sharedScalarFanOut(4, scalarSize, 32);
+        var top = 3 + scalarSize;
+        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
+        var result = (List<?>) decoder.decode(top, Object.class);
+        assertEquals(32, result.size());
+    }
+
     public static final class StackProbe {
         private StackProbe() {
         }
@@ -848,6 +984,19 @@ public class DecoderTest {
     public static final class EmptyModel {
         @MaxMindDbConstructor
         public EmptyModel() {
+        }
+    }
+
+    public static final class KnownFieldModel {
+        private final String known;
+
+        @MaxMindDbConstructor
+        public KnownFieldModel(@MaxMindDbParameter(name = "known") String known) {
+            this.known = known;
+        }
+
+        public String known() {
+            return this.known;
         }
     }
 
