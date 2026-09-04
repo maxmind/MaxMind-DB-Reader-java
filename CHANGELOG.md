@@ -16,7 +16,7 @@ CHANGELOG
 * Added decoder limits to prevent excessive CPU and memory use from crafted
   databases: 65,536 decoded or skipped values, 128 nested containers, and 2 MiB
   of encoded string and bytes payload per operation. Exceeding a limit throws
-  `InvalidDatabaseException`.
+  `InvalidDatabaseException`. See [UPGRADING.md](UPGRADING.md) for details.
   * Oversized integer encodings are rejected.
   * Truncated payloads and malformed UTF-8 are rejected.
 

@@ -56,7 +56,7 @@ class Decoder {
     // A collection's declared size is its logical child count, but it is not
     // proof that the input contains that many decodable children. When deriving
     // an initial capacity from it, limit unused capacity on the active recursion
-    // path; completed children remain bounded by MAX_VALUES.
+    // path. Completed children remain bounded by MAX_VALUES.
     private static final int MAX_INITIAL_COLLECTION_CAPACITY = 128;
     private int depth;
     private int maxDepth;
