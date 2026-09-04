@@ -22,6 +22,9 @@ CHANGELOG
     required by the MaxMind DB format.
   * Metadata decoding uses both limits. Skipped fields use the value and depth
     limits.
+  * Declared map and array sizes are checked before their children are decoded,
+    and collection preallocation is capped so nested crafted sizes cannot
+    exhaust the heap before a decoder limit rejects them.
 
 4.1.0 (2026-05-12)
 ------------------

@@ -696,6 +696,84 @@ public class DecoderTest {
     }
 
     @Test
+    public void testHugeContainerIsRejectedBeforeAllocation() throws IOException {
+        // An array control byte can declare up to ~16.8 million entries from a
+        // few bytes. The value limit must reject this before the decoder uses
+        // the declared size as an allocation hint.
+        var out = new ByteArrayOutputStream();
+        out.write(0x1F); // extended type, size code 31 (three size bytes)
+        out.write(0x04); // array
+        out.write(0xFF); // size = 65821 + 0xFFFFFF = 16,843,036
+        out.write(0xFF);
+        out.write(0xFF);
+
+        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(out.toByteArray()), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+    }
+
+    @Test
+    public void testArrayInitialCapacityIsBounded() throws IOException {
+        var decoder = new Decoder(NoCache.getInstance(),
+            SingleBuffer.wrap(inlineArray(129)), 0);
+        var result = decoder.decode(0, CapacityList.class);
+        assertEquals(128, result.initialCapacity);
+        assertEquals(129, result.size());
+    }
+
+    @Test
+    public void testMapInitialCapacityIsBounded() throws IOException {
+        var out = new ByteArrayOutputStream();
+        out.write(0xFD); // map, size code 29
+        out.write(100); // 29 + 100 = 129 entries
+        for (var i = 0; i < 129; i++) {
+            var key = Integer.toString(i).getBytes(StandardCharsets.UTF_8);
+            out.write(0x40 | key.length);
+            out.writeBytes(key);
+            out.write(0xA0); // uint16 with value 0
+        }
+
+        var decoder = new Decoder(NoCache.getInstance(),
+            SingleBuffer.wrap(out.toByteArray()), 0);
+        var result = decoder.decode(0, CapacityMap.class);
+        assertEquals(128, result.initialCapacity);
+        assertEquals(129, result.size());
+    }
+
+    @Test
+    public void testNestedLargeCollectionsDoNotExhaustHeap() throws Exception {
+        runProbe("-Xmx16m", AllocationProbe.class);
+    }
+
+    @Test
+    public void testImpossibleArrayIsRejectedBeforeAllocation() {
+        // The declared size is below the value budget, but two elements cannot
+        // be encoded in the one remaining byte.
+        var decoder = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(new byte[] {0x02, 0x04, (byte) 0xA0}), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class));
+        assertThat(ex.getMessage(), containsString(
+                "a container declares more entries than the data section can hold"));
+    }
+
+    @Test
+    public void testImpossibleMapIsRejectedBeforeAllocation() {
+        // A one-entry map needs both a key and a value, but only one byte
+        // remains after its control byte.
+        var decoder = new Decoder(NoCache.getInstance(),
+                SingleBuffer.wrap(new byte[] {(byte) 0xE1, (byte) 0xA0}), 0);
+        var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, Object.class));
+        assertThat(ex.getMessage(), containsString(
+                "a container declares more entries than the data section can hold"));
+    }
+
+    @Test
     public void testCyclicPointerThrows() {
         // A pointer to itself must throw a catchable InvalidDatabaseException
         // rather than recursing until the stack overflows.
@@ -770,6 +848,77 @@ public class DecoderTest {
     public static final class EmptyModel {
         @MaxMindDbConstructor
         public EmptyModel() {
+        }
+    }
+
+    public static final class CapacityList extends ArrayList<Object> {
+        private static final long serialVersionUID = 1L;
+        private final int initialCapacity;
+
+        public CapacityList(int initialCapacity) {
+            super(initialCapacity);
+            this.initialCapacity = initialCapacity;
+        }
+    }
+
+    public static final class CapacityMap extends HashMap<String, Object> {
+        private static final long serialVersionUID = 1L;
+        private final int initialCapacity;
+
+        public CapacityMap(int initialCapacity) {
+            super(initialCapacity);
+            this.initialCapacity = initialCapacity;
+        }
+    }
+
+    public static final class AllocationProbe {
+        private AllocationProbe() {
+        }
+
+        public static void main(String[] args) throws IOException {
+            decodeRecursivelyNestedArray();
+            decodeRecursivelyNestedMap();
+        }
+
+        private static void decodeRecursivelyNestedArray() throws IOException {
+            var data = new byte[40_000];
+            var encodedSize = 32_768 - 285;
+            data[0] = 0x1E; // extended type, size code 30
+            data[1] = 0x04; // array
+            data[2] = (byte) (encodedSize >> 8);
+            data[3] = (byte) encodedSize;
+            data[4] = 0x20; // one-byte pointer to offset 0
+            data[5] = 0x00;
+
+            expectDepthRejection(data);
+        }
+
+        private static void decodeRecursivelyNestedMap() throws IOException {
+            var data = new byte[40_000];
+            var encodedSize = 16_384 - 285;
+            data[0] = (byte) 0xFE; // map, size code 30
+            data[1] = (byte) (encodedSize >> 8);
+            data[2] = (byte) encodedSize;
+            data[3] = 0x41; // one-byte UTF-8 string key
+            data[4] = 'a';
+            data[5] = (byte) 0xA0; // uint16 with value 0
+            data[6] = 0x40; // empty UTF-8 string key
+            data[7] = 0x20; // one-byte pointer to offset 0
+            data[8] = 0x00;
+
+            expectDepthRejection(data);
+        }
+
+        private static void expectDepthRejection(byte[] data) throws IOException {
+            var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
+            try {
+                decoder.decode(0, Object.class);
+                throw new AssertionError("nested large collection decoded without rejection");
+            } catch (InvalidDatabaseException e) {
+                if (!e.getMessage().contains("exceeds the maximum depth")) {
+                    throw e;
+                }
+            }
         }
     }
 

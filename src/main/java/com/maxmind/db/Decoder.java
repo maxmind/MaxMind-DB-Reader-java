@@ -47,6 +47,12 @@ class Decoder {
     // so these fields need no synchronization.
     private static final int MAX_DEPTH = 128;
     private static final int MAX_VALUES = 1 << 16;
+
+    // A collection's declared size is its logical child count, but it is not
+    // proof that the input contains that many decodable children. When deriving
+    // an initial capacity from it, limit unused capacity on the active recursion
+    // path; completed children remain bounded by MAX_VALUES.
+    private static final int MAX_INITIAL_COLLECTION_CAPACITY = 128;
     private int depth;
     private int valuesRemaining = MAX_VALUES;
 
@@ -244,6 +250,27 @@ class Decoder {
             || cls.equals(BigInteger.class);
     }
 
+    // A container cannot hold more entries than there are bytes left to encode
+    // them: every key, value, and element occupies at least one byte. Reject an
+    // impossible declared size before it is used as an allocation hint, so a
+    // tiny crafted database cannot force a huge list or map preallocation and
+    // exhaust memory. valueCount is the number of encoded values the container
+    // declares (an array of N declares N, a map of N declares 2N).
+    private void checkContainerSize(long valueCount) throws InvalidDatabaseException {
+        // A container cannot decode more values than the per-lookup budget
+        // allows, so reject an oversized declaration before allocating for it
+        // rather than after the per-value limit stops the decode.
+        if (valueCount > this.valuesRemaining) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum number of values");
+        }
+        if (valueCount > this.buffer.capacity() - this.buffer.position()) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "a container declares more entries than the data section can hold");
+        }
+    }
+
     private <T> Object decodeByType(
         Type type,
         int size,
@@ -256,6 +283,7 @@ class Decoder {
                     throw new InvalidDatabaseException(
                         "The MaxMind DB file's data section exceeds the maximum depth");
                 }
+                this.checkContainerSize((long) size * 2);
                 var map = this.decodeMap(size, cls, genericType);
                 this.depth--;
                 return map;
@@ -272,6 +300,7 @@ class Decoder {
                     throw new InvalidDatabaseException(
                         "The MaxMind DB file's data section exceeds the maximum depth");
                 }
+                this.checkContainerSize(size);
                 var array = this.decodeArray(size, cls, elementClass);
                 this.depth--;
                 return array;
@@ -510,8 +539,9 @@ class Decoder {
         }
 
         List<V> array;
+        var initialCapacity = Math.min(size, MAX_INITIAL_COLLECTION_CAPACITY);
         if (cls.equals(List.class) || cls.equals(Object.class)) {
-            array = new ArrayList<>(size);
+            array = new ArrayList<>(initialCapacity);
         } else {
             Constructor<T> constructor;
             try {
@@ -520,7 +550,7 @@ class Decoder {
                 throw new DeserializationException(
                     "No constructor found for the List: " + e.getMessage(), e);
             }
-            var parameters = new Object[]{size};
+            var parameters = new Object[]{initialCapacity};
             try {
                 @SuppressWarnings("unchecked")
                 var array2 = (List<V>) constructor.newInstance(parameters);
@@ -570,8 +600,9 @@ class Decoder {
         Class<V> valueClass
     ) throws IOException {
         Map<String, V> map;
+        var initialCapacity = Math.min(size, MAX_INITIAL_COLLECTION_CAPACITY);
         if (cls.equals(Map.class) || cls.equals(Object.class)) {
-            map = new HashMap<>(size);
+            map = new HashMap<>(initialCapacity);
         } else {
             Constructor<T> constructor;
             try {
@@ -580,7 +611,7 @@ class Decoder {
                 throw new DeserializationException(
                     "No constructor found for the Map: " + e.getMessage(), e);
             }
-            var parameters = new Object[]{size};
+            var parameters = new Object[]{initialCapacity};
             try {
                 @SuppressWarnings("unchecked")
                 var map2 = (Map<String, V>) constructor.newInstance(parameters);
@@ -1165,6 +1196,7 @@ class Decoder {
                     offset += pointerSize;
                     break;
                 case MAP:
+                    this.checkContainerSize((long) size * 2);
                     if (++this.depth > MAX_DEPTH) {
                         throw new InvalidDatabaseException(
                             "The MaxMind DB file's data section exceeds the maximum depth");
@@ -1176,6 +1208,7 @@ class Decoder {
                     }
                     break;
                 case ARRAY:
+                    this.checkContainerSize(size);
                     if (++this.depth > MAX_DEPTH) {
                         throw new InvalidDatabaseException(
                             "The MaxMind DB file's data section exceeds the maximum depth");
