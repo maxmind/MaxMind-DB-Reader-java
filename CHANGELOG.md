@@ -16,6 +16,9 @@ CHANGELOG
   in the wrong place. The decoder also rejects a skipped value whose complete
   header declares a payload that extends past the data section. Databases written
   by MaxMind tooling were not affected.
+* Fixed UTF-8 decoding for strings whose multibyte characters cross a buffer
+  chunk boundary. The decoder also rejects an incomplete multibyte character at
+  the end of a string.
 * Bounded the resources that the decoder spends on a single decode operation. A
   crafted database could nest data-section pointers to shared targets so that
   decoding one record cost exponential time and memory, or point many times at

@@ -2,7 +2,6 @@ package com.maxmind.db;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CharsetDecoder;
@@ -215,48 +214,43 @@ final class MultiBuffer implements Buffer {
         return this.decode(decoder, Integer.MAX_VALUE);
     }
 
-    String decode(CharsetDecoder decoder, int maxCharBufferSize)
+    String decode(CharsetDecoder decoder, int maximumSize)
             throws CharacterCodingException {
         var remainingBytes = limit - position;
 
-        // Cannot allocate more than maxCharBufferSize for CharBuffer
-        if (remainingBytes > maxCharBufferSize) {
+        if (remainingBytes > maximumSize) {
             throw new IllegalStateException(
-                    "Decoding region too large to fit in a CharBuffer: " + remainingBytes
+                    "Decoding region exceeds the maximum size: " + remainingBytes
             );
         }
 
-        var out = CharBuffer.allocate((int) remainingBytes);
-        var pos = position;
-
-        while (remainingBytes > 0) {
-            // Locate which underlying buffer we are in
-            var bufIndex = (int) (pos / this.chunkSize);
-            var bufOffset = (int) (pos % this.chunkSize);
-
-            var srcView = buffers[bufIndex];
-            var savedLimit = srcView.limit();
-            srcView.position(bufOffset);
-
-            var toRead = (int) Math.min(srcView.remaining(), remainingBytes);
-            srcView.limit(bufOffset + toRead);
-
-            var result = decoder.decode(srcView, out, false);
-            srcView.limit(savedLimit);
-
-            if (result.isError()) {
-                result.throwException();
-            }
-
-            pos += toRead;
-            remainingBytes -= toRead;
+        if (remainingBytes == 0) {
+            return "";
         }
 
-        // Update this MultiBuffer’s logical position
-        this.position = pos;
+        var bufIndex = (int) (position / this.chunkSize);
+        var bufOffset = (int) (position % this.chunkSize);
+        var source = buffers[bufIndex];
+        if (remainingBytes <= source.limit() - bufOffset) {
+            var savedLimit = source.limit();
+            source.position(bufOffset);
+            source.limit(bufOffset + (int) remainingBytes);
+            try {
+                var value = decoder.decode(source).toString();
+                this.position += remainingBytes;
+                return value;
+            } finally {
+                source.limit(savedLimit);
+            }
+        }
 
-        out.flip();
-        return out.toString();
+        var bytes = new byte[(int) remainingBytes];
+        var savedPosition = this.position;
+        this.get(bytes);
+        this.position = savedPosition;
+        var value = decoder.decode(ByteBuffer.wrap(bytes)).toString();
+        this.position = this.limit;
+        return value;
     }
 
     /**
