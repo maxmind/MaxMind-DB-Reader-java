@@ -10,6 +10,9 @@ CHANGELOG
   with an `IllegalArgumentException`. Every record past the 2 GiB
   boundary was unreachable in databases larger than 2 GiB, which have
   been supported since 4.0.0.
+* Fixed skipping unknown four-byte pointers during typed decoding. Skipped
+  values that extend past the data section are now rejected. MaxMind-produced
+  databases were unaffected.
 * Added decoder limits to prevent excessive CPU and memory use from crafted
   databases: 65,536 decoded or skipped values, 128 nested containers, and 2 MiB
   of encoded string and bytes payload per operation. Exceeding a limit throws
