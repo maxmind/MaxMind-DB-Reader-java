@@ -276,6 +276,15 @@ class Decoder {
         }
     }
 
+    private void enterContainer(long valueCount) throws InvalidDatabaseException {
+        this.checkContainerSize(valueCount);
+        if (this.depth >= MAX_DEPTH) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum depth");
+        }
+        this.depth++;
+    }
+
     // Charge a string or bytes payload against the per-operation budget before
     // it is materialized. A payload amplification points many pointers at one large
     // value. A cache miss that re-decodes the target charges its payload again;
@@ -317,14 +326,12 @@ class Decoder {
     ) throws IOException {
         switch (type) {
             case MAP: {
-                if (++this.depth > MAX_DEPTH) {
-                    throw new InvalidDatabaseException(
-                        "The MaxMind DB file's data section exceeds the maximum depth");
+                this.enterContainer((long) size * 2);
+                try {
+                    return this.decodeMap(size, cls, genericType);
+                } finally {
+                    this.depth--;
                 }
-                this.checkContainerSize((long) size * 2);
-                var map = this.decodeMap(size, cls, genericType);
-                this.depth--;
-                return map;
             }
             case ARRAY:
                 Class<?> elementClass = Object.class;
@@ -334,14 +341,12 @@ class Decoder {
                         elementClass = (Class<?>) actualTypes[0];
                     }
                 }
-                if (++this.depth > MAX_DEPTH) {
-                    throw new InvalidDatabaseException(
-                        "The MaxMind DB file's data section exceeds the maximum depth");
+                this.enterContainer(size);
+                try {
+                    return this.decodeArray(size, cls, elementClass);
+                } finally {
+                    this.depth--;
                 }
-                this.checkContainerSize(size);
-                var array = this.decodeArray(size, cls, elementClass);
-                this.depth--;
-                return array;
             case BOOLEAN:
                 Boolean bool = Decoder.decodeBoolean(size);
                 return convertValue(bool, cls);
@@ -1259,11 +1264,7 @@ class Decoder {
                     offset += pointerSize;
                     break;
                 case MAP:
-                    this.checkContainerSize((long) size * 2);
-                    if (++this.depth > MAX_DEPTH) {
-                        throw new InvalidDatabaseException(
-                            "The MaxMind DB file's data section exceeds the maximum depth");
-                    }
+                    this.enterContainer((long) size * 2);
                     try {
                         offset = this.nextValueOffset(offset, 2 * size);
                     } finally {
@@ -1271,11 +1272,7 @@ class Decoder {
                     }
                     break;
                 case ARRAY:
-                    this.checkContainerSize(size);
-                    if (++this.depth > MAX_DEPTH) {
-                        throw new InvalidDatabaseException(
-                            "The MaxMind DB file's data section exceeds the maximum depth");
-                    }
+                    this.enterContainer(size);
                     try {
                         offset = this.nextValueOffset(offset, size);
                     } finally {
