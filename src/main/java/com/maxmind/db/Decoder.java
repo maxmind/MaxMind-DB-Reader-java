@@ -132,6 +132,14 @@ class Decoder {
                 "The MaxMind DB file's data section contains bad data: "
                     + "pointer larger than the database.");
         }
+        // Validate a target when the cache loader decodes it. A target that was
+        // loaded successfully has already passed this check, so cache hits do
+        // not need to reread its control byte.
+        if (Type.fromControlByte(0xFF & this.buffer.get(offset)) == Type.POINTER) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains a pointer to a pointer");
+        }
+
         this.buffer.position(offset);
         Class<T> cls = key.cls();
         return decode(cls, key.type());
@@ -188,16 +196,6 @@ class Decoder {
 
     DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
             throws IOException {
-        // A pointer to another pointer is illegal per the specification. It also
-        // lets a pointer cycle recurse without ever entering a container, which
-        // the depth limit would not catch, so reject it here. Container cycles
-        // and over-deep data are bounded by the depth limit in decodeByType.
-        if (pointer < buffer.capacity()
-            && Type.fromControlByte(0xFF & buffer.get(pointer)) == Type.POINTER) {
-            throw new InvalidDatabaseException(
-                "The MaxMind DB file's data section contains a pointer to a pointer");
-        }
-
         var position = buffer.position();
 
         var key = new CacheKey<>(pointer, cls, genericType);

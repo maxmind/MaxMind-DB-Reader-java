@@ -710,12 +710,14 @@ public class DecoderTest {
     public void testAcyclicPointerToPointerThrows() {
         // The pointer chain terminates at a scalar, but pointer-to-pointer is
         // illegal regardless of whether the chain forms a cycle.
-        var decoder = new Decoder(NoCache.getInstance(),
-                SingleBuffer.wrap(new byte[] {0x20, 0x02, 0x20, 0x04, (byte) 0xA0}), 0);
-        var ex = assertThrows(
-                InvalidDatabaseException.class,
-                () -> decoder.decode(0, Object.class));
-        assertThat(ex.getMessage(), containsString("pointer to a pointer"));
+        var data = new byte[] {0x20, 0x02, 0x20, 0x04, (byte) 0xA0};
+        for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache())) {
+            var decoder = new Decoder(cache, SingleBuffer.wrap(data), 0);
+            var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> decoder.decode(0, Object.class));
+            assertThat(ex.getMessage(), containsString("pointer to a pointer"));
+        }
     }
 
     public static final class StackProbe {
