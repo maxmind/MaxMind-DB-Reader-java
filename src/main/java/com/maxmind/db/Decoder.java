@@ -37,10 +37,12 @@ class Decoder {
 
     // Per-operation resource limits. The MaxMind DB specification recommends
     // depth and value limits, but permits equivalent reader-specific accounting.
-    // This decoder charges each decode invocation, including a pointer and its
-    // uncached target, so the value limit bounds actual decoder work rather than
-    // the specification's example flat value count. Container depth, together
-    // with rejecting illegal pointer-to-pointer values, bounds recursive calls.
+    // This decoder charges each decoded or skipped value. Each pointer occurrence
+    // also consumes the logical cost of its target. Cache misses measure that cost,
+    // and cache hits replay it. This keeps accounting independent of cache state
+    // rather than following the specification's example flat value count.
+    // Container depth, together with rejecting illegal pointer-to-pointer values,
+    // bounds recursive calls.
     // The payload limit bounds encoded string and bytes data materialized by
     // this Java decoder.
     // The lower depth limit leaves room on a 512 KiB thread stack even for
@@ -57,6 +59,7 @@ class Decoder {
     // path; completed children remain bounded by MAX_VALUES.
     private static final int MAX_INITIAL_COLLECTION_CAPACITY = 128;
     private int depth;
+    private int maxDepth;
     private int valuesRemaining = MAX_VALUES;
     private long payloadRemaining = MAX_PAYLOAD_BYTES;
 
@@ -120,7 +123,7 @@ class Decoder {
         this.lookupNetwork = lookupNetwork;
     }
 
-    private final NodeCache.Loader cacheLoader = this::decode;
+    private final NodeCache.Loader cacheLoader = this::decodeForCache;
 
     <T> T decode(long offset, Class<T> cls) throws IOException {
         if (offset >= this.buffer.capacity()) {
@@ -132,6 +135,7 @@ class Decoder {
         this.valuesRemaining = MAX_VALUES;
         this.payloadRemaining = MAX_PAYLOAD_BYTES;
         this.depth = 0;
+        this.maxDepth = 0;
         this.buffer.position(offset);
         return cls.cast(decode(cls, null).value());
     }
@@ -205,20 +209,61 @@ class Decoder {
         return new DecodedValue(this.decodeByType(type, size, cls, genericType));
     }
 
+    private DecodedValue decodeForCache(CacheKey<?> key) throws IOException {
+        var valuesRemaining = this.valuesRemaining;
+        var payloadRemaining = this.payloadRemaining;
+        var depth = this.depth;
+        var maxDepth = this.maxDepth;
+        this.maxDepth = depth;
+        try {
+            var value = this.decode(key);
+            return value.costs(
+                valuesRemaining - this.valuesRemaining,
+                payloadRemaining - this.payloadRemaining,
+                this.maxDepth - depth
+            );
+        } finally {
+            this.valuesRemaining = valuesRemaining;
+            this.payloadRemaining = payloadRemaining;
+            this.depth = depth;
+            this.maxDepth = maxDepth;
+        }
+    }
+
     DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
             throws IOException {
         var position = buffer.position();
 
         var key = new CacheKey<>(pointer, cls, genericType);
         DecodedValue value;
-        if (requiresLookupContext(cls)) {
+        if (this.cache == NoCache.getInstance() || requiresLookupContext(cls)) {
             value = this.decode(key);
         } else {
             value = cache.get(key, cacheLoader);
+            this.charge(value);
         }
 
         buffer.position(position);
         return value;
+    }
+
+    private void charge(DecodedValue value) throws InvalidDatabaseException {
+        if (value.values() > this.valuesRemaining) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum number of values");
+        }
+        if (value.payloadBytes() > this.payloadRemaining) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum payload size");
+        }
+        if (value.depth() > MAX_DEPTH - this.depth) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum depth");
+        }
+
+        this.valuesRemaining -= value.values();
+        this.payloadRemaining -= value.payloadBytes();
+        this.maxDepth = Math.max(this.maxDepth, this.depth + value.depth());
     }
 
     private boolean requiresLookupContext(Class<?> cls) {
@@ -283,12 +328,13 @@ class Decoder {
                 "The MaxMind DB file's data section exceeds the maximum depth");
         }
         this.depth++;
+        this.maxDepth = Math.max(this.maxDepth, this.depth);
     }
 
     // Charge a string or bytes payload against the per-operation budget before
-    // it is materialized. A payload amplification points many pointers at one large
-    // value. A cache miss that re-decodes the target charges its payload again;
-    // a cache hit reuses the completed value without materializing it again. The
+    // materializing it. A payload amplification points many pointers at one large
+    // value. Cached targets retain their logical payload cost, so each pointer
+    // occurrence consumes the cost even when the decoder reuses the value. The
     // comparison is against the remaining budget so it cannot overflow. The
     // limit is inclusive: a total exactly at the limit is allowed.
     private void chargePayload(long length) throws InvalidDatabaseException {

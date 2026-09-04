@@ -23,6 +23,14 @@ public class DecoderTest {
 
     private static final int TEST_MAX_DEPTH = 128;
 
+    @Test
+    public void testDecodedValueStoresMaximumCosts() {
+        var value = new DecodedValue(null).costs(1 << 16, 1L << 21, TEST_MAX_DEPTH);
+        assertEquals(1 << 16, value.values());
+        assertEquals(1L << 21, value.payloadBytes());
+        assertEquals(TEST_MAX_DEPTH, value.depth());
+    }
+
     private static Map<Integer, byte[]> int32() {
         int max = (2 << 30) - 1;
         var int32 = new HashMap<Integer, byte[]>();
@@ -513,15 +521,11 @@ public class DecoderTest {
                 containsString("The MaxMind DB file's data section contains bad data"));
     }
 
-    private static void writePointer1(ByteArrayOutputStream out, int target) {
-        // One-byte-payload pointer (type 1, pointer_size 1) with base 0.
-        out.write((1 << 5) | ((target >> 8) & 0x7));
-        out.write(target & 0xFF);
-    }
-
     private static void writePointer(ByteArrayOutputStream out, int target) {
         if (target < 1 << 11) {
-            writePointer1(out, target);
+            // One-byte-payload pointer (type 1, pointer_size 1) with base 0.
+            out.write((1 << 5) | ((target >> 8) & 0x7));
+            out.write(target & 0xFF);
             return;
         }
 
@@ -641,31 +645,6 @@ public class DecoderTest {
     }
 
     @Test
-    public void testPointerFanOutIsBounded() throws IOException {
-        // A data section of nested arrays, each holding two pointers to the
-        // node below, would cost 2**depth decode operations. The decoder bounds
-        // the number of values it decodes per lookup and rejects the database.
-        var depth = 100;
-        var out = new ByteArrayOutputStream();
-        out.write(0xA0); // leaf: uint16 with value 0
-        var prev = 0;
-        for (var i = 0; i < depth; i++) {
-            var offset = out.size();
-            out.write(0x02);
-            out.write(0x04);
-            writePointer1(out, prev);
-            writePointer1(out, prev);
-            prev = offset;
-        }
-
-        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(out.toByteArray()), 0);
-        var top = prev;
-        assertThrows(
-                InvalidDatabaseException.class,
-                () -> decoder.decode(top, Object.class));
-    }
-
-    @Test
     public void testPointerFreeContainerDepthIsBounded() throws IOException {
         var atLimit = new Decoder(NoCache.getInstance(),
                 SingleBuffer.wrap(nestedArrays(TEST_MAX_DEPTH)), 0);
@@ -692,6 +671,30 @@ public class DecoderTest {
         var ex = assertThrows(
             InvalidDatabaseException.class,
             () -> decoderOverLimit.decode(overLimit.offset(), Object.class));
+        assertThat(ex.getMessage(), containsString("exceeds the maximum depth"));
+    }
+
+    @Test
+    public void testCachedPointerTargetDepthIsBounded() throws IOException {
+        var nested = pointerNestedArrays(TEST_MAX_DEPTH);
+        var out = new ByteArrayOutputStream();
+        out.writeBytes(nested.data());
+
+        var seedPointerOffset = out.size();
+        writePointer(out, nested.offset());
+
+        var outerArrayOffset = out.size();
+        out.write(0x01); // extended type, one element
+        out.write(0x04); // array
+        writePointer(out, nested.offset());
+
+        var decoder = new Decoder(new CHMCache(), SingleBuffer.wrap(out.toByteArray()), 0);
+        decoder.decode(seedPointerOffset, Object.class);
+
+        var ex = assertThrows(
+            InvalidDatabaseException.class,
+            () -> decoder.decode(outerArrayOffset, Object.class)
+        );
         assertThat(ex.getMessage(), containsString("exceeds the maximum depth"));
     }
 
@@ -742,6 +745,56 @@ public class DecoderTest {
             InvalidDatabaseException.class,
             () -> overLimit.decode(0, Object.class));
         assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+    }
+
+    @Test
+    public void testPointerValueCountBoundaryIsIndependentOfCacheState() throws IOException {
+        // A warm cache replays a recorded cost instead of decoding the target
+        // again. The verdict at the boundary must not depend on which of those
+        // paths ran, so decode each fixture twice against the same cache.
+        for (var cache : List.<NodeCache>of(
+                NoCache.getInstance(), new CHMCache(), new CHMCache(0))) {
+            var atLimit = new Decoder(cache, SingleBuffer.wrap(pointerFanOut(1)), 0);
+            for (var attempt = 0; attempt < 2; attempt++) {
+                var result = (List<?>) atLimit.decode(1, Object.class);
+                assertEquals(32_768, result.size());
+            }
+        }
+
+        for (var cache : List.<NodeCache>of(
+                NoCache.getInstance(), new CHMCache(), new CHMCache(0))) {
+            var overLimit = new Decoder(cache, SingleBuffer.wrap(pointerFanOut(2)), 0);
+            for (var attempt = 0; attempt < 2; attempt++) {
+                var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> overLimit.decode(1, Object.class));
+                assertThat(ex.getMessage(),
+                    containsString("exceeds the maximum number of values"));
+            }
+        }
+    }
+
+    // Builds an array of 32,767 pointers to one uint16, followed by the given
+    // number of inline uint16 values. Each pointer occurrence costs one value
+    // for the pointer and one for its target, so the decode costs
+    // 65,535 + scalars values. One scalar lands on the 65,536 limit and two
+    // exceed it by one.
+    private static byte[] pointerFanOut(int scalars) {
+        var pointers = 32_767;
+        var elements = pointers + scalars;
+        var out = new ByteArrayOutputStream();
+        out.write(0xA0); // uint16 with value 0, the shared pointer target
+        out.write(0x1E); // extended type, size code 30
+        out.write(0x04); // array
+        out.write((elements - 285) >> 8);
+        out.write(elements - 285);
+        for (var i = 0; i < pointers; i++) {
+            writePointer(out, 0);
+        }
+        for (var i = 0; i < scalars; i++) {
+            out.write(0xA0);
+        }
+        return out.toByteArray();
     }
 
     @Test
@@ -962,58 +1015,6 @@ public class DecoderTest {
         }
     }
 
-    // Writes a large scalar (bytes or string) at offset 0, followed by an array
-    // of pointerCount one-byte pointers that all target it. Every pointer
-    // re-decodes the shared value, so the decoder is charged its size once per
-    // pointer even though the value count stays tiny.
-    private static byte[] sharedScalarFanOut(int scalarType, int scalarSize, int pointerCount) {
-        var out = new ByteArrayOutputStream();
-        // Scalar header: size code 30 covers 285..65820 bytes.
-        out.write((scalarType << 5) | 30);
-        var encoded = scalarSize - 285;
-        out.write((encoded >> 8) & 0xFF);
-        out.write(encoded & 0xFF);
-        for (var i = 0; i < scalarSize; i++) {
-            out.write(0);
-        }
-        // Array header (extended type 11), size code 29 covers 29..284 entries.
-        out.write(29);
-        out.write(0x04);
-        out.write(pointerCount - 29);
-        for (var i = 0; i < pointerCount; i++) {
-            writePointer1(out, 0);
-        }
-        return out.toByteArray();
-    }
-
-    @Test
-    public void testPayloadAmplificationIsBounded() throws IOException {
-        // 33 pointers to a 65,536-byte value would materialize just over 2 MiB,
-        // one byte value at a time, while the value count stays tiny. Only the
-        // payload byte bound rejects this.
-        var scalarSize = 1 << 16;
-        var data = sharedScalarFanOut(4, scalarSize, 33);
-        var top = 3 + scalarSize;
-        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
-        var ex = assertThrows(
-                InvalidDatabaseException.class,
-                () -> decoder.decode(top, Object.class));
-        assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
-    }
-
-    @Test
-    public void testPayloadAmplificationIsBoundedAfterCacheFills() {
-        var scalarSize = 1 << 16;
-        var data = sharedScalarFanOut(4, scalarSize, 33);
-        var top = 3 + scalarSize;
-        var decoder = new Decoder(new CHMCache(0), SingleBuffer.wrap(data), 0);
-        var ex = assertThrows(
-            InvalidDatabaseException.class,
-            () -> decoder.decode(top, Object.class)
-        );
-        assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
-    }
-
     @Test
     public void testOverBudgetPayloadHeadersAreRejectedBeforePayloadRead() {
         var overBudgetHeaders = List.of(
@@ -1087,18 +1088,6 @@ public class DecoderTest {
     }
 
     @Test
-    public void testPayloadAtLimitIsAccepted() throws IOException {
-        // 32 pointers to a 65,536-byte value materialize exactly 2 MiB, at the
-        // inclusive limit, so the record must still decode.
-        var scalarSize = 1 << 16;
-        var data = sharedScalarFanOut(4, scalarSize, 32);
-        var top = 3 + scalarSize;
-        var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
-        var result = (List<?>) decoder.decode(top, Object.class);
-        assertEquals(32, result.size());
-    }
-
-    @Test
     public void testBigIntegerDoesNotConsumeStringAndBytesBudget() throws IOException {
         var payloadSize = 1 << 21;
         var out = new ByteArrayOutputStream();
@@ -1134,35 +1123,63 @@ public class DecoderTest {
 
             var pointerArray = pointerNestedArrays(TEST_MAX_DEPTH);
             decode(pointerArray.data(), pointerArray.offset());
+            for (var cache : caches()) {
+                decode(pointerArray.data(), pointerArray.offset(), cache);
+            }
             var pointerMap = pointerNestedMaps(TEST_MAX_DEPTH);
             decode(pointerMap.data(), pointerMap.offset());
+            for (var cache : caches()) {
+                decode(pointerMap.data(), pointerMap.offset(), cache);
+            }
 
             expectDepthRejection(nestedArrays(TEST_MAX_DEPTH + 1), 0);
             expectDepthRejection(nestedMaps(TEST_MAX_DEPTH + 1), 0);
 
             pointerArray = pointerNestedArrays(TEST_MAX_DEPTH + 1);
             expectDepthRejection(pointerArray.data(), pointerArray.offset());
+            for (var cache : caches()) {
+                expectDepthRejection(pointerArray.data(), pointerArray.offset(), cache);
+            }
             pointerMap = pointerNestedMaps(TEST_MAX_DEPTH + 1);
             expectDepthRejection(pointerMap.data(), pointerMap.offset());
+            for (var cache : caches()) {
+                expectDepthRejection(pointerMap.data(), pointerMap.offset(), cache);
+            }
 
             decodeUnknown(unknownFieldWithFlatArray(65_532));
             decodeUnknown(unknownFieldWithFlatMap(32_766));
         }
 
         private static void decode(byte[] data, int offset) throws IOException {
-            var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
+            decode(data, offset, NoCache.getInstance());
+        }
+
+        private static void decode(byte[] data, int offset, NodeCache cache) throws IOException {
+            var decoder = new Decoder(cache, SingleBuffer.wrap(data), 0);
             decoder.decode(offset, Object.class);
         }
 
         private static void expectDepthRejection(byte[] data, int offset) throws IOException {
+            expectDepthRejection(data, offset, NoCache.getInstance());
+        }
+
+        private static void expectDepthRejection(
+            byte[] data,
+            int offset,
+            NodeCache cache
+        ) throws IOException {
             try {
-                decode(data, offset);
+                decode(data, offset, cache);
                 throw new AssertionError("over-depth container decoded without rejection");
             } catch (InvalidDatabaseException e) {
                 if (!e.getMessage().contains("exceeds the maximum depth")) {
                     throw e;
                 }
             }
+        }
+
+        private static List<NodeCache> caches() {
+            return List.of(new CHMCache(), new CHMCache(0));
         }
 
         private static void decodeUnknown(byte[] data) throws IOException {
