@@ -2241,11 +2241,17 @@ public class ReaderTest {
     }
 
     @Test
-    public void testPointerFanOutUsesCachedTargets() throws IOException {
+    public void testPointerFanOutIsRejectedWithCachedTargets() throws IOException {
         var fixture = "MaxMind-DB-test-pointer-decoder-dos.mmdb";
         try (var reader = new Reader(getFile(fixture), new CHMCache())) {
-            var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
-            assertNotNull(value);
+            var address = InetAddress.getByName("1.1.1.1");
+            for (var i = 0; i < 2; i++) {
+                var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> reader.get(address, Object.class)
+                );
+                assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+            }
         }
     }
 
@@ -2258,12 +2264,41 @@ public class ReaderTest {
         };
         var address = InetAddress.getByName("1.1.1.1");
         for (var fixture : fixtures) {
-            try (var reader = new Reader(getFile(fixture))) {
+            for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache())) {
+                try (var reader = new Reader(getFile(fixture), cache)) {
+                    var ex = assertThrows(
+                        InvalidDatabaseException.class,
+                        () -> reader.get(address, Object.class),
+                        fixture + " should be rejected under Java work accounting");
+                    assertThat(
+                        ex.getMessage(),
+                        containsString("exceeds the maximum number of values")
+                    );
+                }
+            }
+        }
+    }
+
+    public static final class TargetModel {
+        final String target;
+
+        @MaxMindDbConstructor
+        public TargetModel(@MaxMindDbParameter(name = "target") String target) {
+            this.target = target;
+        }
+    }
+
+    @Test
+    public void testPointerBackedMapKeysSharePayloadBudget() throws IOException {
+        var fixture = "MaxMind-DB-test-decode-path-shared-budget.mmdb";
+        var address = InetAddress.getByName("1.1.1.1");
+        for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache())) {
+            try (var reader = new Reader(getFile(fixture), cache)) {
                 var ex = assertThrows(
                     InvalidDatabaseException.class,
-                    () -> reader.get(address, Object.class),
-                    fixture + " should be rejected under Java work accounting");
-                assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+                    () -> reader.get(address, TargetModel.class)
+                );
+                assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
             }
         }
     }
@@ -2282,12 +2317,17 @@ public class ReaderTest {
         };
         var ip = InetAddress.getByName("1.1.1.1");
         for (var fixture : fixtures) {
-            try (var reader = new Reader(getFile(fixture))) {
-                var ex = assertThrows(
-                    InvalidDatabaseException.class,
-                    () -> reader.get(ip, Object.class),
-                    fixture + " should be rejected");
-                assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+            for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache())) {
+                try (var reader = new Reader(getFile(fixture), cache)) {
+                    var ex = assertThrows(
+                        InvalidDatabaseException.class,
+                        () -> reader.get(ip, Object.class),
+                        fixture + " should be rejected");
+                    assertThat(
+                        ex.getMessage(),
+                        containsString("exceeds the maximum payload size")
+                    );
+                }
             }
         }
     }
@@ -2296,9 +2336,12 @@ public class ReaderTest {
     // still decode, so the bound does not reject legitimate data.
     @Test
     public void testPayloadAtLimitDecodes() throws IOException {
-        try (var reader = new Reader(getFile("MaxMind-DB-test-decoder-payload-limit.mmdb"))) {
-            var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
-            assertNotNull(value);
+        for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache())) {
+            try (var reader = new Reader(
+                    getFile("MaxMind-DB-test-decoder-payload-limit.mmdb"), cache)) {
+                var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
+                assertNotNull(value);
+            }
         }
     }
 
@@ -2306,10 +2349,13 @@ public class ReaderTest {
     // cover that path too. This fixture amplifies a string through the metadata.
     @Test
     public void testMetadataPayloadAmplificationIsRejected() {
-        var ex = assertThrows(
-            InvalidDatabaseException.class,
-            () -> new Reader(getFile("MaxMind-DB-test-metadata-payload-limit.mmdb")));
-        assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+        for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache())) {
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> new Reader(getFile("MaxMind-DB-test-metadata-payload-limit.mmdb"), cache)
+            );
+            assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+        }
     }
 
     static File getFile(String name) {

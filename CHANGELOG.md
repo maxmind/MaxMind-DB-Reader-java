@@ -30,8 +30,9 @@ CHANGELOG
     required by the MaxMind DB format.
   * Metadata decoding uses all limits. Skipped fields use the value and depth
     limits without materializing their payload.
-  * Cached pointer targets are reused without being charged as newly decoded or
-    materialized. Uncached targets are charged each time they are decoded.
+  * Cached pointer targets retain their logical value, depth, and payload cost.
+    Reusing a target charges that recorded cost without decoding or materializing
+    it again.
   * The decoder rejects integer encodings wider than the format permits before
     reading their payload.
   * The decoder reports truncated string and bytes values, and malformed UTF-8
