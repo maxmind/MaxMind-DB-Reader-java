@@ -40,6 +40,9 @@ CHANGELOG
   * The decoder checks declared map and array sizes before decoding their
     children. It caps collection preallocation so nested crafted sizes cannot
     exhaust the heap before a decoder limit rejects them.
+* Improved decoder performance and reduced per-lookup allocation. The decoder
+  now avoids transient value wrappers, reuses each thread's UTF-8 decoder, and
+  short-circuits common collection targets.
 
 4.1.0 (2026-05-12)
 ------------------
