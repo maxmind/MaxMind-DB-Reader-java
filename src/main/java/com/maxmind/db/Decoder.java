@@ -271,6 +271,16 @@ class Decoder {
         }
     }
 
+    private static int initialMapCapacity(int size) {
+        // HashMap's constructor argument is a table capacity rather than an
+        // expected entry count. Account for its default 0.75 load factor when
+        // that can be done without exceeding the allocation-hint limit.
+        return Math.min(
+            size + (size + 2) / 3,
+            MAX_INITIAL_COLLECTION_CAPACITY
+        );
+    }
+
     private <T> Object decodeByType(
         Type type,
         int size,
@@ -600,10 +610,10 @@ class Decoder {
         Class<V> valueClass
     ) throws IOException {
         Map<String, V> map;
-        var initialCapacity = Math.min(size, MAX_INITIAL_COLLECTION_CAPACITY);
         if (cls.equals(Map.class) || cls.equals(Object.class)) {
-            map = new HashMap<>(initialCapacity);
+            map = new HashMap<>(initialMapCapacity(size));
         } else {
+            var initialCapacity = Math.min(size, MAX_INITIAL_COLLECTION_CAPACITY);
             Constructor<T> constructor;
             try {
                 constructor = cls.getConstructor(Integer.TYPE);
