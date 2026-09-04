@@ -13,6 +13,8 @@ CHANGELOG
 * Fixed skipping unknown four-byte pointers during typed decoding. Skipped
   values that extend past the data section are now rejected. MaxMind-produced
   databases were unaffected.
+* Fixed UTF-8 decoding across buffer chunks and rejection of incomplete
+  multibyte characters at the end of a string.
 * Added decoder limits to prevent excessive CPU and memory use from crafted
   databases: 65,536 decoded or skipped values, 128 nested containers, and 2 MiB
   of encoded string and bytes payload per operation. Exceeding a limit throws

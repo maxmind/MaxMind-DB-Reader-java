@@ -136,7 +136,6 @@ class Decoder implements NodeCache.Loader {
         this.payloadRemaining = MAX_PAYLOAD_BYTES;
         this.depth = 0;
         this.maxDepth = -1;
-        this.utfDecoder.reset();
         this.buffer.position(offset);
         return cls.cast(decode(cls, null));
     }
