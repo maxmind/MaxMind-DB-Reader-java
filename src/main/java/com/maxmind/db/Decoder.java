@@ -1308,6 +1308,11 @@ class Decoder {
                     offset += size;
                     break;
             }
+            if (offset > this.buffer.capacity()) {
+                throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains bad data: "
+                        + "a value extends beyond the end of the data section.");
+            }
         }
         return offset;
     }
@@ -1340,6 +1345,12 @@ class Decoder {
 
             type = Type.get(typeNum);
             offset++;
+        }
+
+        // Pointer control bits encode pointer width and value bits, not a
+        // generic payload size. The caller advances by the pointer width.
+        if (type.equals(Type.POINTER)) {
+            return new CtrlData(type, ctrlByte, offset, 0);
         }
 
         var size = ctrlByte & 0x1f;

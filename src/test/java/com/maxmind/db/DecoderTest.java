@@ -796,6 +796,82 @@ public class DecoderTest {
     }
 
     @Test
+    public void testUnknownFieldPointersAreSkippedByTheirEncodedWidth() throws IOException {
+        var pointerEncodings = new ArrayList<byte[]>();
+        pointerEncodings.add(new byte[] {0x20, 0x00});
+        pointerEncodings.add(new byte[] {0x28, 0x00, 0x00});
+        pointerEncodings.add(new byte[] {0x30, 0x00, 0x00, 0x00});
+        for (var controlByte = 0x38; controlByte <= 0x3F; controlByte++) {
+            pointerEncodings.add(new byte[] {
+                (byte) controlByte, 0x00, 0x00, 0x00, 0x00
+            });
+        }
+
+        for (var pointer : pointerEncodings) {
+            var out = new ByteArrayOutputStream();
+            out.write(0xE2); // map with two key/value pairs
+            out.write(0x47); // seven-byte UTF-8 string
+            out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+            out.writeBytes(pointer);
+            out.write(0x45); // five-byte UTF-8 string
+            out.writeBytes("known".getBytes(StandardCharsets.UTF_8));
+            out.write(0x42); // two-byte UTF-8 string
+            out.writeBytes("ok".getBytes(StandardCharsets.UTF_8));
+
+            var decoder = new Decoder(
+                NoCache.getInstance(),
+                SingleBuffer.wrap(out.toByteArray()),
+                0
+            );
+            var result = decoder.decode(0, KnownFieldModel.class);
+            assertEquals("ok", result.known());
+        }
+    }
+
+    @Test
+    public void testTruncatedUnknownPointersAreRejectedAsInvalidDatabase() {
+        for (var pointerSize = 1; pointerSize <= 4; pointerSize++) {
+            var out = new ByteArrayOutputStream();
+            out.write(0xE1); // map with one key/value pair
+            out.write(0x47); // seven-byte UTF-8 string
+            out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+            out.write(0x20 | ((pointerSize - 1) << 3));
+            out.writeBytes(new byte[pointerSize - 1]);
+
+            var decoder = new Decoder(
+                NoCache.getInstance(),
+                SingleBuffer.wrap(out.toByteArray()),
+                0
+            );
+            var ex = assertThrows(
+                InvalidDatabaseException.class,
+                () -> decoder.decode(0, EmptyModel.class)
+            );
+            assertThat(ex.getMessage(), containsString("extends beyond the end"));
+        }
+    }
+
+    @Test
+    public void testTruncatedUnknownScalarIsRejectedAsInvalidDatabase() {
+        var out = new ByteArrayOutputStream();
+        out.write(0xE1); // map with one key/value pair
+        out.write(0x47); // seven-byte UTF-8 string
+        out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+        out.write(0x41); // one-byte UTF-8 string with no payload
+
+        var decoder = new Decoder(
+            NoCache.getInstance(),
+            SingleBuffer.wrap(out.toByteArray()),
+            0
+        );
+        var ex = assertThrows(
+            InvalidDatabaseException.class,
+            () -> decoder.decode(0, EmptyModel.class)
+        );
+        assertThat(ex.getMessage(), containsString("extends beyond the end"));
+    }
+
+    @Test
     public void testHugeContainerIsRejectedBeforeAllocation() throws IOException {
         // An array control byte can declare up to ~16.8 million entries from a
         // few bytes. The value limit must reject this before the decoder uses

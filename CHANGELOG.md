@@ -10,6 +10,12 @@ CHANGELOG
   with an `IllegalArgumentException`. Every record past the 2 GiB
   boundary was unreachable in databases larger than 2 GiB, which have
   been supported since 4.0.0.
+* Fixed typed decoding when an unknown field contains a four-byte pointer whose
+  low three control bits are nonzero. The pointer's control bits were
+  incorrectly interpreted as a payload size, which could make decoding resume
+  in the wrong place. The decoder also rejects a skipped value whose complete
+  header declares a payload that extends past the data section. Databases written
+  by MaxMind tooling were not affected.
 * Bounded the resources that the decoder spends on a single decode operation. A
   crafted database could nest data-section pointers to shared targets so that
   decoding one record cost exponential time and memory, or point many times at
