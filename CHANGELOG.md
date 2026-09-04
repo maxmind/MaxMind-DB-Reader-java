@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.1.1
+4.2.0
 ------------------
 
 * Fixed decoding of data pointers with offsets of 2 GiB or greater. The
@@ -10,6 +10,42 @@ CHANGELOG
   with an `IllegalArgumentException`. Every record past the 2 GiB
   boundary was unreachable in databases larger than 2 GiB, which have
   been supported since 4.0.0.
+* Fixed typed decoding when an unknown field contains a four-byte pointer whose
+  low three control bits are nonzero. The pointer's control bits were
+  incorrectly interpreted as a payload size, which could make decoding resume
+  in the wrong place. The decoder also rejects a skipped value whose complete
+  header declares a payload that extends past the data section. Databases written
+  by MaxMind tooling were not affected.
+* Fixed UTF-8 decoding for strings whose multibyte characters cross a buffer
+  chunk boundary. The decoder also rejects an incomplete multibyte character at
+  the end of a string.
+* Bounded the resources that the decoder spends on a single decode operation. A
+  crafted database could nest data-section pointers to shared targets so that
+  decoding one record cost exponential time and memory, or point many times at
+  one large value so that decoding materialized far more data than the file
+  holds. Each decode is now limited to 65,536 decoded or skipped values under
+  this reader's work accounting, 128 levels of container nesting, and 2 MiB of
+  encoded string and bytes payload. The value limit follows the MaxMind DB
+  specification's resource guidance. The lower depth limit, payload limit, and
+  exact value accounting are specific to this reader.
+  * Exceeding a limit throws an `InvalidDatabaseException`.
+  * The decoder rejects a data-section pointer whose target is another pointer,
+    as required by the MaxMind DB format.
+  * Metadata decoding uses all limits. Skipped fields use the value and depth
+    limits without materializing their payload.
+  * Cached pointer targets retain their logical value, depth, and payload cost.
+    Reusing a target charges that recorded cost without decoding or materializing
+    it again.
+  * The decoder rejects integer encodings wider than the format permits before
+    reading their payload.
+  * The decoder reports truncated string and bytes values, and malformed UTF-8
+    strings, as invalid database data.
+  * The decoder checks declared map and array sizes before decoding their
+    children. It caps collection preallocation so nested crafted sizes cannot
+    exhaust the heap before a decoder limit rejects them.
+* Improved decoder performance and reduced per-lookup allocation. The decoder
+  now avoids transient value wrappers, reuses each thread's UTF-8 decoder, and
+  short-circuits common collection targets.
 
 4.1.0 (2026-05-12)
 ------------------

@@ -10,9 +10,9 @@ final class TestDecoder extends Decoder {
     }
 
     @Override
-    DecodedValue decodePointer(long pointer, Class<?> cls, Type genericType) {
+    Object decodePointer(long pointer, Class<?> cls, Type genericType) {
         // bypass cache
-        return new DecodedValue(pointer);
+        return pointer;
     }
 
 }

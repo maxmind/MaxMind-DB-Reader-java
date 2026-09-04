@@ -24,9 +24,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * This class CANNOT be shared between threads
  */
-class Decoder {
+class Decoder implements NodeCache.Loader {
 
     private static final Charset UTF_8 = StandardCharsets.UTF_8;
+    private static final ThreadLocal<CharsetDecoder> UTF_8_DECODER =
+        ThreadLocal.withInitial(UTF_8::newDecoder);
 
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + (1 << 11), 0};
 
@@ -35,9 +37,37 @@ class Decoder {
 
     private final NodeCache cache;
 
+    // Per-operation resource limits. The MaxMind DB specification recommends
+    // depth and value limits, but permits equivalent reader-specific accounting.
+    // This decoder charges each decoded or skipped value. Each pointer occurrence
+    // also consumes the logical cost of its target. Cache misses measure that cost,
+    // and cache hits replay it. This keeps accounting independent of cache state
+    // rather than following the specification's example flat value count.
+    // Container depth, together with rejecting illegal pointer-to-pointer values,
+    // bounds recursive calls.
+    // The payload limit bounds encoded string and bytes data materialized by
+    // this Java decoder.
+    // The lower depth limit leaves room on a 512 KiB thread stack even for
+    // pointer-backed maps, which use more Java frames per logical container
+    // than inline values. A Decoder serves one decode operation on one thread,
+    // so these fields need no synchronization.
+    private static final int MAX_DEPTH = 128;
+    private static final int MAX_VALUES = 1 << 16;
+    private static final long MAX_PAYLOAD_BYTES = 1 << 21;
+
+    // A collection's declared size is its logical child count, but it is not
+    // proof that the input contains that many decodable children. When deriving
+    // an initial capacity from it, limit unused capacity on the active recursion
+    // path. Completed children remain bounded by MAX_VALUES.
+    private static final int MAX_INITIAL_COLLECTION_CAPACITY = 128;
+    private int depth;
+    private int maxDepth = -1;
+    private int valuesRemaining = MAX_VALUES;
+    private long payloadRemaining = MAX_PAYLOAD_BYTES;
+
     private final long pointerBase;
 
-    private final CharsetDecoder utfDecoder = UTF_8.newDecoder();
+    private final CharsetDecoder utfDecoder = UTF_8_DECODER.get();
 
     private final Buffer buffer;
 
@@ -95,8 +125,6 @@ class Decoder {
         this.lookupNetwork = lookupNetwork;
     }
 
-    private final NodeCache.Loader cacheLoader = this::decode;
-
     <T> T decode(long offset, Class<T> cls) throws IOException {
         if (offset >= this.buffer.capacity()) {
             throw new InvalidDatabaseException(
@@ -104,25 +132,20 @@ class Decoder {
                     + "pointer larger than the database.");
         }
 
+        this.valuesRemaining = MAX_VALUES;
+        this.payloadRemaining = MAX_PAYLOAD_BYTES;
+        this.depth = 0;
+        this.maxDepth = -1;
         this.buffer.position(offset);
-        return cls.cast(decode(cls, null).value());
+        return cls.cast(decode(cls, null));
     }
 
-    private <T> DecodedValue decode(CacheKey<T> key) throws IOException {
-        long offset = key.offset();
-        if (offset >= this.buffer.capacity()) {
-            throw new InvalidDatabaseException(
-                "The MaxMind DB file's data section contains bad data: "
-                    + "pointer larger than the database.");
-        }
-
-        this.buffer.position(offset);
-        Class<T> cls = key.cls();
-        return decode(cls, key.type());
-    }
-
-    private <T> DecodedValue decode(Class<T> cls, java.lang.reflect.Type genericType)
+    private <T> Object decode(Class<T> cls, java.lang.reflect.Type genericType)
         throws IOException {
+        if (--this.valuesRemaining < 0) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum number of values");
+        }
         var ctrlByte = 0xFF & this.buffer.get();
 
         var type = Type.fromControlByte(ctrlByte);
@@ -163,28 +186,100 @@ class Decoder {
             };
         }
 
-        return new DecodedValue(this.decodeByType(type, size, cls, genericType));
+        return this.decodeByType(type, size, cls, genericType);
     }
 
-    DecodedValue decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
+    private <T> Object decodeTarget(CacheKey<T> key) throws IOException {
+        long offset = key.offset();
+        if (offset >= this.buffer.capacity()) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "pointer larger than the database.");
+        }
+        // Validate a target when the cache loader decodes it. A target that was
+        // loaded successfully has already passed this check, so cache hits do
+        // not need to reread its control byte.
+        if (Type.fromControlByte(0xFF & this.buffer.get(offset)) == Type.POINTER) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains a pointer to a pointer");
+        }
+
+        this.buffer.position(offset);
+        Class<T> cls = key.cls();
+        return decode(cls, key.type());
+    }
+
+    @Override
+    public DecodedValue load(CacheKey<?> key) throws IOException {
+        var valuesRemaining = this.valuesRemaining;
+        var payloadRemaining = this.payloadRemaining;
+        var depth = this.depth;
+        var maxDepth = this.maxDepth;
+        this.maxDepth = depth;
+        try {
+            var value = this.decodeTarget(key);
+            return new DecodedValue(value).costs(
+                valuesRemaining - this.valuesRemaining,
+                payloadRemaining - this.payloadRemaining,
+                this.maxDepth - depth
+            );
+        } finally {
+            this.valuesRemaining = valuesRemaining;
+            this.payloadRemaining = payloadRemaining;
+            this.depth = depth;
+            this.maxDepth = maxDepth;
+        }
+    }
+
+    Object decodePointer(long pointer, Class<?> cls, java.lang.reflect.Type genericType)
             throws IOException {
         var position = buffer.position();
 
         var key = new CacheKey<>(pointer, cls, genericType);
-        DecodedValue value;
-        if (requiresLookupContext(cls)) {
-            value = this.decode(key);
+        Object value;
+        if (this.cache == NoCache.getInstance() || requiresLookupContext(cls)) {
+            value = this.decodeTarget(key);
         } else {
-            value = cache.get(key, cacheLoader);
+            var decodedValue = cache.get(key, this);
+            this.charge(decodedValue);
+            value = decodedValue.value();
         }
 
         buffer.position(position);
         return value;
     }
 
+    private void charge(DecodedValue value) throws InvalidDatabaseException {
+        var costs = value.costs();
+        var values = DecodedValue.values(costs);
+        var payloadBytes = DecodedValue.payloadBytes(costs);
+        var depth = DecodedValue.depth(costs);
+        var valuesRemaining = this.valuesRemaining - values;
+        var payloadRemaining = this.payloadRemaining - payloadBytes;
+
+        if (valuesRemaining < 0) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum number of values");
+        }
+        if (payloadRemaining < 0) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum payload size");
+        }
+        if (depth > MAX_DEPTH - this.depth) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum depth");
+        }
+
+        this.valuesRemaining = valuesRemaining;
+        this.payloadRemaining = payloadRemaining;
+        if (this.maxDepth >= 0) {
+            this.maxDepth = Math.max(this.maxDepth, this.depth + depth);
+        }
+    }
+
     private boolean requiresLookupContext(Class<?> cls) {
         if (cls == null
-            || cls.equals(Object.class)
+            || cls == Object.class
             || Map.class.isAssignableFrom(cls)
             || List.class.isAssignableFrom(cls)
             || cls.isEnum()
@@ -209,11 +304,77 @@ class Decoder {
         if (cls.isPrimitive() || cls.isArray()) {
             return true;
         }
-        return cls.equals(String.class)
+        return cls == String.class
             || Number.class.isAssignableFrom(cls)
-            || cls.equals(Boolean.class)
-            || cls.equals(Character.class)
-            || cls.equals(BigInteger.class);
+            || cls == Boolean.class
+            || cls == Character.class
+            || cls == BigInteger.class;
+    }
+
+    // A container cannot hold more entries than there are bytes left to encode
+    // them: every key, value, and element occupies at least one byte. Reject an
+    // impossible declared size before it is used as an allocation hint, so a
+    // tiny crafted database cannot force a huge list or map preallocation and
+    // exhaust memory. valueCount is the number of encoded values the container
+    // declares (an array of N declares N, a map of N declares 2N).
+    private void checkContainerSize(long valueCount) throws InvalidDatabaseException {
+        // A container cannot decode more values than the per-operation budget
+        // allows, so reject an oversized declaration before allocating for it
+        // rather than after the per-value limit stops the decode.
+        if (valueCount > this.valuesRemaining) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum number of values");
+        }
+        if (valueCount > this.buffer.capacity() - this.buffer.position()) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "a container declares more entries than the data section can hold");
+        }
+    }
+
+    private void enterContainer(long valueCount) throws InvalidDatabaseException {
+        this.checkContainerSize(valueCount);
+        if (this.depth >= MAX_DEPTH) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum depth");
+        }
+        this.depth++;
+        if (this.maxDepth >= 0) {
+            this.maxDepth = Math.max(this.maxDepth, this.depth);
+        }
+    }
+
+    // Charge a string or bytes payload against the per-operation budget before
+    // materializing it. A payload amplification points many pointers at one large
+    // value. Cached targets retain their logical payload cost, so each pointer
+    // occurrence consumes the cost even when the decoder reuses the value. The
+    // comparison is against the remaining budget so it cannot overflow. The
+    // limit is inclusive: a total exactly at the limit is allowed.
+    private void chargePayload(long length) throws InvalidDatabaseException {
+        if (length > this.payloadRemaining) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section exceeds the maximum payload size");
+        }
+        this.checkDataSize(length);
+        this.payloadRemaining -= length;
+    }
+
+    private void checkDataSize(long length) throws InvalidDatabaseException {
+        if (length > this.buffer.capacity() - this.buffer.position()) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "a value extends beyond the end of the data section.");
+        }
+    }
+
+    private static int initialMapCapacity(int size) {
+        // HashMap's constructor argument is a table capacity rather than an
+        // expected entry count. Account for its default 0.75 load factor when
+        // that can be done without exceeding the allocation-hint limit.
+        return Math.min(
+            size + (size + 2) / 3,
+            MAX_INITIAL_COLLECTION_CAPACITY
+        );
     }
 
     private <T> Object decodeByType(
@@ -223,8 +384,14 @@ class Decoder {
         java.lang.reflect.Type genericType
     ) throws IOException {
         switch (type) {
-            case MAP:
-                return this.decodeMap(size, cls, genericType);
+            case MAP: {
+                this.enterContainer((long) size * 2);
+                try {
+                    return this.decodeMap(size, cls, genericType);
+                } finally {
+                    this.depth--;
+                }
+            }
             case ARRAY:
                 Class<?> elementClass = Object.class;
                 if (genericType instanceof ParameterizedType ptype) {
@@ -233,7 +400,12 @@ class Decoder {
                         elementClass = (Class<?>) actualTypes[0];
                     }
                 }
-                return this.decodeArray(size, cls, elementClass);
+                this.enterContainer(size);
+                try {
+                    return this.decodeArray(size, cls, elementClass);
+                } finally {
+                    this.depth--;
+                }
             case BOOLEAN:
                 Boolean bool = Decoder.decodeBoolean(size);
                 return convertValue(bool, cls);
@@ -247,25 +419,44 @@ class Decoder {
             case BYTES:
                 return this.getByteArray(size);
             case UINT16:
+                this.checkIntegerSize("uint16", size, 2);
                 return coerceFromInt(this.decodeUint16(size), cls);
             case UINT32:
+                this.checkIntegerSize("uint32", size, 4);
                 return coerceFromLong(this.decodeUint32(size), cls);
             case INT32:
+                this.checkIntegerSize("int32", size, 4);
                 return coerceFromInt(this.decodeInt32(size), cls);
             case UINT64:
+                this.checkIntegerSize("uint64", size, 8);
+                return this.decodeLargeUint(size, cls);
             case UINT128:
-                // Optimization: for typed fields, avoid BigInteger allocation when
-                // value fits in long. Keep Object.class behavior unchanged for
-                // backward compatibility.
-                if (size < 8 && !cls.equals(Object.class)) {
-                    return coerceFromLong(this.decodeLong(size), cls);
-                }
-                // Size >= 8 bytes or Object.class target: use BigInteger
-                return coerceFromBigInteger(this.decodeBigInteger(size), cls);
+                this.checkIntegerSize("uint128", size, 16);
+                return this.decodeLargeUint(size, cls);
             default:
                 throw new InvalidDatabaseException(
                     "Unknown or unexpected type: " + type.name());
         }
+    }
+
+    private Object decodeLargeUint(int size, Class<?> cls)
+        throws InvalidDatabaseException {
+        // For typed fields, avoid BigInteger allocation when the value fits in
+        // long. Keep Object.class behavior unchanged for backward compatibility.
+        if (size < 8 && !cls.equals(Object.class)) {
+            return coerceFromLong(this.decodeLong(size), cls);
+        }
+        return coerceFromBigInteger(this.decodeBigInteger(size), cls);
+    }
+
+    private void checkIntegerSize(String type, int size, int maximum)
+        throws InvalidDatabaseException {
+        if (size > maximum) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains bad data: "
+                    + "invalid size of " + type + ".");
+        }
+        this.checkDataSize(size);
     }
 
     private static Object coerceFromInt(int value, Class<?> target) {
@@ -377,12 +568,18 @@ class Decoder {
         return value;
     }
 
-    private String decodeString(long size) throws CharacterCodingException {
+    private String decodeString(long size) throws IOException {
+        this.chargePayload(size);
         var oldLimit = buffer.limit();
-        buffer.limit(buffer.position() + size);
-        var s = buffer.decode(utfDecoder);
-        buffer.limit(oldLimit);
-        return s;
+        try {
+            buffer.limit(buffer.position() + size);
+            return buffer.decode(utfDecoder);
+        } catch (CharacterCodingException e) {
+            throw new InvalidDatabaseException(
+                "The MaxMind DB file's data section contains an invalid UTF-8 string", e);
+        } finally {
+            buffer.limit(oldLimit);
+        }
     }
 
     private int decodeUint16(int size) {
@@ -425,8 +622,8 @@ class Decoder {
         return integer;
     }
 
-    private BigInteger decodeBigInteger(int size) {
-        var bytes = this.getByteArray(size);
+    private BigInteger decodeBigInteger(int size) throws InvalidDatabaseException {
+        var bytes = Decoder.getByteArray(this.buffer, size);
         return new BigInteger(1, bytes);
     }
 
@@ -464,13 +661,16 @@ class Decoder {
         Class<T> cls,
         Class<V> elementClass
     ) throws IOException {
-        if (!List.class.isAssignableFrom(cls) && !cls.equals(Object.class)) {
+        if (cls != Object.class
+            && cls != List.class
+            && !List.class.isAssignableFrom(cls)) {
             throw new DeserializationException("Unable to deserialize an array into an " + cls);
         }
 
         List<V> array;
-        if (cls.equals(List.class) || cls.equals(Object.class)) {
-            array = new ArrayList<>(size);
+        var initialCapacity = Math.min(size, MAX_INITIAL_COLLECTION_CAPACITY);
+        if (cls == List.class || cls == Object.class) {
+            array = new ArrayList<>(initialCapacity);
         } else {
             Constructor<T> constructor;
             try {
@@ -479,7 +679,7 @@ class Decoder {
                 throw new DeserializationException(
                     "No constructor found for the List: " + e.getMessage(), e);
             }
-            var parameters = new Object[]{size};
+            var parameters = new Object[]{initialCapacity};
             try {
                 @SuppressWarnings("unchecked")
                 var array2 = (List<V>) constructor.newInstance(parameters);
@@ -492,7 +692,7 @@ class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            var e = this.decode(elementClass, null).value();
+            var e = this.decode(elementClass, null);
             array.add(elementClass.cast(e));
         }
 
@@ -504,13 +704,13 @@ class Decoder {
         Class<T> cls,
         java.lang.reflect.Type genericType
     ) throws IOException {
-        if (Map.class.isAssignableFrom(cls) || cls.equals(Object.class)) {
+        if (cls == Object.class || cls == Map.class || Map.class.isAssignableFrom(cls)) {
             Class<?> valueClass = Object.class;
             if (genericType instanceof ParameterizedType ptype) {
                 var actualTypes = ptype.getActualTypeArguments();
                 if (actualTypes.length == 2) {
                     var keyClass = (Class<?>) actualTypes[0];
-                    if (!keyClass.equals(String.class)) {
+                    if (keyClass != String.class) {
                         throw new DeserializationException("Map keys must be strings.");
                     }
 
@@ -529,9 +729,10 @@ class Decoder {
         Class<V> valueClass
     ) throws IOException {
         Map<String, V> map;
-        if (cls.equals(Map.class) || cls.equals(Object.class)) {
-            map = new HashMap<>(size);
+        if (cls == Map.class || cls == Object.class) {
+            map = new HashMap<>(initialMapCapacity(size));
         } else {
+            var initialCapacity = Math.min(size, MAX_INITIAL_COLLECTION_CAPACITY);
             Constructor<T> constructor;
             try {
                 constructor = cls.getConstructor(Integer.TYPE);
@@ -539,7 +740,7 @@ class Decoder {
                 throw new DeserializationException(
                     "No constructor found for the Map: " + e.getMessage(), e);
             }
-            var parameters = new Object[]{size};
+            var parameters = new Object[]{initialCapacity};
             try {
                 @SuppressWarnings("unchecked")
                 var map2 = (Map<String, V>) constructor.newInstance(parameters);
@@ -552,8 +753,8 @@ class Decoder {
         }
 
         for (int i = 0; i < size; i++) {
-            var key = (String) this.decode(String.class, null).value();
-            var value = this.decode(valueClass, null).value();
+            var key = (String) this.decode(String.class, null);
+            var value = this.decode(valueClass, null);
             try {
                 map.put(key, valueClass.cast(value));
             } catch (ClassCastException e) {
@@ -664,7 +865,7 @@ class Decoder {
 
         var parameters = new Object[parameterTypes.length];
         for (int i = 0; i < size; i++) {
-            var key = (String) this.decode(String.class, null).value();
+            var key = (String) this.decode(String.class, null);
 
             var parameterIndex = parameterIndexes.get(key);
             if (parameterIndex == null) {
@@ -676,7 +877,7 @@ class Decoder {
             parameters[parameterIndex] = this.decode(
                 parameterTypes[parameterIndex],
                 parameterGenericTypes[parameterIndex]
-            ).value();
+            );
         }
 
         for (int i = 0; i < parameters.length; i++) {
@@ -1104,35 +1305,74 @@ class Decoder {
 
     private long nextValueOffset(long offset, int numberToSkip)
         throws InvalidDatabaseException {
-        if (numberToSkip == 0) {
-            return offset;
+        // Iterate over siblings so a large flat unknown value cannot exhaust
+        // the Java stack. Recursion is only used to track structural nesting,
+        // which is bounded by the same limit as normal decoding.
+        for (var i = 0; i < numberToSkip; i++) {
+            if (--this.valuesRemaining < 0) {
+                throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section exceeds the maximum number of values");
+            }
+
+            var ctrlData = this.getCtrlData(offset);
+            var ctrlByte = ctrlData.ctrlByte();
+            var size = ctrlData.size();
+            offset = ctrlData.offset();
+
+            switch (ctrlData.type()) {
+                case POINTER:
+                    var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+                    offset += pointerSize;
+                    break;
+                case MAP:
+                    this.enterContainer((long) size * 2);
+                    try {
+                        offset = this.nextValueOffset(offset, 2 * size);
+                    } finally {
+                        this.depth--;
+                    }
+                    break;
+                case ARRAY:
+                    this.enterContainer(size);
+                    try {
+                        offset = this.nextValueOffset(offset, size);
+                    } finally {
+                        this.depth--;
+                    }
+                    break;
+                case BOOLEAN:
+                    break;
+                case UINT16:
+                    this.checkIntegerSize("uint16", size, 2);
+                    offset += size;
+                    break;
+                case UINT32:
+                    this.checkIntegerSize("uint32", size, 4);
+                    offset += size;
+                    break;
+                case INT32:
+                    this.checkIntegerSize("int32", size, 4);
+                    offset += size;
+                    break;
+                case UINT64:
+                    this.checkIntegerSize("uint64", size, 8);
+                    offset += size;
+                    break;
+                case UINT128:
+                    this.checkIntegerSize("uint128", size, 16);
+                    offset += size;
+                    break;
+                default:
+                    offset += size;
+                    break;
+            }
+            if (offset > this.buffer.capacity()) {
+                throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains bad data: "
+                        + "a value extends beyond the end of the data section.");
+            }
         }
-
-        var ctrlData = this.getCtrlData(offset);
-        var ctrlByte = ctrlData.ctrlByte();
-        var size = ctrlData.size();
-        offset = ctrlData.offset();
-
-        var type = ctrlData.type();
-        switch (type) {
-            case POINTER:
-                var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
-                offset += pointerSize;
-                break;
-            case MAP:
-                numberToSkip += 2 * size;
-                break;
-            case ARRAY:
-                numberToSkip += size;
-                break;
-            case BOOLEAN:
-                break;
-            default:
-                offset += size;
-                break;
-        }
-
-        return nextValueOffset(offset, numberToSkip - 1);
+        return offset;
     }
 
     private CtrlData getCtrlData(long offset)
@@ -1165,6 +1405,12 @@ class Decoder {
             offset++;
         }
 
+        // Pointer control bits encode pointer width and value bits, not a
+        // generic payload size. The caller advances by the pointer width.
+        if (type.equals(Type.POINTER)) {
+            return new CtrlData(type, ctrlByte, offset, 0);
+        }
+
         var size = ctrlByte & 0x1f;
         if (size >= 29) {
             var bytesToRead = size - 28;
@@ -1179,7 +1425,8 @@ class Decoder {
         return new CtrlData(type, ctrlByte, offset, size);
     }
 
-    private byte[] getByteArray(int length) {
+    private byte[] getByteArray(int length) throws InvalidDatabaseException {
+        this.chargePayload(length);
         return Decoder.getByteArray(this.buffer, length);
     }
 
