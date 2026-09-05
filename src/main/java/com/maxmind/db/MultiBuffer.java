@@ -3,8 +3,6 @@ package com.maxmind.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CharsetDecoder;
 
 /**
  * A {@link Buffer} implementation backed by multiple {@link ByteBuffer}s,
@@ -205,52 +203,6 @@ final class MultiBuffer implements Buffer {
         copy.position = this.position;
         copy.limit = this.limit;
         return copy;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public String decode(CharsetDecoder decoder)
-            throws CharacterCodingException {
-        return this.decode(decoder, Integer.MAX_VALUE);
-    }
-
-    String decode(CharsetDecoder decoder, int maximumSize)
-            throws CharacterCodingException {
-        var remainingBytes = limit - position;
-
-        if (remainingBytes > maximumSize) {
-            throw new IllegalStateException(
-                    "Decoding region exceeds the maximum size: " + remainingBytes
-            );
-        }
-
-        if (remainingBytes == 0) {
-            return "";
-        }
-
-        var bufIndex = (int) (position / this.chunkSize);
-        var bufOffset = (int) (position % this.chunkSize);
-        var source = buffers[bufIndex];
-        if (remainingBytes <= source.limit() - bufOffset) {
-            var savedLimit = source.limit();
-            source.position(bufOffset);
-            source.limit(bufOffset + (int) remainingBytes);
-            try {
-                var value = decoder.decode(source).toString();
-                this.position += remainingBytes;
-                return value;
-            } finally {
-                source.limit(savedLimit);
-            }
-        }
-
-        var bytes = new byte[(int) remainingBytes];
-        var savedPosition = this.position;
-        this.get(bytes);
-        this.position = savedPosition;
-        var value = decoder.decode(ByteBuffer.wrap(bytes)).toString();
-        this.position = this.limit;
-        return value;
     }
 
     /**

@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -342,57 +340,4 @@ public class MultiBufferTest {
         }
     }
 
-    @Test
-    public void testDecodeString() throws CharacterCodingException {
-        var buffer = createBuffer(22);
-        buffer.position(26);
-        buffer.limit(29);
-        var result = buffer.decode(StandardCharsets.UTF_8.newDecoder());
-        assertEquals("123", result);
-        assertEquals(29, buffer.position());
-    }
-
-    @Test
-    public void testDecodeStringTooLarge() {
-        var buffer = createBuffer(65);
-        buffer.position(62);
-        buffer.limit(89);
-        assertThrows(IllegalStateException.class, () ->
-                buffer.decode(StandardCharsets.UTF_8.newDecoder(), 20));
-    }
-
-    @Test
-    public void testDecodeAcrossChunks() throws CharacterCodingException {
-        var buffer = createBuffer(65);
-        buffer.position(62);
-        buffer.limit(89);
-        var result = buffer.decode(StandardCharsets.UTF_8.newDecoder());
-        assertEquals("123456789012345678901234567", result);
-        assertEquals(89, buffer.position());
-    }
-
-    @Test
-    public void testDecodeMultibyteCharacterAcrossChunks() throws CharacterCodingException {
-        var bytes = "a€b".getBytes(StandardCharsets.UTF_8);
-        var chunks = new ByteBuffer[]{
-                ByteBuffer.wrap(new byte[]{bytes[0], bytes[1]}),
-                ByteBuffer.wrap(new byte[]{bytes[2], bytes[3]}),
-                ByteBuffer.wrap(new byte[]{bytes[4]})
-        };
-        var buffer = new MultiBuffer(chunks, 2);
-
-        assertEquals("a€b", buffer.decode(StandardCharsets.UTF_8.newDecoder()));
-        assertEquals(bytes.length, buffer.position());
-    }
-
-    @Test
-    public void testDecodeRejectsIncompleteCharacter() {
-        var bytes = new byte[]{'a', (byte) 0xe2};
-        var buffer = new MultiBuffer(new ByteBuffer[]{ByteBuffer.wrap(bytes)}, bytes.length);
-
-        assertThrows(
-                CharacterCodingException.class,
-                () -> buffer.decode(StandardCharsets.UTF_8.newDecoder())
-        );
-    }
 }

@@ -9,9 +9,9 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,8 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 class Decoder implements NodeCache.Loader {
 
     private static final Charset UTF_8 = StandardCharsets.UTF_8;
-    private static final ThreadLocal<CharsetDecoder> UTF_8_DECODER =
-        ThreadLocal.withInitial(UTF_8::newDecoder);
 
     private static final int[] POINTER_VALUE_OFFSETS = {0, 0, 1 << 11, (1 << 19) + (1 << 11), 0};
 
@@ -66,8 +64,6 @@ class Decoder implements NodeCache.Loader {
     private long payloadRemaining = MAX_PAYLOAD_BYTES;
 
     private final long pointerBase;
-
-    private final CharsetDecoder utfDecoder = UTF_8_DECODER.get();
 
     private final Buffer buffer;
 
@@ -571,16 +567,24 @@ class Decoder implements NodeCache.Loader {
 
     private String decodeString(long size) throws IOException {
         this.chargePayload(size);
-        var oldLimit = buffer.limit();
-        try {
-            buffer.limit(buffer.position() + size);
-            return buffer.decode(utfDecoder);
-        } catch (CharacterCodingException e) {
-            throw new InvalidDatabaseException(
-                "The MaxMind DB file's data section contains an invalid UTF-8 string", e);
-        } finally {
-            buffer.limit(oldLimit);
+        // Performance optimization: String's UTF-8 path avoids the temporary
+        // CharBuffer and char[] used by CharsetDecoder, despite this byte[] copy.
+        // On OpenJDK 26, random GeoLite2-City lookup throughput improved by about
+        // 6% with CHMCache and 22% without caching over the previous decoder.
+        var bytes = new byte[(int) size];
+        this.buffer.get(bytes);
+        var value = new String(bytes, UTF_8);
+        // String replaces malformed UTF-8 with U+FFFD. Validate strings containing
+        // that character to distinguish malformed input from a literal U+FFFD.
+        if (value.indexOf(0xFFFD) >= 0) {
+            try {
+                UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes));
+            } catch (CharacterCodingException e) {
+                throw new InvalidDatabaseException(
+                    "The MaxMind DB file's data section contains an invalid UTF-8 string", e);
+            }
         }
+        return value;
     }
 
     private int decodeUint16(int size) {

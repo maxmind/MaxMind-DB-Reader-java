@@ -4,11 +4,14 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -149,6 +152,8 @@ public class DecoderTest {
         DecoderTest.addTestString(strings, (byte) 0x40, "");
         DecoderTest.addTestString(strings, (byte) 0x41, "1");
         DecoderTest.addTestString(strings, (byte) 0x43, "人");
+        DecoderTest.addTestString(strings, (byte) 0x43, "\uFFFD");
+        DecoderTest.addTestString(strings, (byte) 0x45, "a\uFFFDz");
         DecoderTest.addTestString(strings, (byte) 0x43, "123");
         DecoderTest.addTestString(strings, (byte) 0x5b,
             "123456789012345678901234567");
@@ -486,6 +491,69 @@ public class DecoderTest {
     public void testStrings() throws IOException {
         DecoderTest.testTypeDecoding(Type.UTF8_STRING,
             DecoderTest.strings());
+    }
+
+    @Test
+    public void testUtf8PointerAcrossChunks() throws IOException {
+        var expected = "a€𐍈\uFFFDz";
+        var payload = expected.getBytes(StandardCharsets.UTF_8);
+        for (int chunkSize : new int[] {1, 2, 3, 4, 5, 64}) {
+            for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache(), new CHMCache(0))) {
+                var decoder = stringPointerDecoder(payload, chunkSize, cache);
+                assertEquals(expected, decoder.decode(0, String.class));
+                assertEquals(expected, decoder.decode(0, String.class));
+                assertEquals("a", decoder.decode(payload.length + 3, String.class));
+            }
+        }
+    }
+
+    @Test
+    public void testMalformedUtf8IsRejectedAcrossChunks() throws IOException {
+        var payloads = List.of(
+            new byte[] {(byte) 0x80},
+            new byte[] {(byte) 0xC0, (byte) 0xAF},
+            new byte[] {(byte) 0xC2},
+            new byte[] {(byte) 0xE2, (byte) 0x82},
+            new byte[] {(byte) 0xED, (byte) 0xA0, (byte) 0x80},
+            new byte[] {(byte) 0xF0, (byte) 0x9F, (byte) 0x92},
+            new byte[] {(byte) 0xF4, (byte) 0x90, (byte) 0x80, (byte) 0x80},
+            new byte[] {(byte) 0xFF},
+            new byte[] {(byte) 0xEF, (byte) 0xBF, (byte) 0xBD, (byte) 0xFF}
+        );
+        for (var payload : payloads) {
+            for (int chunkSize : new int[] {1, 2, 3, 4, 5, 64}) {
+                for (var cache : List.<NodeCache>of(NoCache.getInstance(), new CHMCache(), new CHMCache(0))) {
+                    var decoder = stringPointerDecoder(payload, chunkSize, cache);
+                    var error = assertThrows(
+                        InvalidDatabaseException.class,
+                        () -> decoder.decode(0, String.class)
+                    );
+                    assertInstanceOf(CharacterCodingException.class, error.getCause());
+                    assertEquals("a", decoder.decode(payload.length + 3, String.class));
+                    assertThrows(InvalidDatabaseException.class, () -> decoder.decode(0, String.class));
+                }
+            }
+        }
+    }
+
+    private static Decoder stringPointerDecoder(byte[] payload, int chunkSize, NodeCache cache) {
+        var data = new byte[payload.length + 5];
+        data[0] = 0x20;
+        data[1] = 2;
+        data[2] = (byte) (0x40 | payload.length);
+        System.arraycopy(payload, 0, data, 3, payload.length);
+        data[data.length - 2] = 0x41;
+        data[data.length - 1] = 'a';
+        if (chunkSize >= data.length) {
+            return new Decoder(cache, SingleBuffer.wrap(data), 0);
+        }
+        var chunks = new ByteBuffer[(data.length + chunkSize - 1) / chunkSize];
+        for (int i = 0; i < chunks.length; i++) {
+            int offset = i * chunkSize;
+            int size = Math.min(chunkSize, data.length - offset);
+            chunks[i] = ByteBuffer.wrap(data, offset, size).slice();
+        }
+        return new Decoder(cache, new MultiBuffer(chunks, chunkSize), 0);
     }
 
     @Test

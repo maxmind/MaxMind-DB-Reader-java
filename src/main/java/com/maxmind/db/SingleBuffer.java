@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CharsetDecoder;
 
 /**
  * A {@link Buffer} implementation backed by a single {@link ByteBuffer}.
@@ -97,13 +95,6 @@ final class SingleBuffer implements Buffer {
     @Override
     public SingleBuffer duplicate() {
         return new SingleBuffer(this.buffer.duplicate());
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public String decode(CharsetDecoder decoder)
-        throws CharacterCodingException {
-        return decoder.decode(buffer).toString();
     }
 
     /**
