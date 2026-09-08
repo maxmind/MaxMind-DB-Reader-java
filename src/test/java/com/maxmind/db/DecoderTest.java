@@ -29,10 +29,27 @@ public class DecoderTest {
 
     @Test
     public void testDecodedValueStoresMaximumCosts() {
-        var value = new DecodedValue(null, 1 << 16, 1L << 21, TEST_MAX_DEPTH);
-        assertEquals(1 << 16, value.values());
-        assertEquals(1L << 21, value.payloadBytes());
-        assertEquals(TEST_MAX_DEPTH, value.depth());
+        var value = new DecodedValue(null, Decoder.MAX_VALUES, Decoder.MAX_PAYLOAD_BYTES, Decoder.MAX_DEPTH);
+        assertEquals(Decoder.MAX_VALUES, value.values());
+        assertEquals(Decoder.MAX_PAYLOAD_BYTES, value.payloadBytes());
+        assertEquals(Decoder.MAX_DEPTH, value.depth());
+    }
+
+    @Test
+    public void testDecodedValueCostsAreIndependent() {
+        var costs = new long[][] {
+            {0, 0, 0},
+            {Decoder.MAX_VALUES, 0, 0},
+            {0, Decoder.MAX_PAYLOAD_BYTES, 0},
+            {0, 0, Decoder.MAX_DEPTH},
+            {123, 456, 7},
+        };
+        for (var expected : costs) {
+            var value = new DecodedValue(null, (int) expected[0], expected[1], (int) expected[2]);
+            assertEquals(expected[0], value.values(), "value cost");
+            assertEquals(expected[1], value.payloadBytes(), "payload cost");
+            assertEquals(expected[2], value.depth(), "depth cost");
+        }
     }
 
     private static Map<Integer, byte[]> int32() {

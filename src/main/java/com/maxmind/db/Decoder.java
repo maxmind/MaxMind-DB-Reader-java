@@ -49,9 +49,9 @@ class Decoder implements NodeCache.Loader {
     // pointer-backed maps, which use more Java frames per logical container
     // than inline values. A Decoder serves one decode operation on one thread,
     // so these fields need no synchronization.
-    private static final int MAX_DEPTH = 128;
-    private static final int MAX_VALUES = 1 << 16;
-    private static final long MAX_PAYLOAD_BYTES = 1 << 21;
+    static final int MAX_DEPTH = 128;
+    static final int MAX_VALUES = 1 << 16;
+    static final long MAX_PAYLOAD_BYTES = 1 << 21;
 
     // A collection's declared size is its logical child count, but it is not
     // proof that the input contains that many decodable children. When deriving
