@@ -2312,14 +2312,13 @@ public class ReaderTest {
             for (var cache : List.<NodeCache>of(
                     NoCache.getInstance(), new CHMCache(), new CHMCache(0))) {
                 try (var reader = new Reader(getFile(fixture), cache)) {
-                    var ex = assertThrows(
-                        InvalidDatabaseException.class,
-                        () -> reader.get(ip, Object.class),
-                        fixture + " should be rejected");
-                    assertThat(
-                        ex.getMessage(),
-                        containsString("exceeds the maximum payload size")
-                    );
+                    for (var attempt = 0; attempt < 2; attempt++) {
+                        var ex = assertThrows(
+                            InvalidDatabaseException.class,
+                            () -> reader.get(ip, Object.class),
+                            fixture + ", " + cache.getClass().getSimpleName() + ", attempt " + attempt);
+                        assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+                    }
                 }
             }
         }
@@ -2333,8 +2332,39 @@ public class ReaderTest {
                 NoCache.getInstance(), new CHMCache(), new CHMCache(0))) {
             try (var reader = new Reader(
                     getFile("MaxMind-DB-test-decoder-payload-limit.mmdb"), cache)) {
-                var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
-                assertNotNull(value);
+                for (var attempt = 0; attempt < 2; attempt++) {
+                    var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
+                    assertPayloadAtLimit(value);
+                }
+            }
+        }
+    }
+
+    private static void assertPayloadAtLimit(Object value) {
+        var values = (List<?>) value;
+        assertEquals(33, values.size());
+        var large = new byte[65_535];
+        for (var i = 0; i < 32; i++) {
+            assertArrayEquals(large, (byte[]) values.get(i), "payload " + i);
+        }
+        assertArrayEquals(new byte[32], (byte[]) values.get(32), "final payload");
+    }
+
+    @Test
+    public void testValueLimitFixturesUseJavaAccounting() throws IOException {
+        // These fixtures use flat specification counts. Java also charges each pointer.
+        for (var suffix : List.of("value-limit", "value-limit-over", "value-limit-pointer-heavy")) {
+            var fixture = "MaxMind-DB-test-decoder-" + suffix + ".mmdb";
+            for (var cache : List.<NodeCache>of(
+                    NoCache.getInstance(), new CHMCache(), new CHMCache(0))) {
+                try (var reader = new Reader(getFile(fixture), cache)) {
+                    for (var attempt = 0; attempt < 2; attempt++) {
+                        var ex = assertThrows(InvalidDatabaseException.class,
+                            () -> reader.get(InetAddress.getByName("1.1.1.1"), Object.class),
+                            fixture + ", " + cache.getClass().getSimpleName() + ", attempt " + attempt);
+                        assertThat(ex.getMessage(), containsString("exceeds the maximum number of values"));
+                    }
+                }
             }
         }
     }

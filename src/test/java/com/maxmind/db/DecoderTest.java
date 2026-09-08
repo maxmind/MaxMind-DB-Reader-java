@@ -902,20 +902,23 @@ public class DecoderTest {
     }
 
     @Test
-    public void testUnknownFieldDepthIsBounded() {
-        var value = nestedArrays(TEST_MAX_DEPTH);
-        var out = new ByteArrayOutputStream();
-        out.write(0xE1); // map with one key/value pair
-        out.write(0x47); // seven-byte UTF-8 string
-        out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
-        out.writeBytes(value);
-
-        var decoder = new Decoder(NoCache.getInstance(),
+    public void testUnknownFieldDepthIsBounded() throws IOException {
+        for (var depth : new int[] {TEST_MAX_DEPTH - 1, TEST_MAX_DEPTH}) {
+            var out = new ByteArrayOutputStream();
+            out.write(0xE1); // map with one key/value pair
+            out.write(0x47);
+            out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+            out.writeBytes(nestedArrays(depth));
+            var decoder = new Decoder(NoCache.getInstance(),
                 SingleBuffer.wrap(out.toByteArray()), 0);
-        var ex = assertThrows(
-                InvalidDatabaseException.class,
-                () -> decoder.decode(0, EmptyModel.class));
-        assertThat(ex.getMessage(), containsString("exceeds the maximum depth"));
+            if (depth == TEST_MAX_DEPTH - 1) {
+                assertInstanceOf(EmptyModel.class, decoder.decode(0, EmptyModel.class));
+            } else {
+                var ex = assertThrows(InvalidDatabaseException.class,
+                    () -> decoder.decode(0, EmptyModel.class));
+                assertThat(ex.getMessage(), containsString("exceeds the maximum depth"));
+            }
+        }
     }
 
     @Test
