@@ -15,6 +15,11 @@ CHANGELOG
   databases were unaffected.
 * Fixed UTF-8 decoding across buffer chunks and rejection of incomplete
   multibyte characters at the end of a string.
+* Fixed the exception thrown for a database truncated in the middle of a
+  value. Reading a control byte, an extended type byte, a size header, a
+  pointer, a `double`, or a `float` past the end of the data section threw
+  `BufferUnderflowException` or `IndexOutOfBoundsException`. These now throw
+  `InvalidDatabaseException`, as the rest of the reader does.
 * Added decoder limits to prevent excessive CPU and memory use from crafted
   databases: 65,536 decoded or skipped values, 128 nested containers, and 2 MiB
   of encoded string and bytes payload per operation. Exceeding a limit throws

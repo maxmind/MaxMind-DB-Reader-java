@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -978,6 +979,73 @@ public class DecoderTest {
             () -> decoder.decode(0, EmptyModel.class)
         );
         assertThat(ex.getMessage(), containsString("extends beyond the end"));
+    }
+
+    @Test
+    public void testTruncatedHeaderIsRejectedAsInvalidDatabase() {
+        var cases = new LinkedHashMap<String, byte[]>();
+        // The outer array declares two elements, but the first element and its
+        // own child consume the rest of the buffer, so no control byte remains.
+        cases.put("control byte", new byte[] {0x02, 0x04, 0x01, 0x04, (byte) 0xA0});
+        cases.put("extended type byte", new byte[] {0x00});
+        cases.put("size code 29", new byte[] {0x5D});
+        cases.put("size code 30", new byte[] {0x5E, 0x00});
+        cases.put("size code 31", new byte[] {0x5F, 0x00, 0x00});
+        cases.put("pointer", new byte[] {0x20});
+        cases.put("double", new byte[] {0x68});
+        cases.put("float", new byte[] {0x04, 0x08});
+
+        for (var entry : cases.entrySet()) {
+            for (var buffer : truncationBuffers(entry.getValue())) {
+                var decoder = new Decoder(NoCache.getInstance(), buffer, 0);
+                var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> decoder.decode(0, Object.class),
+                    entry.getKey()
+                );
+                assertThat(entry.getKey(), ex.getMessage(),
+                    containsString("extends beyond the end"));
+            }
+        }
+    }
+
+    @Test
+    public void testTruncatedUnknownFieldHeaderIsRejectedAsInvalidDatabase() {
+        var cases = new LinkedHashMap<String, byte[]>();
+        cases.put("extended type byte", new byte[] {0x00});
+        cases.put("size code 29", new byte[] {0x5D});
+        cases.put("size code 30", new byte[] {0x5E, 0x00});
+        cases.put("size code 31", new byte[] {0x5F, 0x00, 0x00});
+
+        for (var entry : cases.entrySet()) {
+            var out = new ByteArrayOutputStream();
+            out.write(0xE1); // map with one key/value pair
+            out.write(0x47); // seven-byte UTF-8 string
+            out.writeBytes("unknown".getBytes(StandardCharsets.UTF_8));
+            out.writeBytes(entry.getValue());
+
+            for (var buffer : truncationBuffers(out.toByteArray())) {
+                var decoder = new Decoder(NoCache.getInstance(), buffer, 0);
+                var ex = assertThrows(
+                    InvalidDatabaseException.class,
+                    () -> decoder.decode(0, EmptyModel.class),
+                    entry.getKey()
+                );
+                assertThat(entry.getKey(), ex.getMessage(),
+                    containsString("extends beyond the end"));
+            }
+        }
+    }
+
+    // Both buffer implementations must report a truncated read as an
+    // InvalidDatabaseException rather than a BufferUnderflowException or an
+    // IndexOutOfBoundsException.
+    private static List<Buffer> truncationBuffers(byte[] data) {
+        var chunks = new ByteBuffer[data.length];
+        for (var i = 0; i < data.length; i++) {
+            chunks[i] = ByteBuffer.wrap(data, i, 1).slice();
+        }
+        return List.of(SingleBuffer.wrap(data), new MultiBuffer(chunks, 1));
     }
 
     @Test

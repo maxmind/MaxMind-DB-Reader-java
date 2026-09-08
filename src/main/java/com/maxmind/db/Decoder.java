@@ -67,6 +67,8 @@ class Decoder implements NodeCache.Loader {
 
     private final Buffer buffer;
 
+    private final long capacity;
+
     private final ConcurrentHashMap<Class<?>, CachedConstructor<?>> constructors;
 
     private final ConcurrentHashMap<Class<?>, CachedCreator> creators;
@@ -115,6 +117,9 @@ class Decoder implements NodeCache.Loader {
         this.cache = cache;
         this.pointerBase = pointerBase;
         this.buffer = buffer;
+        // The bounds checks run once per decoded value, so read the fixed
+        // capacity here rather than through the Buffer interface each time.
+        this.capacity = buffer.capacity();
         this.constructors = constructors;
         this.creators = creators;
         this.lookupIp = lookupIp;
@@ -122,7 +127,7 @@ class Decoder implements NodeCache.Loader {
     }
 
     <T> T decode(long offset, Class<T> cls) throws IOException {
-        if (offset >= this.buffer.capacity()) {
+        if (offset >= this.capacity) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
                     + "pointer larger than the database.");
@@ -142,6 +147,7 @@ class Decoder implements NodeCache.Loader {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section exceeds the maximum number of values");
         }
+        this.checkDataSize(1);
         var ctrlByte = 0xFF & this.buffer.get();
 
         var type = Type.fromControlByte(ctrlByte);
@@ -151,6 +157,7 @@ class Decoder implements NodeCache.Loader {
         // it.
         if (type.equals(Type.POINTER)) {
             var pointerSize = ((ctrlByte >>> 3) & 0x3) + 1;
+            this.checkDataSize(pointerSize);
             var base = pointerSize == 4 ? (byte) 0 : (byte) (ctrlByte & 0x7);
             var packed = Decoder.decodeLong(this.buffer, base, pointerSize);
             var pointer = packed + this.pointerBase + POINTER_VALUE_OFFSETS[pointerSize];
@@ -159,6 +166,7 @@ class Decoder implements NodeCache.Loader {
         }
 
         if (type.equals(Type.EXTENDED)) {
+            this.checkDataSize(1);
             var nextByte = this.buffer.get();
 
             var typeNum = nextByte + 7;
@@ -175,6 +183,8 @@ class Decoder implements NodeCache.Loader {
 
         int size = ctrlByte & 0x1f;
         if (size >= 29) {
+            // Size codes 29, 30, and 31 read one, two, and three more bytes.
+            this.checkDataSize(size - 28);
             size = switch (size) {
                 case 29 -> 29 + (0xFF & buffer.get());
                 case 30 -> 285 + decodeInteger(2);
@@ -187,7 +197,7 @@ class Decoder implements NodeCache.Loader {
 
     private <T> Object decodeTarget(CacheKey<T> key) throws IOException {
         long offset = key.offset();
-        if (offset >= this.buffer.capacity()) {
+        if (offset >= this.capacity) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
                     + "pointer larger than the database.");
@@ -322,7 +332,7 @@ class Decoder implements NodeCache.Loader {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section exceeds the maximum number of values");
         }
-        if (valueCount > this.buffer.capacity() - this.buffer.position()) {
+        if (valueCount > this.capacity - this.buffer.position()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
                     + "a container declares more entries than the data section can hold");
@@ -357,7 +367,7 @@ class Decoder implements NodeCache.Loader {
     }
 
     private void checkDataSize(long length) throws InvalidDatabaseException {
-        if (length > this.buffer.capacity() - this.buffer.position()) {
+        if (length > this.capacity - this.buffer.position()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
                     + "a value extends beyond the end of the data section.");
@@ -638,6 +648,7 @@ class Decoder implements NodeCache.Loader {
                 "The MaxMind DB file's data section contains bad data: "
                     + "invalid size of double.");
         }
+        this.checkDataSize(8);
         return this.buffer.getDouble();
     }
 
@@ -647,6 +658,7 @@ class Decoder implements NodeCache.Loader {
                 "The MaxMind DB file's data section contains bad data: "
                     + "invalid size of float.");
         }
+        this.checkDataSize(4);
         return this.buffer.getFloat();
     }
 
@@ -1371,7 +1383,7 @@ class Decoder implements NodeCache.Loader {
                     offset += size;
                     break;
             }
-            if (offset > this.buffer.capacity()) {
+            if (offset > this.capacity) {
                 throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
                         + "a value extends beyond the end of the data section.");
@@ -1382,7 +1394,7 @@ class Decoder implements NodeCache.Loader {
 
     private CtrlData getCtrlData(long offset)
         throws InvalidDatabaseException {
-        if (offset >= this.buffer.capacity()) {
+        if (offset >= this.capacity) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
                     + "pointer larger than the database.");
@@ -1395,6 +1407,7 @@ class Decoder implements NodeCache.Loader {
         var type = Type.fromControlByte(ctrlByte);
 
         if (type.equals(Type.EXTENDED)) {
+            this.checkDataSize(1);
             var nextByte = this.buffer.get();
 
             var typeNum = nextByte + 7;
@@ -1419,6 +1432,7 @@ class Decoder implements NodeCache.Loader {
         var size = ctrlByte & 0x1f;
         if (size >= 29) {
             var bytesToRead = size - 28;
+            this.checkDataSize(bytesToRead);
             offset += bytesToRead;
             size = switch (size) {
                 case 29 -> 29 + (0xFF & buffer.get());
