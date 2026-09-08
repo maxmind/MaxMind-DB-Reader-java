@@ -1359,26 +1359,6 @@ class Decoder implements NodeCache.Loader {
                     break;
                 case BOOLEAN:
                     break;
-                case UINT16:
-                    this.checkIntegerSize("uint16", size, 2);
-                    offset += size;
-                    break;
-                case UINT32:
-                    this.checkIntegerSize("uint32", size, 4);
-                    offset += size;
-                    break;
-                case INT32:
-                    this.checkIntegerSize("int32", size, 4);
-                    offset += size;
-                    break;
-                case UINT64:
-                    this.checkIntegerSize("uint64", size, 8);
-                    offset += size;
-                    break;
-                case UINT128:
-                    this.checkIntegerSize("uint128", size, 16);
-                    offset += size;
-                    break;
                 default:
                     offset += size;
                     break;

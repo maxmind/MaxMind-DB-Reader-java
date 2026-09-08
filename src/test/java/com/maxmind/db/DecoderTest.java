@@ -436,7 +436,7 @@ public class DecoderTest {
     }
 
     @Test
-    public void testSkippedOversizedIntegersAreRejected() {
+    public void testSkippedOversizedIntegersPreserveKnownFields() throws IOException {
         var invalidIntegers = Map.of(
             "uint16", new byte[] {(byte) 0xA3, 0, 0, 0},
             "uint32", new byte[] {(byte) 0xC5, 0, 0, 0, 0, 0},
@@ -463,12 +463,8 @@ public class DecoderTest {
                 SingleBuffer.wrap(out.toByteArray()),
                 0
             );
-            var ex = assertThrows(
-                InvalidDatabaseException.class,
-                () -> decoder.decode(0, KnownFieldModel.class)
-            );
-            assertThat(ex.getMessage(), containsString(
-                "invalid size of " + invalidInteger.getKey()));
+            var result = decoder.decode(0, KnownFieldModel.class);
+            assertEquals("ok", result.known(), invalidInteger.getKey());
         }
     }
 
