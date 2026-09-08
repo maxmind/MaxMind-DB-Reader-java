@@ -2338,20 +2338,20 @@ public class ReaderTest {
                     getFile("MaxMind-DB-test-decoder-payload-limit.mmdb"), cache)) {
                 for (var attempt = 0; attempt < 2; attempt++) {
                     var value = reader.get(InetAddress.getByName("1.1.1.1"), Object.class);
-                    assertPayloadAtLimit(value);
+                    assertPayloadAtLimit(value, cache.getClass().getSimpleName() + ", attempt " + attempt);
                 }
             }
         }
     }
 
-    private static void assertPayloadAtLimit(Object value) {
+    private static void assertPayloadAtLimit(Object value, String context) {
         var values = (List<?>) value;
-        assertEquals(33, values.size());
+        assertEquals(33, values.size(), context);
         var large = new byte[65_535];
         for (var i = 0; i < 32; i++) {
-            assertArrayEquals(large, (byte[]) values.get(i), "payload " + i);
+            assertArrayEquals(large, (byte[]) values.get(i), context + ", payload " + i);
         }
-        assertArrayEquals(new byte[32], (byte[]) values.get(32), "final payload");
+        assertArrayEquals(new byte[32], (byte[]) values.get(32), context + ", final payload");
     }
 
     @Test
@@ -2394,7 +2394,8 @@ public class ReaderTest {
                                         () -> reader.get(InetAddress.getByName("1.1.1.1"), Object.class));
                                     assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
                                 } else {
-                                    assertPayloadAtLimit(reader.get(InetAddress.getByName("1.1.1.1"), Object.class));
+                                    assertPayloadAtLimit(reader.get(InetAddress.getByName("1.1.1.1"), Object.class),
+                                        "shared cache, attempt " + attempt);
                                 }
                             }
                             return null;
