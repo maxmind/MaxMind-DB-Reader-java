@@ -1126,7 +1126,7 @@ public class DecoderTest {
                 InvalidDatabaseException.class,
                 () -> decoder.decode(0, Object.class));
         assertThat(ex.getMessage(), containsString(
-                "a container declares more entries than the data section can hold"));
+                "a container declares more entries than the database can hold"));
     }
 
     @Test
@@ -1139,7 +1139,7 @@ public class DecoderTest {
                 InvalidDatabaseException.class,
                 () -> decoder.decode(0, Object.class));
         assertThat(ex.getMessage(), containsString(
-                "a container declares more entries than the data section can hold"));
+                "a container declares more entries than the database can hold"));
     }
 
     @Test

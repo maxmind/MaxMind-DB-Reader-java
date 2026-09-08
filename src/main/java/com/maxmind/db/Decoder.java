@@ -335,7 +335,7 @@ class Decoder implements NodeCache.Loader {
         if (valueCount > this.capacity - this.buffer.position()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
-                    + "a container declares more entries than the data section can hold");
+                    + "a container declares more entries than the database can hold");
         }
     }
 
@@ -370,7 +370,7 @@ class Decoder implements NodeCache.Loader {
         if (length > this.capacity - this.buffer.position()) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains bad data: "
-                    + "a value extends beyond the end of the data section.");
+                    + "a value extends beyond the end of the database.");
         }
     }
 
@@ -1366,7 +1366,7 @@ class Decoder implements NodeCache.Loader {
             if (offset > this.capacity) {
                 throw new InvalidDatabaseException(
                     "The MaxMind DB file's data section contains bad data: "
-                        + "a value extends beyond the end of the data section.");
+                        + "a value extends beyond the end of the database.");
             }
         }
         return offset;
