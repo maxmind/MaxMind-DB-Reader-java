@@ -28,7 +28,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
@@ -2366,6 +2370,44 @@ public class ReaderTest {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    public void testSharedCachePreservesPayloadBoundaries() throws Exception {
+        var executor = Executors.newFixedThreadPool(4);
+        try {
+            for (var overLimit : new boolean[] {false, true}) {
+                var fixture = "MaxMind-DB-test-decoder-payload-limit";
+                if (overLimit) {
+                    fixture += "-over";
+                }
+                try (var reader = new Reader(getFile(fixture + ".mmdb"), new CHMCache())) {
+                    var start = new CyclicBarrier(4);
+                    var tasks = new ArrayList<Callable<Void>>();
+                    for (var worker = 0; worker < 4; worker++) {
+                        tasks.add(() -> {
+                            start.await(15, TimeUnit.SECONDS);
+                            for (var attempt = 0; attempt < 2; attempt++) {
+                                if (overLimit) {
+                                    var ex = assertThrows(InvalidDatabaseException.class,
+                                        () -> reader.get(InetAddress.getByName("1.1.1.1"), Object.class));
+                                    assertThat(ex.getMessage(), containsString("exceeds the maximum payload size"));
+                                } else {
+                                    assertPayloadAtLimit(reader.get(InetAddress.getByName("1.1.1.1"), Object.class));
+                                }
+                            }
+                            return null;
+                        });
+                    }
+                    for (var future : executor.invokeAll(tasks, 15, TimeUnit.SECONDS)) {
+                        future.get();
+                    }
+                }
+            }
+        } finally {
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(15, TimeUnit.SECONDS), "cache workers did not stop");
         }
     }
 
