@@ -575,13 +575,13 @@ class Decoder implements NodeCache.Loader {
         return value;
     }
 
-    private String decodeString(long size) throws IOException {
+    private String decodeString(int size) throws IOException {
         this.chargePayload(size);
         // Performance optimization: String's UTF-8 path avoids the temporary
         // CharBuffer and char[] used by CharsetDecoder, despite this byte[] copy.
         // On OpenJDK 26, random GeoLite2-City lookup throughput improved by about
         // 6% with CHMCache and 22% without caching over the previous decoder.
-        var bytes = new byte[(int) size];
+        var bytes = new byte[size];
         this.buffer.get(bytes);
         var value = new String(bytes, UTF_8);
         // String replaces malformed UTF-8 with U+FFFD. Validate strings containing

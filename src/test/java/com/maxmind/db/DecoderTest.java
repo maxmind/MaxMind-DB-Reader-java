@@ -30,9 +30,9 @@ public class DecoderTest {
     @Test
     public void testDecodedValueStoresMaximumCosts() {
         var value = new DecodedValue(null, Decoder.MAX_VALUES, Decoder.MAX_PAYLOAD_BYTES, Decoder.MAX_DEPTH);
-        assertEquals(Decoder.MAX_VALUES, value.values());
-        assertEquals(Decoder.MAX_PAYLOAD_BYTES, value.payloadBytes());
-        assertEquals(Decoder.MAX_DEPTH, value.depth());
+        assertEquals(Decoder.MAX_VALUES, DecodedValue.values(value.costs()));
+        assertEquals(Decoder.MAX_PAYLOAD_BYTES, DecodedValue.payloadBytes(value.costs()));
+        assertEquals(Decoder.MAX_DEPTH, DecodedValue.depth(value.costs()));
     }
 
     @Test
@@ -46,9 +46,9 @@ public class DecoderTest {
         };
         for (var expected : costs) {
             var value = new DecodedValue(null, (int) expected[0], expected[1], (int) expected[2]);
-            assertEquals(expected[0], value.values(), "value cost");
-            assertEquals(expected[1], value.payloadBytes(), "payload cost");
-            assertEquals(expected[2], value.depth(), "depth cost");
+            assertEquals(expected[0], DecodedValue.values(value.costs()), "value cost");
+            assertEquals(expected[1], DecodedValue.payloadBytes(value.costs()), "payload cost");
+            assertEquals(expected[2], DecodedValue.depth(value.costs()), "depth cost");
         }
     }
 
@@ -1200,7 +1200,7 @@ public class DecoderTest {
     }
 
     @Test
-    public void testInvalidStringDoesNotChangeBufferLimit() throws IOException {
+    public void testDecoderCanBeReusedAfterInvalidString() throws IOException {
         var data = new byte[] {0x41, (byte) 0xFF, 0x41, 'a'};
         var decoder = new Decoder(NoCache.getInstance(), SingleBuffer.wrap(data), 0);
 

@@ -25,24 +25,12 @@ public final class DecodedValue {
         return value;
     }
 
-    int values() {
-        return values(costs());
-    }
-
     static int values(long costs) {
         return (int) (costs >>> VALUES_SHIFT);
     }
 
-    long payloadBytes() {
-        return payloadBytes(costs());
-    }
-
     static long payloadBytes(long costs) {
         return (costs >>> PAYLOAD_SHIFT) & PAYLOAD_MASK;
-    }
-
-    int depth() {
-        return depth(costs());
     }
 
     static int depth(long costs) {
