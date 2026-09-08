@@ -785,7 +785,7 @@ public class DecoderTest {
         runProbe("-Xss512k", StackProbe.class);
     }
 
-    private static void runProbe(String vmArgument, Class<?> probe) throws Exception {
+    static void runProbe(String vmArgument, Class<?> probe) throws Exception {
         var executable = System.getProperty("os.name").startsWith("Windows")
             ? "java.exe"
             : "java";

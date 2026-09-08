@@ -2203,9 +2203,26 @@ public class ReaderTest {
         }
     }
 
-    @ParameterizedTest
-    @MethodSource("chunkSizes")
-    public void testPointerFanOutIsRejected(int chunkSize) throws IOException {
+    @Test
+    public void testPointerFanOutIsRejected() throws Exception {
+        DecoderTest.runProbe("-Xmx128m", FanOutProbe.class);
+    }
+
+    public static final class FanOutProbe {
+        private FanOutProbe() {
+        }
+
+        public static void main(String[] args) throws IOException {
+            var tests = new ReaderTest();
+            for (var chunkSize : chunkSizes().toArray()) {
+                tests.checkPointerFanOutIsRejected(chunkSize);
+            }
+            tests.checkPointerFanOutIsRejectedForMemoryAndStreamReaders();
+            tests.checkPointerFanOutIsRejectedWithCachedTargets();
+        }
+    }
+
+    private void checkPointerFanOutIsRejected(int chunkSize) throws IOException {
         var fixtures = new String[] {
             "MaxMind-DB-test-pointer-decoder-dos.mmdb",
             "MaxMind-DB-test-pointer-decoder-dos-ipv6.mmdb",
@@ -2224,8 +2241,7 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testPointerFanOutIsRejectedForMemoryAndStreamReaders() throws IOException {
+    private void checkPointerFanOutIsRejectedForMemoryAndStreamReaders() throws IOException {
         var fixture = "MaxMind-DB-test-pointer-decoder-dos.mmdb";
         var address = InetAddress.getByName("1.1.1.1");
         try (var memoryReader = new Reader(getFile(fixture), FileMode.MEMORY, 512)) {
@@ -2240,8 +2256,7 @@ public class ReaderTest {
         }
     }
 
-    @Test
-    public void testPointerFanOutIsRejectedWithCachedTargets() throws IOException {
+    private void checkPointerFanOutIsRejectedWithCachedTargets() throws IOException {
         var fixture = "MaxMind-DB-test-pointer-decoder-dos.mmdb";
         try (var reader = new Reader(getFile(fixture), new CHMCache())) {
             var address = InetAddress.getByName("1.1.1.1");
