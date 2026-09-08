@@ -9,24 +9,23 @@ The decoder rejects an operation that exceeds any of these limits:
 - 128 nested maps or arrays
 - 2 MiB of encoded string and bytes payload materialized by the decoder
 
-Each cached pointer target retains its logical value, depth, and payload cost.
-Every decoded pointer occurrence consumes that recorded cost. The cache still
-avoids decoding or materializing the target again, but cache state does not
-determine whether an operation exceeds a limit. A pointer in a field the
-decoder skips counts as one value. The decoder does not visit its target.
+A decoded pointer costs one value in addition to its target's logical costs.
+Cached targets retain their value count, container depth, and payload bytes, so
+cache state does not change whether a decode exceeds a limit. Skipped pointers
+count as one value and their targets remain unvisited. Skipped fields receive structural bounds and
+resource checks, but their contents are not fully validated.
 
 These limits leave a wide margin above MaxMind-produced records. A custom
 database containing an unusually large record that decoded in an earlier
 release may now throw `InvalidDatabaseException`. The limits are not
 configurable in this release.
 
-When the decoder constructs a custom `List` or `Map` type through an `int`
-constructor, it passes an initial-capacity hint capped at 128 rather than the
-full declared collection size.
+Initial collection capacity hints are capped at 128. Built-in collections grow
+as needed. Custom `List` and `Map` types constructed through an `int` constructor
+receive this capped hint instead of the full declared size.
 
-The decoder also rejects a data-section pointer whose target is another pointer,
-which the MaxMind DB format does not permit. It rejects integer payloads wider
-than their format type permits before reading the payload.
+When following a pointer, the decoder rejects targets that are themselves
+pointers. Decoded integers wider than their format type permits are also rejected.
 
 # Upgrading to 4.0.0
 

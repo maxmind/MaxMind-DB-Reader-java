@@ -4,28 +4,17 @@ CHANGELOG
 4.2.0
 ------------------
 
-* Fixed decoding of data pointers with offsets of 2 GiB or greater. The
-  pointer payload was decoded into an `int`, so such offsets were
-  sign-extended to a negative value and rejected by `Buffer.position()`
-  with an `IllegalArgumentException`. Every record past the 2 GiB
-  boundary was unreachable in databases larger than 2 GiB, which have
-  been supported since 4.0.0.
+* Fixed decoding of data pointers with offsets of 2 GiB or greater. Records
+  beyond that boundary could previously fail with `IllegalArgumentException`.
 * Fixed skipping unknown four-byte pointers during typed decoding. Skipped
-  values that extend past the data section are now rejected. MaxMind-produced
-  databases were unaffected.
-* Fixed UTF-8 decoding across buffer chunks and rejection of incomplete
-  multibyte characters at the end of a string.
-* Fixed the exception thrown for a database truncated in the middle of a
-  value. Reading a control byte, an extended type byte, a size header, a
-  pointer, a `double`, or a `float` past the end of the data section threw
-  `BufferUnderflowException` or `IndexOutOfBoundsException`. These now throw
-  `InvalidDatabaseException`, as the rest of the reader does.
+  values that extend past the database are now rejected.
+* Fixed UTF-8 decoding across buffer chunks. Malformed decoded strings and
+  truncated values now throw `InvalidDatabaseException`.
 * Added decoder limits to prevent excessive CPU and memory use from crafted
   databases: 65,536 decoded or skipped values, 128 nested containers, and 2 MiB
   of encoded string and bytes payload per operation. Exceeding a limit throws
-  `InvalidDatabaseException`. See [UPGRADING.md](UPGRADING.md) for details.
-  * Oversized integer encodings are rejected.
-  * Truncated payloads and malformed UTF-8 are rejected.
+  `InvalidDatabaseException`. See [UPGRADING.md](UPGRADING.md) for accounting,
+  decoded-value validation, and collection capacity-hint changes.
 * Improved decoder performance and reduced per-lookup allocation, including
   UTF-8 string decoding.
 
