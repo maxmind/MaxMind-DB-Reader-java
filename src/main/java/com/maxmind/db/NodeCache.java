@@ -5,6 +5,10 @@ import java.io.IOException;
 /**
  * NodeCache is an interface for a cache that stores decoded values from the
  * data section of the database.
+ *
+ * <p>Scope each cache to one {@link Reader}. Return the loader's result unchanged
+ * for the requested key, propagate loader exceptions, and never return {@code null}.
+ * Implementations used for concurrent lookups must be thread-safe.
  */
 public interface NodeCache {
     /**

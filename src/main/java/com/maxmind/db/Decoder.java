@@ -35,30 +35,20 @@ class Decoder implements NodeCache.Loader {
 
     private final NodeCache cache;
 
-    // Per-operation resource limits. The MaxMind DB specification recommends
-    // depth and value limits, but permits equivalent reader-specific accounting.
-    // This decoder charges each decoded or skipped value. Each pointer occurrence
-    // also consumes the logical cost of its target. Cache misses measure that cost,
-    // and cache hits replay it. This keeps accounting independent of cache state
-    // rather than following the specification's example flat value count.
-    // Container depth, together with rejecting illegal pointer-to-pointer values,
-    // bounds recursive calls.
-    // The payload limit bounds encoded string and bytes data materialized by
-    // this Java decoder.
-    // The lower depth limit leaves room on a 512 KiB thread stack even for
-    // pointer-backed maps, which use more Java frames per logical container
-    // than inline values. A Decoder serves one decode operation on one thread,
-    // so these fields need no synchronization.
+    // Bound work per operation. Decoded pointers cost one value plus their target.
+    // Skipped pointers cost one and are not followed. Depth counts containers only.
+    // Rejecting followed pointer-to-pointer values bounds data-driven recursion.
+    // The 128-container limit is tested on a 512 KiB stack. Payload accounting
+    // covers materialized string and bytes data.
     static final int MAX_DEPTH = 128;
     static final int MAX_VALUES = 1 << 16;
     static final long MAX_PAYLOAD_BYTES = 1 << 21;
 
-    // A collection's declared size is its logical child count, but it is not
-    // proof that the input contains that many decodable children. When deriving
-    // an initial capacity from it, limit unused capacity on the active recursion
-    // path. Completed children remain bounded by MAX_VALUES.
+    // Nested containers can each declare nearly MAX_VALUES children before any
+    // are decoded. Cap preallocation to avoid reserving unused slots at every depth.
     private static final int MAX_INITIAL_COLLECTION_CAPACITY = 128;
     private int depth;
+    // Maximum absolute depth while measuring a cached target, or -1 outside load().
     private int maxDepth = -1;
     private int valuesRemaining = MAX_VALUES;
     private long payloadRemaining = MAX_PAYLOAD_BYTES;
@@ -202,9 +192,8 @@ class Decoder implements NodeCache.Loader {
                 "The MaxMind DB file's data section contains bad data: "
                     + "pointer larger than the database.");
         }
-        // Validate a target when the cache loader decodes it. A target that was
-        // loaded successfully has already passed this check, so cache hits do
-        // not need to reread its control byte.
+        // Validate each followed target before decoding. Cached targets have
+        // already passed this check.
         if (Type.fromControlByte(0xFF & this.buffer.get(offset)) == Type.POINTER) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section contains a pointer to a pointer");
@@ -217,6 +206,8 @@ class Decoder implements NodeCache.Loader {
 
     @Override
     public DecodedValue load(CacheKey<?> key) throws IOException {
+        // Measure within the caller's budget and absolute depth. Restore the
+        // counters here so charge() applies the measured cost exactly once.
         var valuesRemaining = this.valuesRemaining;
         var payloadRemaining = this.payloadRemaining;
         var depth = this.depth;
@@ -318,16 +309,9 @@ class Decoder implements NodeCache.Loader {
             || cls == BigInteger.class;
     }
 
-    // A container cannot hold more entries than there are bytes left to encode
-    // them: every key, value, and element occupies at least one byte. Reject an
-    // impossible declared size before it is used as an allocation hint, so a
-    // tiny crafted database cannot force a huge list or map preallocation and
-    // exhaust memory. valueCount is the number of encoded values the container
-    // declares (an array of N declares N, a map of N declares 2N).
+    // Check the remaining value budget and file bytes before allocating.
+    // valueCount counts array elements, or both keys and values for maps.
     private void checkContainerSize(long valueCount) throws InvalidDatabaseException {
-        // A container cannot decode more values than the per-operation budget
-        // allows, so reject an oversized declaration before allocating for it
-        // rather than after the per-value limit stops the decode.
         if (valueCount > this.valuesRemaining) {
             throw new InvalidDatabaseException(
                 "The MaxMind DB file's data section exceeds the maximum number of values");
@@ -351,12 +335,7 @@ class Decoder implements NodeCache.Loader {
         }
     }
 
-    // Charge a string or bytes payload against the per-operation budget before
-    // materializing it. A payload amplification points many pointers at one large
-    // value. Cached targets retain their logical payload cost, so each pointer
-    // occurrence consumes the cost even when the decoder reuses the value. The
-    // comparison is against the remaining budget so it cannot overflow. The
-    // limit is inclusive: a total exactly at the limit is allowed.
+    // Check payload bounds before allocation. A total exactly at the limit is allowed.
     private void chargePayload(long length) throws InvalidDatabaseException {
         if (length > this.payloadRemaining) {
             throw new InvalidDatabaseException(
@@ -577,10 +556,8 @@ class Decoder implements NodeCache.Loader {
 
     private String decodeString(int size) throws IOException {
         this.chargePayload(size);
-        // Performance optimization: String's UTF-8 path avoids the temporary
-        // CharBuffer and char[] used by CharsetDecoder, despite this byte[] copy.
-        // On OpenJDK 26, random GeoLite2-City lookup throughput improved by about
-        // 6% with CHMCache and 22% without caching over the previous decoder.
+        // String's UTF-8 path avoids the temporary CharBuffer and char[] used by
+        // CharsetDecoder, despite this byte[] copy.
         var bytes = new byte[size];
         this.buffer.get(bytes);
         var value = new String(bytes, UTF_8);
