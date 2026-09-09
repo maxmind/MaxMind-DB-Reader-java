@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -342,32 +340,4 @@ public class MultiBufferTest {
         }
     }
 
-    @Test
-    public void testDecodeString() throws CharacterCodingException {
-        var buffer = createBuffer(22);
-        buffer.position(26);
-        buffer.limit(29);
-        var result = buffer.decode(StandardCharsets.UTF_8.newDecoder());
-        assertEquals("123", result);
-        assertEquals(29, buffer.position());
-    }
-
-    @Test
-    public void testDecodeStringTooLarge() {
-        var buffer = createBuffer(65);
-        buffer.position(62);
-        buffer.limit(89);
-        assertThrows(IllegalStateException.class, () ->
-                buffer.decode(StandardCharsets.UTF_8.newDecoder(), 20));
-    }
-
-    @Test
-    public void testDecodeAcrossChunks() throws CharacterCodingException {
-        var buffer = createBuffer(65);
-        buffer.position(62);
-        buffer.limit(89);
-        var result = buffer.decode(StandardCharsets.UTF_8.newDecoder());
-        assertEquals("123456789012345678901234567", result);
-        assertEquals(89, buffer.position());
-    }
 }

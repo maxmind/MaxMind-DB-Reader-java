@@ -1,3 +1,32 @@
+# Upgrading to 4.2.0
+
+## Decoder Resource Limits
+
+Version 4.2.0 limits the work and memory used by one record or metadata decode.
+The decoder rejects an operation that exceeds any of these limits:
+
+- 65,536 decoded or skipped values under the Java reader's work accounting
+- 128 nested maps or arrays
+- 2 MiB of encoded string and bytes payload materialized by the decoder
+
+A decoded pointer costs one value in addition to its target's logical costs.
+Cached targets retain their value count, container depth, and payload bytes, so
+cache state does not change whether a decode exceeds a limit. Skipped pointers
+count as one value and their targets remain unvisited. Skipped fields receive structural bounds and
+resource checks, but their contents are not fully validated.
+
+These limits leave a wide margin above MaxMind-produced records. A custom
+database containing an unusually large record that decoded in an earlier
+release may now throw `InvalidDatabaseException`. The limits are not
+configurable in this release.
+
+Initial collection capacity hints are capped at 128. Built-in collections grow
+as needed. Custom `List` and `Map` types constructed through an `int` constructor
+receive this capped hint instead of the full declared size.
+
+When following a pointer, the decoder rejects targets that are themselves
+pointers. Decoded integers wider than their format type permits are also rejected.
+
 # Upgrading to 4.0.0
 
 This guide covers the breaking changes introduced in version 4.0.0 and how to

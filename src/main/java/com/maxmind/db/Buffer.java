@@ -1,8 +1,5 @@
 package com.maxmind.db;
 
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CharsetDecoder;
-
 /**
  * A generic buffer abstraction that supports sequential and random access
  * to binary data. Implementations may be backed by a single {@link
@@ -96,13 +93,4 @@ sealed interface Buffer permits SingleBuffer, MultiBuffer {
      * @return a duplicate buffer
      */
     Buffer duplicate();
-
-    /**
-     * Decodes the buffer's content into a string using the given decoder.
-     *
-     * @param decoder the charset decoder
-     * @return the decoded string
-     * @throws CharacterCodingException if decoding fails
-     */
-    String decode(CharsetDecoder decoder) throws CharacterCodingException;
 }

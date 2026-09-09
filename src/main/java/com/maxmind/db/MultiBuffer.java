@@ -2,10 +2,7 @@ package com.maxmind.db;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CharsetDecoder;
 
 /**
  * A {@link Buffer} implementation backed by multiple {@link ByteBuffer}s,
@@ -206,57 +203,6 @@ final class MultiBuffer implements Buffer {
         copy.position = this.position;
         copy.limit = this.limit;
         return copy;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public String decode(CharsetDecoder decoder)
-            throws CharacterCodingException {
-        return this.decode(decoder, Integer.MAX_VALUE);
-    }
-
-    String decode(CharsetDecoder decoder, int maxCharBufferSize)
-            throws CharacterCodingException {
-        var remainingBytes = limit - position;
-
-        // Cannot allocate more than maxCharBufferSize for CharBuffer
-        if (remainingBytes > maxCharBufferSize) {
-            throw new IllegalStateException(
-                    "Decoding region too large to fit in a CharBuffer: " + remainingBytes
-            );
-        }
-
-        var out = CharBuffer.allocate((int) remainingBytes);
-        var pos = position;
-
-        while (remainingBytes > 0) {
-            // Locate which underlying buffer we are in
-            var bufIndex = (int) (pos / this.chunkSize);
-            var bufOffset = (int) (pos % this.chunkSize);
-
-            var srcView = buffers[bufIndex];
-            var savedLimit = srcView.limit();
-            srcView.position(bufOffset);
-
-            var toRead = (int) Math.min(srcView.remaining(), remainingBytes);
-            srcView.limit(bufOffset + toRead);
-
-            var result = decoder.decode(srcView, out, false);
-            srcView.limit(savedLimit);
-
-            if (result.isError()) {
-                result.throwException();
-            }
-
-            pos += toRead;
-            remainingBytes -= toRead;
-        }
-
-        // Update this MultiBuffer’s logical position
-        this.position = pos;
-
-        out.flip();
-        return out.toString();
     }
 
     /**

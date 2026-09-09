@@ -54,7 +54,7 @@ public class PointerTest {
         var observed = new AtomicLong(Long.MIN_VALUE);
         NodeCache cache = (key, loader) -> {
             observed.set(key.offset());
-            return new DecodedValue(null);
+            return new DecodedValue(null, 0, 0, 0);
         };
 
         new Decoder(cache, buffer, 0).decode(0, Object.class);
