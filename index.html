@@ -4,13 +4,13 @@ format that stores data indexed by IP address subnets (IPv4 or IPv6).</p><h2 id=
 To do this, add the dependency to your pom.xml:</p><div class=highlight><pre tabindex=0 style=background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-xml data-lang=xml><span style=display:flex><span>    <span style=color:#0550ae>&lt;dependency&gt;</span>
 </span></span><span style=display:flex><span>        <span style=color:#0550ae>&lt;groupId&gt;</span>com.maxmind.db<span style=color:#0550ae>&lt;/groupId&gt;</span>
 </span></span><span style=display:flex><span>        <span style=color:#0550ae>&lt;artifactId&gt;</span>maxmind-db<span style=color:#0550ae>&lt;/artifactId&gt;</span>
-</span></span><span style=display:flex><span>        <span style=color:#0550ae>&lt;version&gt;</span>4.1.0<span style=color:#0550ae>&lt;/version&gt;</span>
+</span></span><span style=display:flex><span>        <span style=color:#0550ae>&lt;version&gt;</span>4.2.0<span style=color:#0550ae>&lt;/version&gt;</span>
 </span></span><span style=display:flex><span>    <span style=color:#0550ae>&lt;/dependency&gt;</span>
 </span></span></code></pre></div><h3 id=gradle>Gradle<a class=heading-anchor href=#gradle aria-label="Link to Gradle">#</a></h3><p>Add the following to your <code>build.gradle</code> file:</p><pre tabindex=0><code>repositories {
     mavenCentral()
 }
 dependencies {
-    implementation &#39;com.maxmind.db:maxmind-db:4.1.0&#39;
+    implementation &#39;com.maxmind.db:maxmind-db:4.2.0&#39;
 }
 </code></pre><h2 id=usage>Usage<a class=heading-anchor href=#usage aria-label="Link to Usage">#</a></h2><p><em>Note:</em> For accessing MaxMind GeoIP databases, we generally recommend using
 the <a href=https://maxmind.github.io/GeoIP2-java/>GeoIP2 Java API</a> rather than using
