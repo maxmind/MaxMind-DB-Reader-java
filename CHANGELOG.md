@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.2.0
+4.2.0 (2026-09-10)
 ------------------
 
 * Fixed decoding of data pointers with offsets of 2 GiB or greater. Records
